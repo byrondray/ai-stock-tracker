@@ -29,6 +29,5 @@
     }
   },
   "include": ["src", "App.tsx", "__tests__"],
-  "exclude": ["node_modules", "dist", "build"],
-  "extends": "expo/tsconfig.base"
+  "exclude": ["node_modules", "dist", "build"]
 }
