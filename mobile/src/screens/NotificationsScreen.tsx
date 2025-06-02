@@ -78,14 +78,17 @@ export const NotificationsScreen: React.FC = () => {
   };
 
   const handleMarkAllAsRead = async () => {
-    const unreadNotifications = notifications.filter(n => !n.isRead);
+    const unreadNotifications = notifications.filter((n) => !n.isRead);
     try {
       await Promise.all(
-        unreadNotifications.map(n => markAsReadMutation(n.id).unwrap())
+        unreadNotifications.map((n) => markAsReadMutation(n.id).unwrap())
       );
     } catch (error) {
       console.error('Error marking all as read:', error);
-      Alert.alert('Error', 'Failed to mark all notifications as read. Please try again.');
+      Alert.alert(
+        'Error',
+        'Failed to mark all notifications as read. Please try again.'
+      );
     }
   };
 
@@ -101,11 +104,16 @@ export const NotificationsScreen: React.FC = () => {
           onPress: async () => {
             try {
               await Promise.all(
-                notifications.map(n => deleteNotificationMutation(n.id).unwrap())
+                notifications.map((n) =>
+                  deleteNotificationMutation(n.id).unwrap()
+                )
               );
             } catch (error) {
               console.error('Error clearing all notifications:', error);
-              Alert.alert('Error', 'Failed to clear all notifications. Please try again.');
+              Alert.alert(
+                'Error',
+                'Failed to clear all notifications. Please try again.'
+              );
             }
           },
         },
@@ -143,14 +151,14 @@ export const NotificationsScreen: React.FC = () => {
     }
   };
 
-  const filteredNotifications = notifications.filter(notification => {
+  const filteredNotifications = notifications.filter((notification) => {
     if (filter === 'unread') {
       return !notification.isRead;
     }
     return true;
   });
 
-  const unreadCount = notifications.filter(n => !n.isRead).length;
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   if (isLoading && notifications.length === 0) {
     return (
@@ -159,7 +167,7 @@ export const NotificationsScreen: React.FC = () => {
         style={styles.container}
       >
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <ActivityIndicator size='large' color={theme.colors.primary} />
           <Text style={[styles.loadingText, { color: theme.colors.text }]}>
             Loading notifications...
           </Text>
@@ -180,12 +188,22 @@ export const NotificationsScreen: React.FC = () => {
             <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
               Notifications
             </Text>
-            <Text style={[styles.headerSubtitle, { color: theme.colors.textSecondary }]}>
+            <Text
+              style={[
+                styles.headerSubtitle,
+                { color: theme.colors.textSecondary },
+              ]}
+            >
               {unreadCount} unread
             </Text>
           </View>
           <View style={styles.filterContainer}>
-            <Text style={[styles.filterLabel, { color: theme.colors.textSecondary }]}>
+            <Text
+              style={[
+                styles.filterLabel,
+                { color: theme.colors.textSecondary },
+              ]}
+            >
               Unread Only
             </Text>
             <Switch
@@ -199,19 +217,25 @@ export const NotificationsScreen: React.FC = () => {
             />
           </View>
         </View>
-        
+
         {notifications.length > 0 && (
           <View style={styles.actionButtons}>
             <Button
-              title="Mark All Read"
+              title='Mark All Read'
               onPress={handleMarkAllAsRead}
-              style={[styles.actionButton, { backgroundColor: theme.colors.primary }]}
+              style={[
+                styles.actionButton,
+                { backgroundColor: theme.colors.primary },
+              ]}
               disabled={unreadCount === 0}
             />
             <Button
-              title="Clear All"
+              title='Clear All'
               onPress={handleClearAll}
-              style={[styles.actionButton, { backgroundColor: theme.colors.error }]}
+              style={[
+                styles.actionButton,
+                { backgroundColor: theme.colors.error },
+              ]}
             />
           </View>
         )}
@@ -225,17 +249,25 @@ export const NotificationsScreen: React.FC = () => {
       >
         {filteredNotifications.length === 0 ? (
           <Card style={styles.emptyCard}>
-            <Text style={[styles.emptyIcon, { color: theme.colors.textSecondary }]}>
+            <Text
+              style={[styles.emptyIcon, { color: theme.colors.textSecondary }]}
+            >
               📭
             </Text>
             <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
-              {filter === 'unread' ? 'No Unread Notifications' : 'No Notifications'}
+              {filter === 'unread'
+                ? 'No Unread Notifications'
+                : 'No Notifications'}
             </Text>
-            <Text style={[styles.emptySubtitle, { color: theme.colors.textSecondary }]}>
-              {filter === 'unread' 
+            <Text
+              style={[
+                styles.emptySubtitle,
+                { color: theme.colors.textSecondary },
+              ]}
+            >
+              {filter === 'unread'
                 ? 'All caught up! You have no unread notifications.'
-                : 'You have no notifications yet. We\'ll notify you about important updates.'
-              }
+                : "You have no notifications yet. We'll notify you about important updates."}
             </Text>
           </Card>
         ) : (
@@ -244,12 +276,17 @@ export const NotificationsScreen: React.FC = () => {
               key={notification.id}
               style={[
                 styles.notificationCard,
-                !notification.isRead && { borderLeftWidth: 4, borderLeftColor: theme.colors.primary },
+                !notification.isRead && {
+                  borderLeftWidth: 4,
+                  borderLeftColor: theme.colors.primary,
+                },
               ]}
             >
               <View style={styles.notificationHeader}>
                 <View style={styles.notificationIcon}>
-                  <Text style={styles.iconText}>{getNotificationIcon(notification.type)}</Text>
+                  <Text style={styles.iconText}>
+                    {getNotificationIcon(notification.type)}
+                  </Text>
                 </View>
                 <View style={styles.notificationContent}>
                   <Text
@@ -261,32 +298,53 @@ export const NotificationsScreen: React.FC = () => {
                   >
                     {notification.title}
                   </Text>
-                  <Text style={[styles.notificationMessage, { color: theme.colors.textSecondary }]}>
+                  <Text
+                    style={[
+                      styles.notificationMessage,
+                      { color: theme.colors.textSecondary },
+                    ]}
+                  >
                     {notification.message}
                   </Text>
-                  <Text style={[styles.notificationTime, { color: theme.colors.textSecondary }]}>
+                  <Text
+                    style={[
+                      styles.notificationTime,
+                      { color: theme.colors.textSecondary },
+                    ]}
+                  >
                     {new Date(notification.createdAt).toLocaleString()}
                   </Text>
                 </View>
                 {!notification.isRead && (
-                  <View style={[styles.unreadIndicator, { backgroundColor: theme.colors.primary }]} />
+                  <View
+                    style={[
+                      styles.unreadIndicator,
+                      { backgroundColor: theme.colors.primary },
+                    ]}
+                  />
                 )}
               </View>
 
               {notification.data && (
                 <View style={styles.notificationData}>
                   {notification.data.symbol && (
-                    <Text style={[styles.dataText, { color: theme.colors.text }]}>
+                    <Text
+                      style={[styles.dataText, { color: theme.colors.text }]}
+                    >
                       Symbol: {notification.data.symbol}
                     </Text>
                   )}
                   {notification.data.price && (
-                    <Text style={[styles.dataText, { color: theme.colors.text }]}>
+                    <Text
+                      style={[styles.dataText, { color: theme.colors.text }]}
+                    >
                       Price: ${notification.data.price.toFixed(2)}
                     </Text>
                   )}
                   {notification.data.targetPrice && (
-                    <Text style={[styles.dataText, { color: theme.colors.text }]}>
+                    <Text
+                      style={[styles.dataText, { color: theme.colors.text }]}
+                    >
                       Target: ${notification.data.targetPrice.toFixed(2)}
                     </Text>
                   )}
@@ -296,16 +354,22 @@ export const NotificationsScreen: React.FC = () => {
               <View style={styles.notificationActions}>
                 {!notification.isRead && (
                   <Button
-                    title="Mark as Read"
+                    title='Mark as Read'
                     onPress={() => handleMarkAsRead(notification.id)}
-                    style={[styles.smallButton, { backgroundColor: theme.colors.primary }]}
+                    style={[
+                      styles.smallButton,
+                      { backgroundColor: theme.colors.primary },
+                    ]}
                     textStyle={styles.smallButtonText}
                   />
                 )}
                 <Button
-                  title="Delete"
+                  title='Delete'
                   onPress={() => handleDeleteNotification(notification.id)}
-                  style={[styles.smallButton, { backgroundColor: theme.colors.error }]}
+                  style={[
+                    styles.smallButton,
+                    { backgroundColor: theme.colors.error },
+                  ]}
                   textStyle={styles.smallButtonText}
                 />
               </View>

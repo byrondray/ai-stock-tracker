@@ -33,11 +33,7 @@ const Button: React.FC<ButtonProps> = ({
   const { theme } = useTheme();
 
   const getButtonStyle = () => {
-    const baseStyle = [
-      styles.button,
-      styles[size],
-      style,
-    ];
+    const baseStyle = [styles.button, styles[size], style];
 
     if (disabled || loading) {
       baseStyle.push(styles.disabled);
@@ -66,11 +62,7 @@ const Button: React.FC<ButtonProps> = ({
   };
 
   const getTextStyle = () => {
-    const baseStyle = [
-      styles.text,
-      styles[`${size}Text`],
-      textStyle,
-    ];
+    const baseStyle = [styles.text, styles[`${size}Text`], textStyle];
 
     switch (variant) {
       case 'outline':
@@ -93,8 +85,10 @@ const Button: React.FC<ButtonProps> = ({
     >
       {loading ? (
         <ActivityIndicator
-          size="small"
-          color={variant === 'outline' ? theme.colors.primary : theme.colors.surface}
+          size='small'
+          color={
+            variant === 'outline' ? theme.colors.primary : theme.colors.surface
+          }
         />
       ) : (
         <Text style={getTextStyle()}>{title}</Text>

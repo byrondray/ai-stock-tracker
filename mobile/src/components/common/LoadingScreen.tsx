@@ -12,7 +12,7 @@ export const LoadingScreen: React.FC = () => {
       style={styles.container}
     >
       <View style={styles.content}>
-        <ActivityIndicator size="large" color={theme.colors.background} />
+        <ActivityIndicator size='large' color={theme.colors.background} />
       </View>
     </LinearGradient>
   );

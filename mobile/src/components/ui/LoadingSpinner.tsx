@@ -28,7 +28,9 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
 
   if (overlay) {
     return (
-      <View style={[styles.overlay, { backgroundColor: theme.colors.background }]}>
+      <View
+        style={[styles.overlay, { backgroundColor: theme.colors.background }]}
+      >
         {content}
       </View>
     );

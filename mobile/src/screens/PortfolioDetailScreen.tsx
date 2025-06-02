@@ -20,7 +20,10 @@ import {
   useUpdatePortfolioItemMutation,
   useDeletePortfolioItemMutation,
 } from '../store/api/apiSlice';
-import { updatePortfolioItem, removeFromPortfolio } from '../store/slices/portfolioSlice';
+import {
+  updatePortfolioItem,
+  removeFromPortfolio,
+} from '../store/slices/portfolioSlice';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { ChangeIndicator } from '../components/ui/ChangeIndicator';
@@ -29,7 +32,10 @@ type RootStackParamList = {
   PortfolioDetail: { portfolioId: string };
 };
 
-type PortfolioDetailScreenRouteProp = RouteProp<RootStackParamList, 'PortfolioDetail'>;
+type PortfolioDetailScreenRouteProp = RouteProp<
+  RootStackParamList,
+  'PortfolioDetail'
+>;
 
 interface EditModalData {
   shares: string;
@@ -41,7 +47,7 @@ export const PortfolioDetailScreen: React.FC = () => {
   const dispatch = useAppDispatch();
   const { theme } = useTheme();
   const { portfolioId } = route.params;
-  
+
   const [refreshing, setRefreshing] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editModalData, setEditModalData] = useState<EditModalData>({
@@ -50,7 +56,7 @@ export const PortfolioDetailScreen: React.FC = () => {
   });
 
   const portfolioItems = useAppSelector((state) => state.portfolio.items);
-  const portfolioItem = portfolioItems.find(item => item.id === portfolioId);
+  const portfolioItem = portfolioItems.find((item) => item.id === portfolioId);
 
   const {
     data: portfolioData,
@@ -75,7 +81,7 @@ export const PortfolioDetailScreen: React.FC = () => {
 
   const handleEditPortfolio = () => {
     if (!portfolioItem) return;
-    
+
     setEditModalData({
       shares: portfolioItem.shares.toString(),
       averagePrice: portfolioItem.averagePrice.toString(),
@@ -112,15 +118,20 @@ export const PortfolioDetailScreen: React.FC = () => {
         data: updatedItem,
       }).unwrap();
 
-      dispatch(updatePortfolioItem({
-        id: portfolioId,
-        updates: updatedItem,
-      }));
+      dispatch(
+        updatePortfolioItem({
+          id: portfolioId,
+          updates: updatedItem,
+        })
+      );
 
       setEditModalVisible(false);
     } catch (error) {
       console.error('Error updating portfolio item:', error);
-      Alert.alert('Error', 'Failed to update portfolio item. Please try again.');
+      Alert.alert(
+        'Error',
+        'Failed to update portfolio item. Please try again.'
+      );
     }
   };
 
@@ -140,7 +151,10 @@ export const PortfolioDetailScreen: React.FC = () => {
               // Navigate back
             } catch (error) {
               console.error('Error deleting portfolio item:', error);
-              Alert.alert('Error', 'Failed to delete portfolio item. Please try again.');
+              Alert.alert(
+                'Error',
+                'Failed to delete portfolio item. Please try again.'
+              );
             }
           },
         },
@@ -155,7 +169,7 @@ export const PortfolioDetailScreen: React.FC = () => {
         style={styles.container}
       >
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <ActivityIndicator size='large' color={theme.colors.primary} />
           <Text style={[styles.loadingText, { color: theme.colors.text }]}>
             Loading portfolio details...
           </Text>
@@ -179,9 +193,13 @@ export const PortfolioDetailScreen: React.FC = () => {
     );
   }
 
-  const currentValue = portfolioItem.shares * (portfolioItem.currentPrice || portfolioItem.averagePrice);
-  const totalGainLoss = currentValue - (portfolioItem.shares * portfolioItem.averagePrice);
-  const gainLossPercent = (totalGainLoss / (portfolioItem.shares * portfolioItem.averagePrice)) * 100;
+  const currentValue =
+    portfolioItem.shares *
+    (portfolioItem.currentPrice || portfolioItem.averagePrice);
+  const totalGainLoss =
+    currentValue - portfolioItem.shares * portfolioItem.averagePrice;
+  const gainLossPercent =
+    (totalGainLoss / (portfolioItem.shares * portfolioItem.averagePrice)) * 100;
 
   return (
     <LinearGradient
@@ -201,13 +219,20 @@ export const PortfolioDetailScreen: React.FC = () => {
               <Text style={[styles.stockSymbol, { color: theme.colors.text }]}>
                 {portfolioItem.symbol}
               </Text>
-              <Text style={[styles.stockName, { color: theme.colors.textSecondary }]}>
+              <Text
+                style={[
+                  styles.stockName,
+                  { color: theme.colors.textSecondary },
+                ]}
+              >
                 {portfolioItem.name}
               </Text>
             </View>
             <View style={styles.priceInfo}>
               <Text style={[styles.currentPrice, { color: theme.colors.text }]}>
-                ${portfolioItem.currentPrice?.toFixed(2) || portfolioItem.averagePrice.toFixed(2)}
+                $
+                {portfolioItem.currentPrice?.toFixed(2) ||
+                  portfolioItem.averagePrice.toFixed(2)}
               </Text>
               {portfolioItem.change !== undefined && (
                 <ChangeIndicator
@@ -226,7 +251,12 @@ export const PortfolioDetailScreen: React.FC = () => {
           </Text>
           <View style={styles.summaryGrid}>
             <View style={styles.summaryItem}>
-              <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary }]}>
+              <Text
+                style={[
+                  styles.summaryLabel,
+                  { color: theme.colors.textSecondary },
+                ]}
+              >
                 Shares Owned
               </Text>
               <Text style={[styles.summaryValue, { color: theme.colors.text }]}>
@@ -234,7 +264,12 @@ export const PortfolioDetailScreen: React.FC = () => {
               </Text>
             </View>
             <View style={styles.summaryItem}>
-              <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary }]}>
+              <Text
+                style={[
+                  styles.summaryLabel,
+                  { color: theme.colors.textSecondary },
+                ]}
+              >
                 Average Price
               </Text>
               <Text style={[styles.summaryValue, { color: theme.colors.text }]}>
@@ -242,15 +277,26 @@ export const PortfolioDetailScreen: React.FC = () => {
               </Text>
             </View>
             <View style={styles.summaryItem}>
-              <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary }]}>
+              <Text
+                style={[
+                  styles.summaryLabel,
+                  { color: theme.colors.textSecondary },
+                ]}
+              >
                 Total Invested
               </Text>
               <Text style={[styles.summaryValue, { color: theme.colors.text }]}>
-                ${(portfolioItem.shares * portfolioItem.averagePrice).toFixed(2)}
+                $
+                {(portfolioItem.shares * portfolioItem.averagePrice).toFixed(2)}
               </Text>
             </View>
             <View style={styles.summaryItem}>
-              <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary }]}>
+              <Text
+                style={[
+                  styles.summaryLabel,
+                  { color: theme.colors.textSecondary },
+                ]}
+              >
                 Current Value
               </Text>
               <Text style={[styles.summaryValue, { color: theme.colors.text }]}>
@@ -267,14 +313,24 @@ export const PortfolioDetailScreen: React.FC = () => {
           </Text>
           <View style={styles.performanceContent}>
             <View style={styles.performanceItem}>
-              <Text style={[styles.performanceLabel, { color: theme.colors.textSecondary }]}>
+              <Text
+                style={[
+                  styles.performanceLabel,
+                  { color: theme.colors.textSecondary },
+                ]}
+              >
                 Total Gain/Loss
               </Text>
               <View style={styles.performanceValueContainer}>
                 <Text
                   style={[
                     styles.performanceValue,
-                    { color: totalGainLoss >= 0 ? theme.colors.success : theme.colors.error },
+                    {
+                      color:
+                        totalGainLoss >= 0
+                          ? theme.colors.success
+                          : theme.colors.error,
+                    },
                   ]}
                 >
                   ${totalGainLoss.toFixed(2)}
@@ -282,18 +338,31 @@ export const PortfolioDetailScreen: React.FC = () => {
                 <Text
                   style={[
                     styles.performancePercent,
-                    { color: totalGainLoss >= 0 ? theme.colors.success : theme.colors.error },
+                    {
+                      color:
+                        totalGainLoss >= 0
+                          ? theme.colors.success
+                          : theme.colors.error,
+                    },
                   ]}
                 >
-                  ({gainLossPercent >= 0 ? '+' : ''}{gainLossPercent.toFixed(2)}%)
+                  ({gainLossPercent >= 0 ? '+' : ''}
+                  {gainLossPercent.toFixed(2)}%)
                 </Text>
               </View>
             </View>
             <View style={styles.performanceItem}>
-              <Text style={[styles.performanceLabel, { color: theme.colors.textSecondary }]}>
+              <Text
+                style={[
+                  styles.performanceLabel,
+                  { color: theme.colors.textSecondary },
+                ]}
+              >
                 Purchase Date
               </Text>
-              <Text style={[styles.performanceValue, { color: theme.colors.text }]}>
+              <Text
+                style={[styles.performanceValue, { color: theme.colors.text }]}
+              >
                 {new Date(portfolioItem.purchaseDate).toLocaleDateString()}
               </Text>
             </View>
@@ -307,14 +376,20 @@ export const PortfolioDetailScreen: React.FC = () => {
           </Text>
           <View style={styles.actionButtons}>
             <Button
-              title="Edit Position"
+              title='Edit Position'
               onPress={handleEditPortfolio}
-              style={[styles.actionButton, { backgroundColor: theme.colors.primary }]}
+              style={[
+                styles.actionButton,
+                { backgroundColor: theme.colors.primary },
+              ]}
             />
             <Button
-              title="Delete Position"
+              title='Delete Position'
               onPress={handleDeletePortfolio}
-              style={[styles.actionButton, { backgroundColor: theme.colors.error }]}
+              style={[
+                styles.actionButton,
+                { backgroundColor: theme.colors.error },
+              ]}
             />
           </View>
         </Card>
@@ -324,17 +399,27 @@ export const PortfolioDetailScreen: React.FC = () => {
       <Modal
         visible={editModalVisible}
         transparent
-        animationType="slide"
+        animationType='slide'
         onRequestClose={() => setEditModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: theme.colors.card }]}>
+          <View
+            style={[
+              styles.modalContent,
+              { backgroundColor: theme.colors.card },
+            ]}
+          >
             <Text style={[styles.modalTitle, { color: theme.colors.text }]}>
               Edit Position
             </Text>
-            
+
             <View style={styles.inputContainer}>
-              <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>
+              <Text
+                style={[
+                  styles.inputLabel,
+                  { color: theme.colors.textSecondary },
+                ]}
+              >
                 Number of Shares
               </Text>
               <TextInput
@@ -348,16 +433,21 @@ export const PortfolioDetailScreen: React.FC = () => {
                 ]}
                 value={editModalData.shares}
                 onChangeText={(text) =>
-                  setEditModalData(prev => ({ ...prev, shares: text }))
+                  setEditModalData((prev) => ({ ...prev, shares: text }))
                 }
-                keyboardType="numeric"
-                placeholder="Enter number of shares"
+                keyboardType='numeric'
+                placeholder='Enter number of shares'
                 placeholderTextColor={theme.colors.textSecondary}
               />
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>
+              <Text
+                style={[
+                  styles.inputLabel,
+                  { color: theme.colors.textSecondary },
+                ]}
+              >
                 Average Price
               </Text>
               <TextInput
@@ -371,25 +461,31 @@ export const PortfolioDetailScreen: React.FC = () => {
                 ]}
                 value={editModalData.averagePrice}
                 onChangeText={(text) =>
-                  setEditModalData(prev => ({ ...prev, averagePrice: text }))
+                  setEditModalData((prev) => ({ ...prev, averagePrice: text }))
                 }
-                keyboardType="decimal-pad"
-                placeholder="Enter average price"
+                keyboardType='decimal-pad'
+                placeholder='Enter average price'
                 placeholderTextColor={theme.colors.textSecondary}
               />
             </View>
 
             <View style={styles.modalButtons}>
               <Button
-                title="Cancel"
+                title='Cancel'
                 onPress={() => setEditModalVisible(false)}
-                style={[styles.modalButton, { backgroundColor: theme.colors.surface }]}
+                style={[
+                  styles.modalButton,
+                  { backgroundColor: theme.colors.surface },
+                ]}
                 textStyle={{ color: theme.colors.text }}
               />
               <Button
-                title="Save"
+                title='Save'
                 onPress={handleSaveEdit}
-                style={[styles.modalButton, { backgroundColor: theme.colors.primary }]}
+                style={[
+                  styles.modalButton,
+                  { backgroundColor: theme.colors.primary },
+                ]}
               />
             </View>
           </View>

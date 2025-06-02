@@ -9,11 +9,11 @@ interface CardProps {
   elevated?: boolean;
 }
 
-const Card: React.FC<CardProps> = ({ 
-  children, 
-  style, 
-  padding = 16, 
-  elevated = true 
+const Card: React.FC<CardProps> = ({
+  children,
+  style,
+  padding = 16,
+  elevated = true,
 }) => {
   const { theme } = useTheme();
 

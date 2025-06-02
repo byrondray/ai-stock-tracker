@@ -27,18 +27,21 @@ type RootStackParamList = {
   WatchlistDetail: { watchlistId: string };
 };
 
-type WatchlistDetailScreenRouteProp = RouteProp<RootStackParamList, 'WatchlistDetail'>;
+type WatchlistDetailScreenRouteProp = RouteProp<
+  RootStackParamList,
+  'WatchlistDetail'
+>;
 
 export const WatchlistDetailScreen: React.FC = () => {
   const route = useRoute<WatchlistDetailScreenRouteProp>();
   const dispatch = useAppDispatch();
   const { theme } = useTheme();
   const { watchlistId } = route.params;
-  
+
   const [refreshing, setRefreshing] = useState(false);
 
   const watchlistItems = useAppSelector((state) => state.watchlist.items);
-  const watchlistItem = watchlistItems.find(item => item.id === watchlistId);
+  const watchlistItem = watchlistItems.find((item) => item.id === watchlistId);
 
   const {
     data: watchlistData,
@@ -76,7 +79,10 @@ export const WatchlistDetailScreen: React.FC = () => {
               // Navigate back
             } catch (error) {
               console.error('Error removing from watchlist:', error);
-              Alert.alert('Error', 'Failed to remove from watchlist. Please try again.');
+              Alert.alert(
+                'Error',
+                'Failed to remove from watchlist. Please try again.'
+              );
             }
           },
         },
@@ -97,15 +103,17 @@ export const WatchlistDetailScreen: React.FC = () => {
           onPress: (shares) => {
             const numShares = parseInt(shares || '0', 10);
             if (numShares > 0) {
-              dispatch(addToPortfolio({
-                id: Date.now().toString(),
-                symbol: watchlistItem.symbol,
-                name: watchlistItem.name,
-                shares: numShares,
-                averagePrice: watchlistItem.currentPrice,
-                totalValue: watchlistItem.currentPrice * numShares,
-                purchaseDate: new Date().toISOString(),
-              }));
+              dispatch(
+                addToPortfolio({
+                  id: Date.now().toString(),
+                  symbol: watchlistItem.symbol,
+                  name: watchlistItem.name,
+                  shares: numShares,
+                  averagePrice: watchlistItem.currentPrice,
+                  totalValue: watchlistItem.currentPrice * numShares,
+                  purchaseDate: new Date().toISOString(),
+                })
+              );
             }
           },
         },
@@ -128,7 +136,7 @@ export const WatchlistDetailScreen: React.FC = () => {
         style={styles.container}
       >
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <ActivityIndicator size='large' color={theme.colors.primary} />
           <Text style={[styles.loadingText, { color: theme.colors.text }]}>
             Loading watchlist details...
           </Text>
@@ -170,7 +178,12 @@ export const WatchlistDetailScreen: React.FC = () => {
               <Text style={[styles.stockSymbol, { color: theme.colors.text }]}>
                 {watchlistItem.symbol}
               </Text>
-              <Text style={[styles.stockName, { color: theme.colors.textSecondary }]}>
+              <Text
+                style={[
+                  styles.stockName,
+                  { color: theme.colors.textSecondary },
+                ]}
+              >
                 {watchlistItem.name}
               </Text>
             </View>
@@ -193,7 +206,12 @@ export const WatchlistDetailScreen: React.FC = () => {
           </Text>
           <View style={styles.infoContent}>
             <View style={styles.infoItem}>
-              <Text style={[styles.infoLabel, { color: theme.colors.textSecondary }]}>
+              <Text
+                style={[
+                  styles.infoLabel,
+                  { color: theme.colors.textSecondary },
+                ]}
+              >
                 Added to Watchlist
               </Text>
               <Text style={[styles.infoValue, { color: theme.colors.text }]}>
@@ -201,7 +219,12 @@ export const WatchlistDetailScreen: React.FC = () => {
               </Text>
             </View>
             <View style={styles.infoItem}>
-              <Text style={[styles.infoLabel, { color: theme.colors.textSecondary }]}>
+              <Text
+                style={[
+                  styles.infoLabel,
+                  { color: theme.colors.textSecondary },
+                ]}
+              >
                 Current Price
               </Text>
               <Text style={[styles.infoValue, { color: theme.colors.text }]}>
@@ -209,14 +232,24 @@ export const WatchlistDetailScreen: React.FC = () => {
               </Text>
             </View>
             <View style={styles.infoItem}>
-              <Text style={[styles.infoLabel, { color: theme.colors.textSecondary }]}>
+              <Text
+                style={[
+                  styles.infoLabel,
+                  { color: theme.colors.textSecondary },
+                ]}
+              >
                 Daily Change
               </Text>
               <View style={styles.changeContainer}>
                 <Text
                   style={[
                     styles.changeValue,
-                    { color: watchlistItem.change >= 0 ? theme.colors.success : theme.colors.error },
+                    {
+                      color:
+                        watchlistItem.change >= 0
+                          ? theme.colors.success
+                          : theme.colors.error,
+                    },
                   ]}
                 >
                   ${watchlistItem.change.toFixed(2)}
@@ -224,10 +257,16 @@ export const WatchlistDetailScreen: React.FC = () => {
                 <Text
                   style={[
                     styles.changePercent,
-                    { color: watchlistItem.change >= 0 ? theme.colors.success : theme.colors.error },
+                    {
+                      color:
+                        watchlistItem.change >= 0
+                          ? theme.colors.success
+                          : theme.colors.error,
+                    },
                   ]}
                 >
-                  ({watchlistItem.changePercent >= 0 ? '+' : ''}{watchlistItem.changePercent.toFixed(2)}%)
+                  ({watchlistItem.changePercent >= 0 ? '+' : ''}
+                  {watchlistItem.changePercent.toFixed(2)}%)
                 </Text>
               </View>
             </View>
@@ -241,7 +280,12 @@ export const WatchlistDetailScreen: React.FC = () => {
           </Text>
           <View style={styles.statsGrid}>
             <View style={styles.statItem}>
-              <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>
+              <Text
+                style={[
+                  styles.statLabel,
+                  { color: theme.colors.textSecondary },
+                ]}
+              >
                 Symbol
               </Text>
               <Text style={[styles.statValue, { color: theme.colors.text }]}>
@@ -249,7 +293,12 @@ export const WatchlistDetailScreen: React.FC = () => {
               </Text>
             </View>
             <View style={styles.statItem}>
-              <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>
+              <Text
+                style={[
+                  styles.statLabel,
+                  { color: theme.colors.textSecondary },
+                ]}
+              >
                 Price
               </Text>
               <Text style={[styles.statValue, { color: theme.colors.text }]}>
@@ -257,29 +306,50 @@ export const WatchlistDetailScreen: React.FC = () => {
               </Text>
             </View>
             <View style={styles.statItem}>
-              <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>
+              <Text
+                style={[
+                  styles.statLabel,
+                  { color: theme.colors.textSecondary },
+                ]}
+              >
                 Change
               </Text>
               <Text
                 style={[
                   styles.statValue,
-                  { color: watchlistItem.change >= 0 ? theme.colors.success : theme.colors.error },
+                  {
+                    color:
+                      watchlistItem.change >= 0
+                        ? theme.colors.success
+                        : theme.colors.error,
+                  },
                 ]}
               >
                 ${watchlistItem.change.toFixed(2)}
               </Text>
             </View>
             <View style={styles.statItem}>
-              <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>
+              <Text
+                style={[
+                  styles.statLabel,
+                  { color: theme.colors.textSecondary },
+                ]}
+              >
                 Change %
               </Text>
               <Text
                 style={[
                   styles.statValue,
-                  { color: watchlistItem.change >= 0 ? theme.colors.success : theme.colors.error },
+                  {
+                    color:
+                      watchlistItem.change >= 0
+                        ? theme.colors.success
+                        : theme.colors.error,
+                  },
                 ]}
               >
-                {watchlistItem.changePercent >= 0 ? '+' : ''}{watchlistItem.changePercent.toFixed(2)}%
+                {watchlistItem.changePercent >= 0 ? '+' : ''}
+                {watchlistItem.changePercent.toFixed(2)}%
               </Text>
             </View>
           </View>
@@ -292,18 +362,24 @@ export const WatchlistDetailScreen: React.FC = () => {
           </Text>
           <View style={styles.actionButtons}>
             <Button
-              title="View Details"
+              title='View Details'
               onPress={handleViewStockDetail}
-              style={[styles.actionButton, { backgroundColor: theme.colors.primary }]}
+              style={[
+                styles.actionButton,
+                { backgroundColor: theme.colors.primary },
+              ]}
             />
             <Button
-              title="Add to Portfolio"
+              title='Add to Portfolio'
               onPress={handleAddToPortfolio}
-              style={[styles.actionButton, { backgroundColor: theme.colors.success }]}
+              style={[
+                styles.actionButton,
+                { backgroundColor: theme.colors.success },
+              ]}
             />
           </View>
           <Button
-            title="Remove from Watchlist"
+            title='Remove from Watchlist'
             onPress={handleRemoveFromWatchlist}
             style={[
               styles.actionButton,
@@ -318,13 +394,27 @@ export const WatchlistDetailScreen: React.FC = () => {
           <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
             Price Alerts
           </Text>
-          <Text style={[styles.comingSoonText, { color: theme.colors.textSecondary }]}>
-            Set price alerts to get notified when {watchlistItem.symbol} reaches your target price.
+          <Text
+            style={[
+              styles.comingSoonText,
+              { color: theme.colors.textSecondary },
+            ]}
+          >
+            Set price alerts to get notified when {watchlistItem.symbol} reaches
+            your target price.
           </Text>
           <Button
-            title="Set Price Alert"
-            onPress={() => Alert.alert('Coming Soon', 'Price alerts feature will be available in a future update.')}
-            style={[styles.actionButton, { backgroundColor: theme.colors.surface, marginTop: 12 }]}
+            title='Set Price Alert'
+            onPress={() =>
+              Alert.alert(
+                'Coming Soon',
+                'Price alerts feature will be available in a future update.'
+              )
+            }
+            style={[
+              styles.actionButton,
+              { backgroundColor: theme.colors.surface, marginTop: 12 },
+            ]}
             textStyle={{ color: theme.colors.text }}
           />
         </Card>

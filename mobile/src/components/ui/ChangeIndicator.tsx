@@ -45,13 +45,7 @@ const ChangeIndicator: React.FC<ChangeIndicatorProps> = ({
   };
 
   return (
-    <Text
-      style={[
-        styles.text,
-        { color: getColor() },
-        style,
-      ]}
-    >
+    <Text style={[styles.text, { color: getColor() }, style]}>
       {formatValue()}
     </Text>
   );

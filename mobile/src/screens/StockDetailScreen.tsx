@@ -14,13 +14,16 @@ import { RouteProp, useRoute, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAppSelector, useAppDispatch } from '../hooks/redux';
 import { useTheme } from '../hooks/useTheme';
-import { 
+import {
   useGetStockDetailsQuery,
   useGetStockPriceHistoryQuery,
   useGetStockAnalysisQuery,
   useGetStockPredictionQuery,
 } from '../store/api/apiSlice';
-import { addToWatchlist, removeFromWatchlist } from '../store/slices/watchlistSlice';
+import {
+  addToWatchlist,
+  removeFromWatchlist,
+} from '../store/slices/watchlistSlice';
 import { addToPortfolio } from '../store/slices/portfolioSlice';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -31,7 +34,8 @@ type RootStackParamList = {
 };
 
 type StockDetailScreenRouteProp = RouteProp<RootStackParamList, 'StockDetail'>;
-type StockDetailScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
+type StockDetailScreenNavigationProp =
+  NativeStackNavigationProp<RootStackParamList>;
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -41,13 +45,15 @@ export const StockDetailScreen: React.FC = () => {
   const dispatch = useAppDispatch();
   const { theme } = useTheme();
   const { symbol } = route.params;
-  
+
   const [chartType, setChartType] = useState<'line' | 'candlestick'>('line');
-  const [timeframe, setTimeframe] = useState<'1D' | '1W' | '1M' | '3M' | '1Y'>('1M');
+  const [timeframe, setTimeframe] = useState<'1D' | '1W' | '1M' | '3M' | '1Y'>(
+    '1M'
+  );
   const [refreshing, setRefreshing] = useState(false);
 
   const watchlist = useAppSelector((state) => state.watchlist.items);
-  const isInWatchlist = watchlist.some(item => item.symbol === symbol);
+  const isInWatchlist = watchlist.some((item) => item.symbol === symbol);
 
   const {
     data: stockDetails,
@@ -97,15 +103,17 @@ export const StockDetailScreen: React.FC = () => {
     if (isInWatchlist) {
       dispatch(removeFromWatchlist(symbol));
     } else {
-      dispatch(addToWatchlist({
-        id: Date.now().toString(),
-        symbol,
-        name: stockDetails?.name || symbol,
-        currentPrice: stockDetails?.currentPrice || 0,
-        change: stockDetails?.change || 0,
-        changePercent: stockDetails?.changePercent || 0,
-        addedAt: new Date().toISOString(),
-      }));
+      dispatch(
+        addToWatchlist({
+          id: Date.now().toString(),
+          symbol,
+          name: stockDetails?.name || symbol,
+          currentPrice: stockDetails?.currentPrice || 0,
+          change: stockDetails?.change || 0,
+          changePercent: stockDetails?.changePercent || 0,
+          addedAt: new Date().toISOString(),
+        })
+      );
     }
   };
 
@@ -120,15 +128,17 @@ export const StockDetailScreen: React.FC = () => {
           onPress: (shares) => {
             const numShares = parseInt(shares || '0', 10);
             if (numShares > 0 && stockDetails) {
-              dispatch(addToPortfolio({
-                id: Date.now().toString(),
-                symbol,
-                name: stockDetails.name,
-                shares: numShares,
-                averagePrice: stockDetails.currentPrice,
-                totalValue: stockDetails.currentPrice * numShares,
-                purchaseDate: new Date().toISOString(),
-              }));
+              dispatch(
+                addToPortfolio({
+                  id: Date.now().toString(),
+                  symbol,
+                  name: stockDetails.name,
+                  shares: numShares,
+                  averagePrice: stockDetails.currentPrice,
+                  totalValue: stockDetails.currentPrice * numShares,
+                  purchaseDate: new Date().toISOString(),
+                })
+              );
             }
           },
         },
@@ -142,19 +152,27 @@ export const StockDetailScreen: React.FC = () => {
   const renderChart = () => {
     if (historyLoading || !priceHistory || priceHistory.length === 0) {
       return (
-        <View style={[styles.chartContainer, { backgroundColor: theme.colors.card }]}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
+        <View
+          style={[
+            styles.chartContainer,
+            { backgroundColor: theme.colors.card },
+          ]}
+        >
+          <ActivityIndicator size='large' color={theme.colors.primary} />
         </View>
       );
     }
 
     const chartData = {
-      labels: priceHistory.map(item => 
-        new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      labels: priceHistory.map((item) =>
+        new Date(item.date).toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+        })
       ),
       datasets: [
         {
-          data: priceHistory.map(item => item.close),
+          data: priceHistory.map((item) => item.close),
           color: () => theme.colors.primary,
           strokeWidth: 2,
         },
@@ -179,7 +197,12 @@ export const StockDetailScreen: React.FC = () => {
                 ]}
                 textStyle={[
                   styles.timeframeButtonText,
-                  { color: timeframe === tf ? theme.colors.background : theme.colors.text },
+                  {
+                    color:
+                      timeframe === tf
+                        ? theme.colors.background
+                        : theme.colors.text,
+                  },
                 ]}
               />
             ))}
@@ -194,7 +217,8 @@ export const StockDetailScreen: React.FC = () => {
             backgroundGradientFrom: theme.colors.card,
             backgroundGradientTo: theme.colors.card,
             decimalPlaces: 2,
-            color: (opacity = 1) => `rgba(${theme.colors.primary.replace('#', '')}, ${opacity})`,
+            color: (opacity = 1) =>
+              `rgba(${theme.colors.primary.replace('#', '')}, ${opacity})`,
             labelColor: () => theme.colors.text,
             style: {
               borderRadius: 16,
@@ -212,7 +236,7 @@ export const StockDetailScreen: React.FC = () => {
 
   const renderAnalysis = () => {
     if (analysisLoading) {
-      return <ActivityIndicator size="small" color={theme.colors.primary} />;
+      return <ActivityIndicator size='small' color={theme.colors.primary} />;
     }
 
     if (!analysis) return null;
@@ -224,7 +248,9 @@ export const StockDetailScreen: React.FC = () => {
         </Text>
         <View style={styles.analysisScores}>
           <View style={styles.scoreItem}>
-            <Text style={[styles.scoreLabel, { color: theme.colors.textSecondary }]}>
+            <Text
+              style={[styles.scoreLabel, { color: theme.colors.textSecondary }]}
+            >
               Technical Score
             </Text>
             <Text style={[styles.scoreValue, { color: theme.colors.primary }]}>
@@ -232,7 +258,9 @@ export const StockDetailScreen: React.FC = () => {
             </Text>
           </View>
           <View style={styles.scoreItem}>
-            <Text style={[styles.scoreLabel, { color: theme.colors.textSecondary }]}>
+            <Text
+              style={[styles.scoreLabel, { color: theme.colors.textSecondary }]}
+            >
               Fundamental Score
             </Text>
             <Text style={[styles.scoreValue, { color: theme.colors.primary }]}>
@@ -240,7 +268,9 @@ export const StockDetailScreen: React.FC = () => {
             </Text>
           </View>
           <View style={styles.scoreItem}>
-            <Text style={[styles.scoreLabel, { color: theme.colors.textSecondary }]}>
+            <Text
+              style={[styles.scoreLabel, { color: theme.colors.textSecondary }]}
+            >
               Sentiment Score
             </Text>
             <Text style={[styles.scoreValue, { color: theme.colors.primary }]}>
@@ -251,7 +281,9 @@ export const StockDetailScreen: React.FC = () => {
         <Text style={[styles.recommendation, { color: theme.colors.text }]}>
           Recommendation: {analysis.recommendation}
         </Text>
-        <Text style={[styles.analysisText, { color: theme.colors.textSecondary }]}>
+        <Text
+          style={[styles.analysisText, { color: theme.colors.textSecondary }]}
+        >
           {analysis.summary}
         </Text>
       </Card>
@@ -260,7 +292,7 @@ export const StockDetailScreen: React.FC = () => {
 
   const renderPrediction = () => {
     if (predictionLoading) {
-      return <ActivityIndicator size="small" color={theme.colors.primary} />;
+      return <ActivityIndicator size='small' color={theme.colors.primary} />;
     }
 
     if (!prediction) return null;
@@ -272,10 +304,17 @@ export const StockDetailScreen: React.FC = () => {
         </Text>
         <View style={styles.predictionValues}>
           <View style={styles.predictionItem}>
-            <Text style={[styles.predictionLabel, { color: theme.colors.textSecondary }]}>
+            <Text
+              style={[
+                styles.predictionLabel,
+                { color: theme.colors.textSecondary },
+              ]}
+            >
               1 Week
             </Text>
-            <Text style={[styles.predictionPrice, { color: theme.colors.text }]}>
+            <Text
+              style={[styles.predictionPrice, { color: theme.colors.text }]}
+            >
               ${prediction.oneWeek.toFixed(2)}
             </Text>
             <ChangeIndicator
@@ -284,10 +323,17 @@ export const StockDetailScreen: React.FC = () => {
             />
           </View>
           <View style={styles.predictionItem}>
-            <Text style={[styles.predictionLabel, { color: theme.colors.textSecondary }]}>
+            <Text
+              style={[
+                styles.predictionLabel,
+                { color: theme.colors.textSecondary },
+              ]}
+            >
               1 Month
             </Text>
-            <Text style={[styles.predictionPrice, { color: theme.colors.text }]}>
+            <Text
+              style={[styles.predictionPrice, { color: theme.colors.text }]}
+            >
               ${prediction.oneMonth.toFixed(2)}
             </Text>
             <ChangeIndicator
@@ -296,10 +342,17 @@ export const StockDetailScreen: React.FC = () => {
             />
           </View>
           <View style={styles.predictionItem}>
-            <Text style={[styles.predictionLabel, { color: theme.colors.textSecondary }]}>
+            <Text
+              style={[
+                styles.predictionLabel,
+                { color: theme.colors.textSecondary },
+              ]}
+            >
               3 Months
             </Text>
-            <Text style={[styles.predictionPrice, { color: theme.colors.text }]}>
+            <Text
+              style={[styles.predictionPrice, { color: theme.colors.text }]}
+            >
               ${prediction.threeMonths.toFixed(2)}
             </Text>
             <ChangeIndicator
@@ -308,7 +361,9 @@ export const StockDetailScreen: React.FC = () => {
             />
           </View>
         </View>
-        <Text style={[styles.confidenceText, { color: theme.colors.textSecondary }]}>
+        <Text
+          style={[styles.confidenceText, { color: theme.colors.textSecondary }]}
+        >
           Confidence: {(prediction.confidence * 100).toFixed(1)}%
         </Text>
       </Card>
@@ -322,7 +377,7 @@ export const StockDetailScreen: React.FC = () => {
         style={styles.container}
       >
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <ActivityIndicator size='large' color={theme.colors.primary} />
           <Text style={[styles.loadingText, { color: theme.colors.text }]}>
             Loading stock details...
           </Text>
@@ -346,15 +401,24 @@ export const StockDetailScreen: React.FC = () => {
           <Card style={styles.headerCard}>
             <View style={styles.stockHeader}>
               <View style={styles.stockInfo}>
-                <Text style={[styles.stockSymbol, { color: theme.colors.text }]}>
+                <Text
+                  style={[styles.stockSymbol, { color: theme.colors.text }]}
+                >
                   {stockDetails.symbol}
                 </Text>
-                <Text style={[styles.stockName, { color: theme.colors.textSecondary }]}>
+                <Text
+                  style={[
+                    styles.stockName,
+                    { color: theme.colors.textSecondary },
+                  ]}
+                >
                   {stockDetails.name}
                 </Text>
               </View>
               <View style={styles.priceInfo}>
-                <Text style={[styles.currentPrice, { color: theme.colors.text }]}>
+                <Text
+                  style={[styles.currentPrice, { color: theme.colors.text }]}
+                >
                   ${stockDetails.currentPrice.toFixed(2)}
                 </Text>
                 <ChangeIndicator
@@ -365,17 +429,26 @@ export const StockDetailScreen: React.FC = () => {
             </View>
             <View style={styles.actionButtons}>
               <Button
-                title={isInWatchlist ? 'Remove from Watchlist' : 'Add to Watchlist'}
+                title={
+                  isInWatchlist ? 'Remove from Watchlist' : 'Add to Watchlist'
+                }
                 onPress={handleToggleWatchlist}
                 style={[
                   styles.actionButton,
-                  { backgroundColor: isInWatchlist ? theme.colors.error : theme.colors.primary },
+                  {
+                    backgroundColor: isInWatchlist
+                      ? theme.colors.error
+                      : theme.colors.primary,
+                  },
                 ]}
               />
               <Button
-                title="Add to Portfolio"
+                title='Add to Portfolio'
                 onPress={handleAddToPortfolio}
-                style={[styles.actionButton, { backgroundColor: theme.colors.success }]}
+                style={[
+                  styles.actionButton,
+                  { backgroundColor: theme.colors.success },
+                ]}
               />
             </View>
           </Card>
@@ -392,7 +465,12 @@ export const StockDetailScreen: React.FC = () => {
             </Text>
             <View style={styles.statsGrid}>
               <View style={styles.statItem}>
-                <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>
+                <Text
+                  style={[
+                    styles.statLabel,
+                    { color: theme.colors.textSecondary },
+                  ]}
+                >
                   Market Cap
                 </Text>
                 <Text style={[styles.statValue, { color: theme.colors.text }]}>
@@ -400,7 +478,12 @@ export const StockDetailScreen: React.FC = () => {
                 </Text>
               </View>
               <View style={styles.statItem}>
-                <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>
+                <Text
+                  style={[
+                    styles.statLabel,
+                    { color: theme.colors.textSecondary },
+                  ]}
+                >
                   P/E Ratio
                 </Text>
                 <Text style={[styles.statValue, { color: theme.colors.text }]}>
@@ -408,7 +491,12 @@ export const StockDetailScreen: React.FC = () => {
                 </Text>
               </View>
               <View style={styles.statItem}>
-                <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>
+                <Text
+                  style={[
+                    styles.statLabel,
+                    { color: theme.colors.textSecondary },
+                  ]}
+                >
                   52W High
                 </Text>
                 <Text style={[styles.statValue, { color: theme.colors.text }]}>
@@ -416,7 +504,12 @@ export const StockDetailScreen: React.FC = () => {
                 </Text>
               </View>
               <View style={styles.statItem}>
-                <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>
+                <Text
+                  style={[
+                    styles.statLabel,
+                    { color: theme.colors.textSecondary },
+                  ]}
+                >
                   52W Low
                 </Text>
                 <Text style={[styles.statValue, { color: theme.colors.text }]}>
@@ -424,7 +517,12 @@ export const StockDetailScreen: React.FC = () => {
                 </Text>
               </View>
               <View style={styles.statItem}>
-                <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>
+                <Text
+                  style={[
+                    styles.statLabel,
+                    { color: theme.colors.textSecondary },
+                  ]}
+                >
                   Volume
                 </Text>
                 <Text style={[styles.statValue, { color: theme.colors.text }]}>
@@ -432,7 +530,12 @@ export const StockDetailScreen: React.FC = () => {
                 </Text>
               </View>
               <View style={styles.statItem}>
-                <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>
+                <Text
+                  style={[
+                    styles.statLabel,
+                    { color: theme.colors.textSecondary },
+                  ]}
+                >
                   Avg Volume
                 </Text>
                 <Text style={[styles.statValue, { color: theme.colors.text }]}>

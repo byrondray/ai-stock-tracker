@@ -34,8 +34,9 @@ export const SettingsScreen: React.FC = () => {
   const dispatch = useAppDispatch();
   const { theme, isDarkMode } = useTheme();
   const { user } = useAppSelector((state) => state.auth);
-  
-  const [changePasswordModalVisible, setChangePasswordModalVisible] = useState(false);
+
+  const [changePasswordModalVisible, setChangePasswordModalVisible] =
+    useState(false);
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
     newPassword: '',
@@ -43,18 +44,14 @@ export const SettingsScreen: React.FC = () => {
   });
 
   const handleLogout = () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Logout',
-          style: 'destructive',
-          onPress: () => dispatch(logout()),
-        },
-      ]
-    );
+    Alert.alert('Logout', 'Are you sure you want to logout?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Logout',
+        style: 'destructive',
+        onPress: () => dispatch(logout()),
+      },
+    ]);
   };
 
   const handleChangePassword = () => {
@@ -62,7 +59,11 @@ export const SettingsScreen: React.FC = () => {
   };
 
   const handleSavePassword = () => {
-    if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
+    if (
+      !passwordData.currentPassword ||
+      !passwordData.newPassword ||
+      !passwordData.confirmPassword
+    ) {
       Alert.alert('Error', 'Please fill in all fields.');
       return;
     }
@@ -98,7 +99,10 @@ export const SettingsScreen: React.FC = () => {
           style: 'destructive',
           onPress: () => {
             // TODO: Implement account deletion API call
-            Alert.alert('Account Deleted', 'Your account has been deleted successfully.');
+            Alert.alert(
+              'Account Deleted',
+              'Your account has been deleted successfully.'
+            );
           },
         },
       ]
@@ -115,7 +119,10 @@ export const SettingsScreen: React.FC = () => {
           text: 'Export',
           onPress: () => {
             // TODO: Implement data export functionality
-            Alert.alert('Export Started', 'Your data export has started. You will be notified when it\'s ready.');
+            Alert.alert(
+              'Export Started',
+              "Your data export has started. You will be notified when it's ready."
+            );
           },
         },
       ]
@@ -163,7 +170,10 @@ export const SettingsScreen: React.FC = () => {
           value: true,
           onToggle: (value) => {
             // TODO: Implement push notification toggle
-            Alert.alert('Coming Soon', 'Notification settings will be available in a future update.');
+            Alert.alert(
+              'Coming Soon',
+              'Notification settings will be available in a future update.'
+            );
           },
         },
         {
@@ -172,7 +182,10 @@ export const SettingsScreen: React.FC = () => {
           value: true,
           onToggle: (value) => {
             // TODO: Implement price alerts toggle
-            Alert.alert('Coming Soon', 'Price alerts will be available in a future update.');
+            Alert.alert(
+              'Coming Soon',
+              'Price alerts will be available in a future update.'
+            );
           },
         },
         {
@@ -181,7 +194,10 @@ export const SettingsScreen: React.FC = () => {
           value: true,
           onToggle: (value) => {
             // TODO: Implement portfolio updates toggle
-            Alert.alert('Coming Soon', 'Portfolio update notifications will be available in a future update.');
+            Alert.alert(
+              'Coming Soon',
+              'Portfolio update notifications will be available in a future update.'
+            );
           },
         },
       ],
@@ -195,7 +211,10 @@ export const SettingsScreen: React.FC = () => {
           value: false,
           onToggle: (value) => {
             // TODO: Implement biometric authentication
-            Alert.alert('Coming Soon', 'Biometric authentication will be available in a future update.');
+            Alert.alert(
+              'Coming Soon',
+              'Biometric authentication will be available in a future update.'
+            );
           },
         },
         {
@@ -204,7 +223,10 @@ export const SettingsScreen: React.FC = () => {
           value: false,
           onToggle: (value) => {
             // TODO: Implement data sharing toggle
-            Alert.alert('Coming Soon', 'Data sharing settings will be available in a future update.');
+            Alert.alert(
+              'Coming Soon',
+              'Data sharing settings will be available in a future update.'
+            );
           },
         },
       ],
@@ -215,17 +237,29 @@ export const SettingsScreen: React.FC = () => {
         {
           title: 'Help Center',
           type: 'button',
-          onPress: () => Alert.alert('Coming Soon', 'Help center will be available in a future update.'),
+          onPress: () =>
+            Alert.alert(
+              'Coming Soon',
+              'Help center will be available in a future update.'
+            ),
         },
         {
           title: 'Contact Support',
           type: 'button',
-          onPress: () => Alert.alert('Coming Soon', 'Contact support will be available in a future update.'),
+          onPress: () =>
+            Alert.alert(
+              'Coming Soon',
+              'Contact support will be available in a future update.'
+            ),
         },
         {
           title: 'Rate App',
           type: 'button',
-          onPress: () => Alert.alert('Coming Soon', 'App rating will be available in a future update.'),
+          onPress: () =>
+            Alert.alert(
+              'Coming Soon',
+              'App rating will be available in a future update.'
+            ),
         },
       ],
     },
@@ -246,7 +280,9 @@ export const SettingsScreen: React.FC = () => {
       case 'switch':
         return (
           <View style={styles.settingsItem}>
-            <Text style={[styles.settingsItemTitle, { color: theme.colors.text }]}>
+            <Text
+              style={[styles.settingsItemTitle, { color: theme.colors.text }]}
+            >
               {item.title}
             </Text>
             <Switch
@@ -268,13 +304,20 @@ export const SettingsScreen: React.FC = () => {
               onPress={item.onPress}
               style={[
                 styles.settingsButton,
-                sectionTitle === 'Danger Zone' && { backgroundColor: theme.colors.error },
-                sectionTitle !== 'Danger Zone' && { backgroundColor: theme.colors.surface },
+                sectionTitle === 'Danger Zone' && {
+                  backgroundColor: theme.colors.error,
+                },
+                sectionTitle !== 'Danger Zone' && {
+                  backgroundColor: theme.colors.surface,
+                },
               ]}
               textStyle={[
                 styles.settingsButtonText,
                 {
-                  color: sectionTitle === 'Danger Zone' ? theme.colors.background : theme.colors.text,
+                  color:
+                    sectionTitle === 'Danger Zone'
+                      ? theme.colors.background
+                      : theme.colors.text,
                 },
               ]}
             />
@@ -283,10 +326,17 @@ export const SettingsScreen: React.FC = () => {
       case 'info':
         return (
           <View style={styles.settingsItem}>
-            <Text style={[styles.settingsItemTitle, { color: theme.colors.text }]}>
+            <Text
+              style={[styles.settingsItemTitle, { color: theme.colors.text }]}
+            >
               {item.title}
             </Text>
-            <Text style={[styles.settingsItemValue, { color: theme.colors.textSecondary }]}>
+            <Text
+              style={[
+                styles.settingsItemValue,
+                { color: theme.colors.textSecondary },
+              ]}
+            >
               {item.value as string}
             </Text>
           </View>
@@ -305,8 +355,18 @@ export const SettingsScreen: React.FC = () => {
         {/* User Info Card */}
         <Card style={styles.userCard}>
           <View style={styles.userInfo}>
-            <View style={[styles.userAvatar, { backgroundColor: theme.colors.primary }]}>
-              <Text style={[styles.userAvatarText, { color: theme.colors.background }]}>
+            <View
+              style={[
+                styles.userAvatar,
+                { backgroundColor: theme.colors.primary },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.userAvatarText,
+                  { color: theme.colors.background },
+                ]}
+              >
                 {user?.email?.charAt(0).toUpperCase() || 'U'}
               </Text>
             </View>
@@ -314,7 +374,12 @@ export const SettingsScreen: React.FC = () => {
               <Text style={[styles.userName, { color: theme.colors.text }]}>
                 {user?.email || 'User'}
               </Text>
-              <Text style={[styles.userStatus, { color: theme.colors.textSecondary }]}>
+              <Text
+                style={[
+                  styles.userStatus,
+                  { color: theme.colors.textSecondary },
+                ]}
+              >
                 Active Member
               </Text>
             </View>
@@ -331,7 +396,12 @@ export const SettingsScreen: React.FC = () => {
               <View key={index}>
                 {renderSettingsItem(item, section.title)}
                 {index < section.items.length - 1 && (
-                  <View style={[styles.separator, { backgroundColor: theme.colors.border }]} />
+                  <View
+                    style={[
+                      styles.separator,
+                      { backgroundColor: theme.colors.border },
+                    ]}
+                  />
                 )}
               </View>
             ))}
@@ -341,9 +411,12 @@ export const SettingsScreen: React.FC = () => {
         {/* Logout Button */}
         <Card style={styles.logoutCard}>
           <Button
-            title="Logout"
+            title='Logout'
             onPress={handleLogout}
-            style={[styles.logoutButton, { backgroundColor: theme.colors.error }]}
+            style={[
+              styles.logoutButton,
+              { backgroundColor: theme.colors.error },
+            ]}
             textStyle={{ color: theme.colors.background }}
           />
         </Card>
@@ -353,17 +426,27 @@ export const SettingsScreen: React.FC = () => {
       <Modal
         visible={changePasswordModalVisible}
         transparent
-        animationType="slide"
+        animationType='slide'
         onRequestClose={() => setChangePasswordModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: theme.colors.card }]}>
+          <View
+            style={[
+              styles.modalContent,
+              { backgroundColor: theme.colors.card },
+            ]}
+          >
             <Text style={[styles.modalTitle, { color: theme.colors.text }]}>
               Change Password
             </Text>
-            
+
             <View style={styles.inputContainer}>
-              <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>
+              <Text
+                style={[
+                  styles.inputLabel,
+                  { color: theme.colors.textSecondary },
+                ]}
+              >
                 Current Password
               </Text>
               <TextInput
@@ -377,16 +460,24 @@ export const SettingsScreen: React.FC = () => {
                 ]}
                 value={passwordData.currentPassword}
                 onChangeText={(text) =>
-                  setPasswordData(prev => ({ ...prev, currentPassword: text }))
+                  setPasswordData((prev) => ({
+                    ...prev,
+                    currentPassword: text,
+                  }))
                 }
                 secureTextEntry
-                placeholder="Enter current password"
+                placeholder='Enter current password'
                 placeholderTextColor={theme.colors.textSecondary}
               />
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>
+              <Text
+                style={[
+                  styles.inputLabel,
+                  { color: theme.colors.textSecondary },
+                ]}
+              >
                 New Password
               </Text>
               <TextInput
@@ -400,16 +491,21 @@ export const SettingsScreen: React.FC = () => {
                 ]}
                 value={passwordData.newPassword}
                 onChangeText={(text) =>
-                  setPasswordData(prev => ({ ...prev, newPassword: text }))
+                  setPasswordData((prev) => ({ ...prev, newPassword: text }))
                 }
                 secureTextEntry
-                placeholder="Enter new password"
+                placeholder='Enter new password'
                 placeholderTextColor={theme.colors.textSecondary}
               />
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={[styles.inputLabel, { color: theme.colors.textSecondary }]}>
+              <Text
+                style={[
+                  styles.inputLabel,
+                  { color: theme.colors.textSecondary },
+                ]}
+              >
                 Confirm New Password
               </Text>
               <TextInput
@@ -423,25 +519,34 @@ export const SettingsScreen: React.FC = () => {
                 ]}
                 value={passwordData.confirmPassword}
                 onChangeText={(text) =>
-                  setPasswordData(prev => ({ ...prev, confirmPassword: text }))
+                  setPasswordData((prev) => ({
+                    ...prev,
+                    confirmPassword: text,
+                  }))
                 }
                 secureTextEntry
-                placeholder="Confirm new password"
+                placeholder='Confirm new password'
                 placeholderTextColor={theme.colors.textSecondary}
               />
             </View>
 
             <View style={styles.modalButtons}>
               <Button
-                title="Cancel"
+                title='Cancel'
                 onPress={() => setChangePasswordModalVisible(false)}
-                style={[styles.modalButton, { backgroundColor: theme.colors.surface }]}
+                style={[
+                  styles.modalButton,
+                  { backgroundColor: theme.colors.surface },
+                ]}
                 textStyle={{ color: theme.colors.text }}
               />
               <Button
-                title="Save"
+                title='Save'
                 onPress={handleSavePassword}
-                style={[styles.modalButton, { backgroundColor: theme.colors.primary }]}
+                style={[
+                  styles.modalButton,
+                  { backgroundColor: theme.colors.primary },
+                ]}
               />
             </View>
           </View>
