@@ -9,6 +9,7 @@ import type { Watchlist } from '../api/apiSlice';
 
 interface WatchlistState {
   watchlists: Watchlist[];
+  items: any[]; // Watchlist items for backward compatibility
   selectedWatchlistId: number | null;
   isLoading: boolean;
   error: string | null;
@@ -16,6 +17,7 @@ interface WatchlistState {
 
 const initialState: WatchlistState = {
   watchlists: [],
+  items: [], // Backward compatibility
   selectedWatchlistId: null,
   isLoading: false,
   error: null,
@@ -67,9 +69,15 @@ export const watchlistSlice = createSlice({
     setError: (state, action: PayloadAction<string | null>) => {
       state.error = action.payload;
       state.isLoading = false;
-    },
-    clearError: (state) => {
+    },    clearError: (state) => {
       state.error = null;
+    },
+    // Individual stock actions for backward compatibility
+    addToWatchlist: (state, action: PayloadAction<any>) => {
+      state.items.push(action.payload);
+    },
+    removeFromWatchlist: (state, action: PayloadAction<string>) => {
+      state.items = state.items.filter(item => item.symbol !== action.payload);
     },
   },
 });
@@ -83,6 +91,8 @@ export const {
   setLoading,
   setError,
   clearError,
+  addToWatchlist,
+  removeFromWatchlist,
 } = watchlistSlice.actions;
 
 export default watchlistSlice.reducer;

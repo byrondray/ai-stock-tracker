@@ -28,6 +28,7 @@ import { addToPortfolio } from '../store/slices/portfolioSlice';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { ChangeIndicator } from '../components/ui/ChangeIndicator';
+import LineChart from '../components/charts/LineChart';
 
 type RootStackParamList = {
   StockDetail: { symbol: string };

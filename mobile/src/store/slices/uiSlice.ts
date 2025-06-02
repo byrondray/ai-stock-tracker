@@ -66,9 +66,12 @@ const initialState: UIState = {
 export const uiSlice = createSlice({
   name: 'ui',
   initialState,
-  reducers: {
-    setTheme: (state, action: PayloadAction<'light' | 'dark' | 'system'>) => {
+  reducers: {    setTheme: (state, action: PayloadAction<'light' | 'dark' | 'system'>) => {
       state.theme = action.payload;
+    },
+    toggleTheme: (state) => {
+      state.theme = state.theme === 'light' ? 'dark' : 'light';
+      state.settings.darkMode = state.theme === 'dark';
     },
     setActiveTab: (state, action: PayloadAction<string>) => {
       state.activeTab = action.payload;
@@ -139,6 +142,7 @@ export const uiSlice = createSlice({
 
 export const {
   setTheme,
+  toggleTheme,
   setActiveTab,
   setOnlineStatus,
   setRefreshing,

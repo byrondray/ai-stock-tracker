@@ -12,6 +12,7 @@ export function useTheme() {
   const themeContext = useThemeContext();
   return {
     ...themeContext,
+    isDarkMode: themeContext.isDark, // Add backward compatibility
     colors: themeContext.theme.colors,
     spacing: themeContext.theme.spacing,
     typography: themeContext.theme.typography,

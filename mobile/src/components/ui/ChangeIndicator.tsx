@@ -4,16 +4,20 @@ import { useTheme } from '../../hooks/useTheme';
 
 interface ChangeIndicatorProps {
   value: number;
+  percentage?: number; // Add missing prop
   format?: 'currency' | 'percentage';
   style?: TextStyle;
   showSign?: boolean;
+  showIcon?: boolean; // Add missing prop
 }
 
 const ChangeIndicator: React.FC<ChangeIndicatorProps> = ({
   value,
+  percentage,
   format = 'percentage',
   style,
   showSign = true,
+  showIcon = true,
 }) => {
   const { theme } = useTheme();
 

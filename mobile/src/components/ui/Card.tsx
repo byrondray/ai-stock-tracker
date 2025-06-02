@@ -4,7 +4,7 @@ import { useTheme } from '../../hooks/useTheme';
 
 interface CardProps {
   children: React.ReactNode;
-  style?: ViewStyle;
+  style?: ViewStyle | ViewStyle[]; // Allow array of styles
   padding?: number;
   elevated?: boolean;
 }

@@ -9,6 +9,7 @@ import type { Portfolio } from '../api/apiSlice';
 
 interface PortfolioState {
   portfolios: Portfolio[];
+  items: any[]; // Portfolio items for backward compatibility  
   selectedPortfolioId: number | null;
   totalValue: number;
   totalReturn: number;
@@ -27,6 +28,7 @@ interface PerformanceData {
 
 const initialState: PortfolioState = {
   portfolios: [],
+  items: [], // Backward compatibility
   selectedPortfolioId: null,
   totalValue: 0,
   totalReturn: 0,
@@ -96,9 +98,31 @@ export const portfolioSlice = createSlice({
     },
     setPerformanceData: (state, action: PayloadAction<PerformanceData[]>) => {
       state.performanceData = action.payload;
-    },
-    clearError: (state) => {
+    },    clearError: (state) => {
       state.error = null;
+    },
+    addToPortfolio: (state, action: PayloadAction<Portfolio>) => {
+      state.portfolios.push(action.payload);
+      if (state.selectedPortfolioId === null) {
+        state.selectedPortfolioId = action.payload.id;
+      }
+    },
+    updatePortfolioItem: (state, action: PayloadAction<Portfolio>) => {
+      const index = state.portfolios.findIndex(
+        (p) => p.id === action.payload.id
+      );
+      if (index !== -1) {
+        state.portfolios[index] = action.payload;
+      }
+    },
+    removeFromPortfolio: (state, action: PayloadAction<number>) => {
+      state.portfolios = state.portfolios.filter(
+        (p) => p.id !== action.payload
+      );
+      if (state.selectedPortfolioId === action.payload) {
+        state.selectedPortfolioId =
+          state.portfolios.length > 0 ? state.portfolios[0].id : null;
+      }
     },
   },
 });
@@ -113,6 +137,9 @@ export const {
   setError,
   setPerformanceData,
   clearError,
+  addToPortfolio,
+  updatePortfolioItem,
+  removeFromPortfolio,
 } = portfolioSlice.actions;
 
 export default portfolioSlice.reducer;

@@ -51,9 +51,8 @@ export function MainTabNavigator() {
               break;
             case 'News':
               iconName = focused ? 'newspaper' : 'newspaper-outline';
-              break;
-            default:
-              iconName = 'circle';
+              break;            default:
+              iconName = 'ellipse-outline';
           }
 
           return <Ionicons name={iconName} size={size} color={color} />;

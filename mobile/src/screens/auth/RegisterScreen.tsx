@@ -88,12 +88,11 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
         last_name: formData.lastName.trim(),
         email: formData.email.trim().toLowerCase(),
         password: formData.password,
-      }).unwrap();
-
-      dispatch(
+      }).unwrap();      dispatch(
         setCredentials({
           user: result.user,
           token: result.access_token,
+          refreshToken: result.refresh_token,
         })
       );
     } catch (error: any) {

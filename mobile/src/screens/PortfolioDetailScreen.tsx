@@ -147,7 +147,7 @@ export const PortfolioDetailScreen: React.FC = () => {
           onPress: async () => {
             try {
               await deletePortfolioItemMutation(portfolioId).unwrap();
-              dispatch(removeFromPortfolio(portfolioId));
+              dispatch(removeFromPortfolio(parseInt(portfolioId, 10)));
               // Navigate back
             } catch (error) {
               console.error('Error deleting portfolio item:', error);
