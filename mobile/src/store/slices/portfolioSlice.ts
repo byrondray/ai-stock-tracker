@@ -9,7 +9,7 @@ import type { Portfolio } from '../api/apiSlice';
 
 interface PortfolioState {
   portfolios: Portfolio[];
-  items: any[]; // Portfolio items for backward compatibility  
+  items: any[]; // Portfolio items for backward compatibility
   selectedPortfolioId: number | null;
   totalValue: number;
   totalReturn: number;
@@ -98,7 +98,8 @@ export const portfolioSlice = createSlice({
     },
     setPerformanceData: (state, action: PayloadAction<PerformanceData[]>) => {
       state.performanceData = action.payload;
-    },    clearError: (state) => {
+    },
+    clearError: (state) => {
       state.error = null;
     },
     addToPortfolio: (state, action: PayloadAction<Portfolio>) => {

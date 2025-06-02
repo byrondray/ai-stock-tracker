@@ -51,7 +51,8 @@ export function MainTabNavigator() {
               break;
             case 'News':
               iconName = focused ? 'newspaper' : 'newspaper-outline';
-              break;            default:
+              break;
+            default:
               iconName = 'ellipse-outline';
           }
 

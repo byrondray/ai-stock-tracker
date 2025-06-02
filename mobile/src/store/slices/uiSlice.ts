@@ -66,7 +66,8 @@ const initialState: UIState = {
 export const uiSlice = createSlice({
   name: 'ui',
   initialState,
-  reducers: {    setTheme: (state, action: PayloadAction<'light' | 'dark' | 'system'>) => {
+  reducers: {
+    setTheme: (state, action: PayloadAction<'light' | 'dark' | 'system'>) => {
       state.theme = action.payload;
     },
     toggleTheme: (state) => {

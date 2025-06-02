@@ -39,7 +39,9 @@ const LineChart: React.FC<LineChartProps> = ({
   return (
     <View style={[styles.container, { width, height }, style]}>
       <View style={styles.chart}>
-        <Text style={[styles.placeholder, { color: theme.colors.textSecondary }]}>
+        <Text
+          style={[styles.placeholder, { color: theme.colors.textSecondary }]}
+        >
           Chart View
         </Text>
         <Text style={[styles.subText, { color: theme.colors.textSecondary }]}>

@@ -69,7 +69,8 @@ export const watchlistSlice = createSlice({
     setError: (state, action: PayloadAction<string | null>) => {
       state.error = action.payload;
       state.isLoading = false;
-    },    clearError: (state) => {
+    },
+    clearError: (state) => {
       state.error = null;
     },
     // Individual stock actions for backward compatibility
@@ -77,7 +78,9 @@ export const watchlistSlice = createSlice({
       state.items.push(action.payload);
     },
     removeFromWatchlist: (state, action: PayloadAction<string>) => {
-      state.items = state.items.filter(item => item.symbol !== action.payload);
+      state.items = state.items.filter(
+        (item) => item.symbol !== action.payload
+      );
     },
   },
 });

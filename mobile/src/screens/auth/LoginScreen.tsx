@@ -44,7 +44,8 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
       const result = await login({
         email: email.trim().toLowerCase(),
         password: password,
-      }).unwrap();      dispatch(
+      }).unwrap();
+      dispatch(
         setCredentials({
           user: result.user,
           token: result.access_token,
