@@ -4,7 +4,7 @@
  * Configures the Redux store with RTK Query and persistence
  */
 
-import { configureStore } from '@reduxjs/toolkit';
+import { configureStore, combineReducers } from '@reduxjs/toolkit';
 import { setupListeners } from '@reduxjs/toolkit/query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
@@ -25,6 +25,16 @@ import { watchlistSlice } from './slices/watchlistSlice';
 import { uiSlice } from './slices/uiSlice';
 import { apiSlice } from './api/apiSlice';
 
+// Root reducer
+const rootReducer = combineReducers({
+  auth: authSlice.reducer,
+  stocks: stockSlice.reducer,
+  portfolio: portfolioSlice.reducer,
+  watchlist: watchlistSlice.reducer,
+  ui: uiSlice.reducer,
+  api: apiSlice.reducer,
+});
+
 // Persist configuration
 const persistConfig = {
   key: 'root',
@@ -32,23 +42,8 @@ const persistConfig = {
   whitelist: ['auth', 'ui'], // Only persist auth and UI state
 };
 
-// Root reducer
-const rootReducer = {
-  auth: authSlice.reducer,
-  stocks: stockSlice.reducer,
-  portfolio: portfolioSlice.reducer,
-  watchlist: watchlistSlice.reducer,
-  ui: uiSlice.reducer,
-  api: apiSlice.reducer,
-};
-
 // Apply persistence to the combined reducer
-const persistedReducer = persistReducer(persistConfig, (state = {}, action) => {
-  return Object.keys(rootReducer).reduce((acc, key) => {
-    acc[key] = rootReducer[key as keyof typeof rootReducer](state[key], action);
-    return acc;
-  }, {} as any);
-});
+const persistedReducer = persistReducer(persistConfig, rootReducer);
 
 // Configure store
 export const store = configureStore({

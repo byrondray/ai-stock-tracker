@@ -9,7 +9,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
-import NetInfo from '@react-native-async-storage/async-storage';
+import NetInfo from '@react-native-community/netinfo';
 import * as SplashScreen from 'expo-splash-screen';
 
 import { store, persistor } from './src/store';
@@ -17,7 +17,7 @@ import { AppNavigator } from './src/navigation/AppNavigator';
 import { ThemeProvider } from './src/providers/ThemeProvider';
 import { NotificationProvider } from './src/providers/NotificationProvider';
 import { LoadingScreen } from './src/components/common/LoadingScreen';
-import { useAppDispatch } from './src/store';
+import { useAppDispatch } from './src/hooks/redux';
 import { setOnlineStatus } from './src/store/slices/uiSlice';
 
 // Keep the splash screen visible while we fetch resources
@@ -28,7 +28,7 @@ function AppContent() {
 
   useEffect(() => {
     // Monitor network connectivity
-    const unsubscribe = NetInfo.addEventListener((state) => {
+    const unsubscribe = NetInfo.addEventListener((state: any) => {
       dispatch(setOnlineStatus(state.isConnected ?? false));
     });
 

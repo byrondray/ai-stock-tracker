@@ -7,7 +7,7 @@
 import React, { createContext, useContext, useEffect } from 'react';
 import * as Notifications from 'expo-notifications';
 import { Alert } from 'react-native';
-import { useAppDispatch, useAppSelector } from '../store';
+import { useAppDispatch, useAppSelector } from '../hooks/redux';
 import { addNotification } from '../store/slices/uiSlice';
 
 // Configure notification behavior
