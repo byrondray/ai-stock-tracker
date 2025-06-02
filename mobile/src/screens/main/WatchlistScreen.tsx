@@ -1,0 +1,499 @@
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  RefreshControl,
+  Alert,
+} from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useTheme } from '../../hooks/useTheme';
+import {
+  useGetWatchlistQuery,
+  useRemoveFromWatchlistMutation,
+  useAddToPortfolioMutation,
+} from '../../store/api/apiSlice';
+
+interface WatchlistStock {
+  symbol: string;
+  name: string;
+  current_price: number;
+  change_amount: number;
+  change_percent: number;
+  volume: number;
+  market_cap?: number;
+  high_52w?: number;
+  low_52w?: number;
+}
+
+const WatchlistScreen: React.FC = () => {
+  const { theme, isDark } = useTheme();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const { data: watchlist, isLoading, refetch } = useGetWatchlistQuery();
+
+  const [removeFromWatchlist, { isLoading: removing }] =
+    useRemoveFromWatchlistMutation();
+  const [addToPortfolio, { isLoading: adding }] = useAddToPortfolioMutation();
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const handleRemoveStock = (symbol: string) => {
+    Alert.alert(
+      'Remove from Watchlist',
+      `Are you sure you want to remove ${symbol} from your watchlist?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await removeFromWatchlist({ symbol }).unwrap();
+              Alert.alert('Success', 'Stock removed from watchlist');
+            } catch (error: any) {
+              Alert.alert(
+                'Error',
+                error?.data?.detail || 'Failed to remove stock'
+              );
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleAddToPortfolio = (stock: WatchlistStock) => {
+    Alert.alert('Add to Portfolio', `Add ${stock.symbol} to your portfolio?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Add',
+        onPress: () => {
+          Alert.prompt(
+            'Add to Portfolio',
+            'Enter the number of shares and purchase price:',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Add',
+                onPress: async (input) => {
+                  if (!input) return;
+
+                  const parts = input.split(',');
+                  if (parts.length !== 2) {
+                    Alert.alert(
+                      'Error',
+                      'Please enter quantity and price separated by comma (e.g., 10, 150.50)'
+                    );
+                    return;
+                  }
+
+                  const quantity = parseFloat(parts[0].trim());
+                  const price = parseFloat(parts[1].trim());
+
+                  if (
+                    isNaN(quantity) ||
+                    isNaN(price) ||
+                    quantity <= 0 ||
+                    price <= 0
+                  ) {
+                    Alert.alert('Error', 'Please enter valid numbers');
+                    return;
+                  }
+
+                  try {
+                    await addToPortfolio({
+                      symbol: stock.symbol,
+                      quantity,
+                      purchase_price: price,
+                    }).unwrap();
+                    Alert.alert('Success', 'Stock added to portfolio');
+                  } catch (error: any) {
+                    Alert.alert(
+                      'Error',
+                      error?.data?.detail || 'Failed to add stock to portfolio'
+                    );
+                  }
+                },
+              },
+            ],
+            'plain-text',
+            '',
+            'number-pad'
+          );
+        },
+      },
+    ]);
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(amount);
+  };
+
+  const formatPercentage = (percentage: number) => {
+    const sign = percentage >= 0 ? '+' : '';
+    return `${sign}${percentage.toFixed(2)}%`;
+  };
+
+  const formatVolume = (volume: number) => {
+    if (volume >= 1000000) {
+      return `${(volume / 1000000).toFixed(1)}M`;
+    } else if (volume >= 1000) {
+      return `${(volume / 1000).toFixed(1)}K`;
+    }
+    return volume.toLocaleString();
+  };
+
+  const getChangeColor = (change: number) => {
+    if (change > 0) return theme.colors.success;
+    if (change < 0) return theme.colors.error;
+    return theme.colors.textSecondary;
+  };
+
+  const renderStockItem = ({ item }: { item: WatchlistStock }) => (
+    <TouchableOpacity
+      style={[styles.stockCard, { backgroundColor: theme.colors.surface }]}
+      onLongPress={() => handleRemoveStock(item.symbol)}
+      activeOpacity={0.7}
+    >
+      <View style={styles.stockHeader}>
+        <View style={styles.stockInfo}>
+          <Text style={[styles.stockSymbol, { color: theme.colors.text }]}>
+            {item.symbol}
+          </Text>
+          <Text
+            style={[styles.stockName, { color: theme.colors.textSecondary }]}
+          >
+            {item.name}
+          </Text>
+        </View>
+        <View style={styles.priceInfo}>
+          <Text style={[styles.currentPrice, { color: theme.colors.text }]}>
+            {formatCurrency(item.current_price)}
+          </Text>
+          <View style={styles.changeInfo}>
+            <Text
+              style={[
+                styles.changeAmount,
+                { color: getChangeColor(item.change_amount) },
+              ]}
+            >
+              {item.change_amount >= 0 ? '+' : ''}
+              {formatCurrency(Math.abs(item.change_amount))}
+            </Text>
+            <Text
+              style={[
+                styles.changePercent,
+                { color: getChangeColor(item.change_percent) },
+              ]}
+            >
+              ({formatPercentage(item.change_percent)})
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.stockDetails}>
+        <View style={styles.detailRow}>
+          <Text
+            style={[styles.detailLabel, { color: theme.colors.textSecondary }]}
+          >
+            Volume
+          </Text>
+          <Text style={[styles.detailValue, { color: theme.colors.text }]}>
+            {formatVolume(item.volume)}
+          </Text>
+        </View>
+        {item.market_cap && (
+          <View style={styles.detailRow}>
+            <Text
+              style={[
+                styles.detailLabel,
+                { color: theme.colors.textSecondary },
+              ]}
+            >
+              Market Cap
+            </Text>
+            <Text style={[styles.detailValue, { color: theme.colors.text }]}>
+              {formatVolume(item.market_cap)}
+            </Text>
+          </View>
+        )}
+        {item.high_52w && item.low_52w && (
+          <View style={styles.detailRow}>
+            <Text
+              style={[
+                styles.detailLabel,
+                { color: theme.colors.textSecondary },
+              ]}
+            >
+              52W Range
+            </Text>
+            <Text style={[styles.detailValue, { color: theme.colors.text }]}>
+              {formatCurrency(item.low_52w)} - {formatCurrency(item.high_52w)}
+            </Text>
+          </View>
+        )}
+      </View>
+
+      <View style={styles.actionButtons}>
+        <TouchableOpacity
+          style={[
+            styles.portfolioButton,
+            { backgroundColor: theme.colors.primary },
+          ]}
+          onPress={() => handleAddToPortfolio(item)}
+          disabled={adding}
+        >
+          <Text style={[styles.buttonText, { color: theme.colors.surface }]}>
+            {adding ? 'Adding...' : 'Add to Portfolio'}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.removeButton, { borderColor: theme.colors.error }]}
+          onPress={() => handleRemoveStock(item.symbol)}
+          disabled={removing}
+        >
+          <Text
+            style={[styles.removeButtonText, { color: theme.colors.error }]}
+          >
+            {removing ? 'Removing...' : 'Remove'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </TouchableOpacity>
+  );
+
+  if (isLoading) {
+    return (
+      <View
+        style={[
+          styles.container,
+          styles.centered,
+          { backgroundColor: theme.colors.background },
+        ]}
+      >
+        <Text
+          style={[styles.loadingText, { color: theme.colors.textSecondary }]}
+        >
+          Loading watchlist...
+        </Text>
+      </View>
+    );
+  }
+
+  return (
+    <View
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+    >
+      {/* Header */}
+      <LinearGradient
+        colors={isDark ? ['#1a1a2e', '#16213e'] : ['#667eea', '#764ba2']}
+        style={styles.header}
+      >
+        <Text style={[styles.headerTitle, { color: theme.colors.surface }]}>
+          Watchlist
+        </Text>
+        {watchlist?.stocks && (
+          <Text style={[styles.stockCount, { color: theme.colors.surface }]}>
+            {watchlist.stocks.length} stocks
+          </Text>
+        )}
+      </LinearGradient>
+
+      {/* Stock List */}
+      {watchlist?.stocks && watchlist.stocks.length > 0 ? (
+        <FlatList
+          data={watchlist.stocks}
+          keyExtractor={(item) => item.symbol}
+          renderItem={renderStockItem}
+          contentContainerStyle={styles.listContent}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+          showsVerticalScrollIndicator={false}
+          ItemSeparatorComponent={() => <View style={styles.separator} />}
+        />
+      ) : (
+        <View style={styles.emptyState}>
+          <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
+            Your Watchlist is Empty
+          </Text>
+          <Text
+            style={[styles.emptyText, { color: theme.colors.textSecondary }]}
+          >
+            Start adding stocks to track their performance
+          </Text>
+          <Text
+            style={[styles.emptyHint, { color: theme.colors.textSecondary }]}
+          >
+            Use the search tab to find and add stocks
+          </Text>
+        </View>
+      )}
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  centered: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 16,
+  },
+  header: {
+    paddingTop: 60,
+    paddingBottom: 24,
+    paddingHorizontal: 24,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+  },
+  stockCount: {
+    fontSize: 16,
+    opacity: 0.8,
+  },
+  listContent: {
+    padding: 16,
+  },
+  stockCard: {
+    padding: 20,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  stockHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+  stockInfo: {
+    flex: 1,
+  },
+  stockSymbol: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  stockName: {
+    fontSize: 14,
+  },
+  priceInfo: {
+    alignItems: 'flex-end',
+  },
+  currentPrice: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  changeInfo: {
+    alignItems: 'flex-end',
+  },
+  changeAmount: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  changePercent: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  stockDetails: {
+    marginBottom: 16,
+    gap: 8,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  detailLabel: {
+    fontSize: 14,
+  },
+  detailValue: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  portfolioButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  removeButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  buttonText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  removeButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  separator: {
+    height: 16,
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+  },
+  emptyTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  emptyText: {
+    fontSize: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  emptyHint: {
+    fontSize: 14,
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+});
+
+export default WatchlistScreen;
