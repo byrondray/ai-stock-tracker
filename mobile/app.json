@@ -11,9 +11,7 @@
       "resizeMode": "contain",
       "backgroundColor": "#1a1a2e"
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.aistockanalyzer.app"
@@ -28,9 +26,7 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": [
-      "expo-notifications"
-    ],
+    "plugins": ["expo-notifications"],
     "extra": {
       "apiBaseUrl": "http://localhost:8000",
       "wsBaseUrl": "ws://localhost:8000"

@@ -28,15 +28,7 @@
       "@/navigation/*": ["./src/navigation/*"]
     }
   },
-  "include": [
-    "src",
-    "App.tsx",
-    "__tests__"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "build"
-  ],
+  "include": ["src", "App.tsx", "__tests__"],
+  "exclude": ["node_modules", "dist", "build"],
   "extends": "expo/tsconfig.base"
 }
