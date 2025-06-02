@@ -39,7 +39,7 @@ You are helping build an AI-powered stock analysis and prediction app called "AI
 
 ### Infrastructure
 
-- **Cloud**: AWS (EC2, RDS, S3, SageMaker)
+- **Cloud**: Railway
 - **Container**: Docker + Kubernetes
 - **CI/CD**: GitHub Actions
 - **Monitoring**: Prometheus + Grafana
