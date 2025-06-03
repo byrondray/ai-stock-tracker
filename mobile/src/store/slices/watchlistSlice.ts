@@ -70,4 +70,8 @@ export const {
   clearWatchlist,
 } = watchlistSlice.actions;
 
+// Add individual exports for components that expect them
+export const addToWatchlist = addWatchlistItem;
+export const removeFromWatchlist = removeWatchlistItem;
+
 export default watchlistSlice.reducer;

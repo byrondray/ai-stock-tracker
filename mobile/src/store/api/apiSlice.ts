@@ -33,6 +33,13 @@ export interface Stock {
   employees?: number;
   founded_year?: number;
   last_updated: string;
+  // Additional properties used in screens
+  open_price?: number;
+  high_price?: number;
+  low_price?: number;
+  volume?: number;
+  change_amount?: number;
+  change_percent?: number;
 }
 
 export interface PortfolioItem {
@@ -151,6 +158,7 @@ export interface AuthResponse {
   refresh_token: string;
   token_type: string;
   expires_in: number;
+  user: User;
 }
 
 export interface PortfolioItemCreate {
@@ -189,6 +197,16 @@ export interface StockPrice {
   last_updated: string;
 }
 
+export interface Notification {
+  id: number;
+  title: string;
+  message: string;
+  type: 'info' | 'warning' | 'error' | 'success';
+  isRead: boolean;
+  created_at: string;
+  data?: any;
+}
+
 export const apiSlice = createApi({
   reducerPath: 'api',
   baseQuery: fetchBaseQuery({
@@ -210,6 +228,7 @@ export const apiSlice = createApi({
     'News',
     'Prediction',
     'Analysis',
+    'Notification',
   ],
   endpoints: (builder) => ({
     // Authentication endpoints
@@ -226,7 +245,7 @@ export const apiSlice = createApi({
         },
       }),
     }),
-    register: builder.mutation<User, RegisterRequest>({
+    register: builder.mutation<AuthResponse, RegisterRequest>({
       query: (userData) => ({
         url: '/auth/register',
         method: 'POST',
@@ -240,14 +259,14 @@ export const apiSlice = createApi({
 
     // Stock endpoints
     searchStocks: builder.query<SearchResponse, string>({
-      query: (query) => `/stocks/search?q=\${encodeURIComponent(query)}`,
+      query: (query) => `/stocks/search?q=${encodeURIComponent(query)}`,
     }),
     getStock: builder.query<Stock, string>({
-      query: (symbol) => `/stocks/\${symbol}`,
+      query: (symbol) => `/stocks/${symbol}`,
       providesTags: (result, error, symbol) => [{ type: 'Stock', id: symbol }],
     }),
     getStockPrice: builder.query<StockPrice, string>({
-      query: (symbol) => `/stocks/\${symbol}/price`,
+      query: (symbol) => `/stocks/${symbol}/price`,
     }),
 
     // Portfolio endpoints
@@ -268,7 +287,7 @@ export const apiSlice = createApi({
       { id: number; data: PortfolioItemUpdate }
     >({
       query: ({ id, data }) => ({
-        url: `/portfolio/\${id}`,
+        url: `/portfolio/${id}`,
         method: 'PUT',
         body: data,
       }),
@@ -276,7 +295,7 @@ export const apiSlice = createApi({
     }),
     removeFromPortfolio: builder.mutation<void, number>({
       query: (id) => ({
-        url: `/portfolio/\${id}`,
+        url: `/portfolio/${id}`,
         method: 'DELETE',
       }),
       invalidatesTags: ['Portfolio'],
@@ -300,7 +319,7 @@ export const apiSlice = createApi({
       { id: number; data: WatchlistItemUpdate }
     >({
       query: ({ id, data }) => ({
-        url: `/watchlist/\${id}`,
+        url: `/watchlist/${id}`,
         method: 'PUT',
         body: data,
       }),
@@ -308,7 +327,7 @@ export const apiSlice = createApi({
     }),
     removeFromWatchlist: builder.mutation<void, number>({
       query: (id) => ({
-        url: `/watchlist/\${id}`,
+        url: `/watchlist/${id}`,
         method: 'DELETE',
       }),
       invalidatesTags: ['Watchlist'],
@@ -319,13 +338,13 @@ export const apiSlice = createApi({
       NewsResponse,
       { symbol: string; limit?: number }
     >({
-      query: ({ symbol, limit = 10 }) => `/news/\${symbol}?limit=\${limit}`,
+      query: ({ symbol, limit = 10 }) => `/news/${symbol}?limit=${limit}`,
       providesTags: (result, error, { symbol }) => [
         { type: 'News', id: symbol },
       ],
     }),
     getGeneralNews: builder.query<NewsResponse, { limit?: number }>({
-      query: ({ limit = 20 }) => `/news?limit=\${limit}`,
+      query: ({ limit = 20 }) => `/news?limit=${limit}`,
       providesTags: ['News'],
     }),
 
@@ -334,7 +353,7 @@ export const apiSlice = createApi({
       StockPrediction,
       { symbol: string; days?: number }
     >({
-      query: ({ symbol, days = 7 }) => `/predictions/\${symbol}?days=\${days}`,
+      query: ({ symbol, days = 7 }) => `/predictions/${symbol}?days=${days}`,
       providesTags: (result, error, { symbol }) => [
         { type: 'Prediction', id: symbol },
       ],
@@ -342,10 +361,30 @@ export const apiSlice = createApi({
 
     // Analysis endpoints
     getStockAnalysis: builder.query<StockAnalysisResponse, string>({
-      query: (symbol) => `/stocks/\${symbol}/analysis`,
+      query: (symbol) => `/stocks/${symbol}/analysis`,
       providesTags: (result, error, symbol) => [
         { type: 'Analysis', id: symbol },
       ],
+    }),
+
+    // Notification endpoints
+    getNotifications: builder.query<Notification[], void>({
+      query: () => '/notifications',
+      providesTags: ['Notification'],
+    }),
+    markNotificationAsRead: builder.mutation<void, number>({
+      query: (id) => ({
+        url: `/notifications/${id}/read`,
+        method: 'POST',
+      }),
+      invalidatesTags: ['Notification'],
+    }),
+    deleteNotification: builder.mutation<void, number>({
+      query: (id) => ({
+        url: `/notifications/${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['Notification'],
     }),
   }),
 });
@@ -370,4 +409,15 @@ export const {
   useGetGeneralNewsQuery,
   useGetStockPredictionQuery,
   useGetStockAnalysisQuery,
+  useGetNotificationsQuery,
+  useMarkNotificationAsReadMutation,
+  useDeleteNotificationMutation,
 } = apiSlice;
+
+// Add aliases for backward compatibility
+export const useGetStockDetailsQuery = useGetStockQuery;
+export const useGetStockPriceHistoryQuery = useGetStockPriceQuery;
+export const useUpdatePortfolioHoldingMutation = useUpdatePortfolioItemMutation;
+export const useDeletePortfolioItemMutation = useRemoveFromPortfolioMutation;
+export const useDeleteWatchlistItemMutation = useRemoveFromWatchlistMutation;
+export const useGetMarketNewsQuery = useGetGeneralNewsQuery;

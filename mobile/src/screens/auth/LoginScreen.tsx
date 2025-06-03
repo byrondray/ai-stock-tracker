@@ -38,11 +38,9 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
     if (!email.trim() || !password.trim()) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
-    }
-
-    try {
+    }    try {
       const result = await login({
-        email: email.trim().toLowerCase(),
+        username: email.trim().toLowerCase(),
         password: password,
       }).unwrap();
       dispatch(

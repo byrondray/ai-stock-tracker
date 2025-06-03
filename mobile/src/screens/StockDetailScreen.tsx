@@ -52,9 +52,8 @@ export const StockDetailScreen: React.FC = () => {
     '1M'
   );
   const [refreshing, setRefreshing] = useState(false);
-
   const watchlist = useAppSelector((state) => state.watchlist.items);
-  const isInWatchlist = watchlist.some((item) => item.symbol === symbol);
+  const isInWatchlist = watchlist.some((item) => item.stock_symbol === symbol);
 
   const {
     data: stockDetails,
@@ -82,7 +81,7 @@ export const StockDetailScreen: React.FC = () => {
     isLoading: predictionLoading,
     error: predictionError,
     refetch: refetchPrediction,
-  } = useGetStockPredictionQuery(symbol);
+  } = useGetStockPredictionQuery({ symbol, days: 30 });
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -255,7 +254,7 @@ export const StockDetailScreen: React.FC = () => {
               Technical Score
             </Text>
             <Text style={[styles.scoreValue, { color: theme.colors.primary }]}>
-              {analysis.technicalScore}/100
+              {analysis.technical_score}/100
             </Text>
           </View>
           <View style={styles.scoreItem}>
@@ -265,7 +264,7 @@ export const StockDetailScreen: React.FC = () => {
               Fundamental Score
             </Text>
             <Text style={[styles.scoreValue, { color: theme.colors.primary }]}>
-              {analysis.fundamentalScore}/100
+              {analysis.fundamental_score}/100
             </Text>
           </View>
           <View style={styles.scoreItem}>
@@ -275,17 +274,17 @@ export const StockDetailScreen: React.FC = () => {
               Sentiment Score
             </Text>
             <Text style={[styles.scoreValue, { color: theme.colors.primary }]}>
-              {analysis.sentimentScore}/100
+              {analysis.sentiment_score}/100
             </Text>
           </View>
         </View>
         <Text style={[styles.recommendation, { color: theme.colors.text }]}>
-          Recommendation: {analysis.recommendation}
+          Recommendation: {analysis.overall_rating}
         </Text>
         <Text
           style={[styles.analysisText, { color: theme.colors.textSecondary }]}
         >
-          {analysis.summary}
+          {analysis.analyst_consensus || 'No summary available'}
         </Text>
       </Card>
     );
@@ -312,14 +311,13 @@ export const StockDetailScreen: React.FC = () => {
               ]}
             >
               1 Week
-            </Text>
-            <Text
+            </Text>            <Text
               style={[styles.predictionPrice, { color: theme.colors.text }]}
             >
-              ${prediction.oneWeek.toFixed(2)}
+              ${prediction.predictions[0]?.predicted_price?.toFixed(2) || 'N/A'}
             </Text>
             <ChangeIndicator
-              value={prediction.oneWeek - (stockDetails?.currentPrice || 0)}
+              value={prediction.predictions[0]?.predicted_price - (stockDetails?.current_price || 0) || 0}
               showIcon={false}
             />
           </View>
@@ -334,11 +332,10 @@ export const StockDetailScreen: React.FC = () => {
             </Text>
             <Text
               style={[styles.predictionPrice, { color: theme.colors.text }]}
-            >
-              ${prediction.oneMonth.toFixed(2)}
+            >              ${prediction.predictions[1]?.predicted_price?.toFixed(2) || 'N/A'}
             </Text>
             <ChangeIndicator
-              value={prediction.oneMonth - (stockDetails?.currentPrice || 0)}
+              value={prediction.predictions[1]?.predicted_price - (stockDetails?.current_price || 0) || 0}
               showIcon={false}
             />
           </View>
@@ -350,14 +347,13 @@ export const StockDetailScreen: React.FC = () => {
               ]}
             >
               3 Months
-            </Text>
-            <Text
+            </Text>            <Text
               style={[styles.predictionPrice, { color: theme.colors.text }]}
             >
-              ${prediction.threeMonths.toFixed(2)}
+              ${prediction.predictions[2]?.predicted_price?.toFixed(2) || 'N/A'}
             </Text>
             <ChangeIndicator
-              value={prediction.threeMonths - (stockDetails?.currentPrice || 0)}
+              value={prediction.predictions[2]?.predicted_price - (stockDetails?.current_price || 0) || 0}
               showIcon={false}
             />
           </View>
@@ -365,7 +361,7 @@ export const StockDetailScreen: React.FC = () => {
         <Text
           style={[styles.confidenceText, { color: theme.colors.textSecondary }]}
         >
-          Confidence: {(prediction.confidence * 100).toFixed(1)}%
+          Confidence: {(prediction.predictions[0]?.confidence * 100)?.toFixed(1) || 'N/A'}%
         </Text>
       </Card>
     );
@@ -416,15 +412,14 @@ export const StockDetailScreen: React.FC = () => {
                   {stockDetails.name}
                 </Text>
               </View>
-              <View style={styles.priceInfo}>
-                <Text
+              <View style={styles.priceInfo}>                <Text
                   style={[styles.currentPrice, { color: theme.colors.text }]}
                 >
-                  ${stockDetails.currentPrice.toFixed(2)}
+                  ${stockDetails.current_price?.toFixed(2) || 'N/A'}
                 </Text>
                 <ChangeIndicator
-                  value={stockDetails.change}
-                  percentage={stockDetails.changePercent}
+                  value={0} // Stock model doesn't have change property
+                  percentage={0} // Stock model doesn't have changePercent property
                 />
               </View>
             </View>
@@ -473,9 +468,8 @@ export const StockDetailScreen: React.FC = () => {
                   ]}
                 >
                   Market Cap
-                </Text>
-                <Text style={[styles.statValue, { color: theme.colors.text }]}>
-                  ${stockDetails.marketCap?.toLocaleString() || 'N/A'}
+                </Text>                <Text style={[styles.statValue, { color: theme.colors.text }]}>
+                  ${stockDetails.market_cap?.toLocaleString() || 'N/A'}
                 </Text>
               </View>
               <View style={styles.statItem}>
@@ -488,7 +482,7 @@ export const StockDetailScreen: React.FC = () => {
                   P/E Ratio
                 </Text>
                 <Text style={[styles.statValue, { color: theme.colors.text }]}>
-                  {stockDetails.peRatio?.toFixed(2) || 'N/A'}
+                  N/A {/* Stock model doesn't have peRatio */}
                 </Text>
               </View>
               <View style={styles.statItem}>
@@ -499,9 +493,8 @@ export const StockDetailScreen: React.FC = () => {
                   ]}
                 >
                   52W High
-                </Text>
-                <Text style={[styles.statValue, { color: theme.colors.text }]}>
-                  ${stockDetails.high52w?.toFixed(2) || 'N/A'}
+                </Text>                <Text style={[styles.statValue, { color: theme.colors.text }]}>
+                  N/A {/* Stock model doesn't have high52w */}
                 </Text>
               </View>
               <View style={styles.statItem}>
@@ -514,7 +507,7 @@ export const StockDetailScreen: React.FC = () => {
                   52W Low
                 </Text>
                 <Text style={[styles.statValue, { color: theme.colors.text }]}>
-                  ${stockDetails.low52w?.toFixed(2) || 'N/A'}
+                  N/A {/* Stock model doesn't have low52w */}
                 </Text>
               </View>
               <View style={styles.statItem}>
@@ -527,7 +520,7 @@ export const StockDetailScreen: React.FC = () => {
                   Volume
                 </Text>
                 <Text style={[styles.statValue, { color: theme.colors.text }]}>
-                  {stockDetails.volume?.toLocaleString() || 'N/A'}
+                  N/A {/* Stock model doesn't have volume */}
                 </Text>
               </View>
               <View style={styles.statItem}>
@@ -538,9 +531,8 @@ export const StockDetailScreen: React.FC = () => {
                   ]}
                 >
                   Avg Volume
-                </Text>
-                <Text style={[styles.statValue, { color: theme.colors.text }]}>
-                  {stockDetails.avgVolume?.toLocaleString() || 'N/A'}
+                </Text>                <Text style={[styles.statValue, { color: theme.colors.text }]}>
+                  N/A {/* Stock model doesn't have avgVolume */}
                 </Text>
               </View>
             </View>

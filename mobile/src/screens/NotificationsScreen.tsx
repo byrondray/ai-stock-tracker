@@ -16,23 +16,10 @@ import {
   useGetNotificationsQuery,
   useMarkNotificationAsReadMutation,
   useDeleteNotificationMutation,
+  Notification,
 } from '../store/api/apiSlice';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
-
-interface Notification {
-  id: string;
-  type: 'price_alert' | 'news' | 'portfolio' | 'system';
-  title: string;
-  message: string;
-  isRead: boolean;
-  createdAt: string;
-  data?: {
-    symbol?: string;
-    price?: number;
-    targetPrice?: number;
-  };
-}
 
 export const NotificationsScreen: React.FC = () => {
   const { theme } = useTheme();
@@ -59,8 +46,7 @@ export const NotificationsScreen: React.FC = () => {
       setRefreshing(false);
     }
   };
-
-  const handleMarkAsRead = async (notificationId: string) => {
+  const handleMarkAsRead = async (notificationId: number) => {
     try {
       await markAsReadMutation(notificationId).unwrap();
     } catch (error) {
@@ -68,7 +54,7 @@ export const NotificationsScreen: React.FC = () => {
     }
   };
 
-  const handleDeleteNotification = async (notificationId: string) => {
+  const handleDeleteNotification = async (notificationId: number) => {
     try {
       await deleteNotificationMutation(notificationId).unwrap();
     } catch (error) {
@@ -120,32 +106,31 @@ export const NotificationsScreen: React.FC = () => {
       ]
     );
   };
-
-  const getNotificationIcon = (type: Notification['type']) => {
+  const getNotificationIcon = (type: 'info' | 'warning' | 'error' | 'success') => {
     switch (type) {
-      case 'price_alert':
-        return '🔔';
-      case 'news':
-        return '📰';
-      case 'portfolio':
-        return '💼';
-      case 'system':
-        return '⚙️';
+      case 'info':
+        return '📱';
+      case 'warning':
+        return '⚠️';
+      case 'error':
+        return '❌';
+      case 'success':
+        return '✅';
       default:
         return '📱';
     }
   };
 
-  const getNotificationColor = (type: Notification['type']) => {
+  const getNotificationColor = (type: 'info' | 'warning' | 'error' | 'success') => {
     switch (type) {
-      case 'price_alert':
-        return theme.colors.warning;
-      case 'news':
-        return theme.colors.info;
-      case 'portfolio':
-        return theme.colors.success;
-      case 'system':
+      case 'info':
         return theme.colors.primary;
+      case 'warning':
+        return theme.colors.warning;
+      case 'error':
+        return theme.colors.error;
+      case 'success':
+        return theme.colors.success;
       default:
         return theme.colors.textSecondary;
     }
@@ -273,13 +258,12 @@ export const NotificationsScreen: React.FC = () => {
         ) : (
           filteredNotifications.map((notification) => (
             <Card
-              key={notification.id}
-              style={[
+              key={notification.id}              style={[
                 styles.notificationCard,
-                !notification.isRead && {
+                ...((!notification.isRead) ? [{
                   borderLeftWidth: 4,
                   borderLeftColor: theme.colors.primary,
-                },
+                }] : []),
               ]}
             >
               <View style={styles.notificationHeader}>
@@ -312,7 +296,7 @@ export const NotificationsScreen: React.FC = () => {
                       { color: theme.colors.textSecondary },
                     ]}
                   >
-                    {new Date(notification.createdAt).toLocaleString()}
+                    {new Date(notification.created_at).toLocaleString()}
                   </Text>
                 </View>
                 {!notification.isRead && (

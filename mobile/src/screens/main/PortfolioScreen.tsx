@@ -17,25 +17,14 @@ import {
   useAddToPortfolioMutation,
   useUpdatePortfolioHoldingMutation,
   useRemoveFromPortfolioMutation,
+  PortfolioItem,
 } from '../../store/api/apiSlice';
-
-interface PortfolioHolding {
-  symbol: string;
-  name: string;
-  quantity: number;
-  average_price: number;
-  current_price: number;
-  total_value: number;
-  total_cost: number;
-  unrealized_gain: number;
-  unrealized_gain_percent: number;
-}
+import { ChangeIndicator } from '../../components/ui/ChangeIndicator';
 
 const PortfolioScreen: React.FC = () => {
   const { theme, isDark } = useTheme();
   const [refreshing, setRefreshing] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [editingHolding, setEditingHolding] = useState<PortfolioHolding | null>(
+  const [modalVisible, setModalVisible] = useState(false);  const [editingHolding, setEditingHolding] = useState<PortfolioItem | null>(
     null
   );
   const [formData, setFormData] = useState({
@@ -66,13 +55,12 @@ const PortfolioScreen: React.FC = () => {
     setFormData({ symbol: '', quantity: '', price: '' });
     setModalVisible(true);
   };
-
-  const handleEditHolding = (holding: PortfolioHolding) => {
+  const handleEditHolding = (holding: PortfolioItem) => {
     setEditingHolding(holding);
     setFormData({
-      symbol: holding.symbol,
+      symbol: holding.stock_symbol,
       quantity: holding.quantity.toString(),
-      price: holding.average_price.toString(),
+      price: holding.average_cost.toString(),
     });
     setModalVisible(true);
   };
@@ -96,21 +84,22 @@ const PortfolioScreen: React.FC = () => {
     ) {
       Alert.alert('Error', 'Please enter valid numbers');
       return;
-    }
-
-    try {
+    }    try {
       if (editingHolding) {
         await updateHolding({
-          symbol: symbol.toUpperCase(),
-          quantity: quantityNum,
-          average_price: priceNum,
+          id: editingHolding.id,
+          data: {
+            quantity: quantityNum,
+            average_cost: priceNum,
+          }
         }).unwrap();
         Alert.alert('Success', 'Holding updated successfully');
       } else {
         await addToPortfolio({
-          symbol: symbol.toUpperCase(),
+          stock_symbol: symbol.toUpperCase(),
           quantity: quantityNum,
-          purchase_price: priceNum,
+          average_cost: priceNum,
+          purchase_date: new Date().toISOString(),
         }).unwrap();
         Alert.alert('Success', 'Stock added to portfolio');
       }
@@ -129,11 +118,14 @@ const PortfolioScreen: React.FC = () => {
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Remove',
-          style: 'destructive',
-          onPress: async () => {
+          style: 'destructive',          onPress: async () => {
             try {
-              await removeFromPortfolio({ symbol }).unwrap();
-              Alert.alert('Success', 'Stock removed from portfolio');
+              // Find the holding by symbol to get the ID
+              const holdingToRemove = portfolio?.items.find(item => item.stock_symbol === symbol);
+              if (holdingToRemove) {
+                await removeFromPortfolio(holdingToRemove.id).unwrap();
+                Alert.alert('Success', 'Stock removed from portfolio');
+              }
             } catch (error: any) {
               Alert.alert(
                 'Error',
@@ -162,43 +154,35 @@ const PortfolioScreen: React.FC = () => {
     if (change > 0) return theme.colors.success;
     if (change < 0) return theme.colors.error;
     return theme.colors.textSecondary;
-  };
-
-  const renderHolding = (holding: PortfolioHolding) => (
+  };  const renderHolding = (holding: PortfolioItem) => (
     <TouchableOpacity
-      key={holding.symbol}
+      key={holding.stock_symbol}
       style={[styles.holdingCard, { backgroundColor: theme.colors.surface }]}
       onPress={() => handleEditHolding(holding)}
-      onLongPress={() => handleRemoveHolding(holding.symbol)}
+      onLongPress={() => handleRemoveHolding(holding.stock_symbol)}
       activeOpacity={0.7}
     >
       <View style={styles.holdingHeader}>
         <View>
           <Text style={[styles.holdingSymbol, { color: theme.colors.text }]}>
-            {holding.symbol}
+            {holding.stock_symbol}
           </Text>
           <Text
             style={[styles.holdingName, { color: theme.colors.textSecondary }]}
           >
-            {holding.name}
+            {holding.stock?.name || holding.stock_symbol}
           </Text>
         </View>
         <View style={styles.holdingValue}>
           <Text style={[styles.valueText, { color: theme.colors.text }]}>
-            {formatCurrency(holding.total_value)}
+            {formatCurrency(holding.current_value || 0)}
           </Text>
-          <Text
-            style={[
-              styles.gainText,
-              { color: getChangeColor(holding.unrealized_gain) },
-            ]}
-          >
-            {formatCurrency(holding.unrealized_gain)} (
-            {formatPercentage(holding.unrealized_gain_percent)})
-          </Text>
+          <ChangeIndicator
+            value={holding.total_return || 0}
+            percentage={holding.return_percentage || 0}
+          />
         </View>
       </View>
-
       <View style={styles.holdingDetails}>
         <View style={styles.detailRow}>
           <Text
@@ -214,10 +198,10 @@ const PortfolioScreen: React.FC = () => {
           <Text
             style={[styles.detailLabel, { color: theme.colors.textSecondary }]}
           >
-            Avg. Price
+            Avg. Cost
           </Text>
           <Text style={[styles.detailValue, { color: theme.colors.text }]}>
-            {formatCurrency(holding.average_price)}
+            {formatCurrency(holding.average_cost)}
           </Text>
         </View>
         <View style={styles.detailRow}>
@@ -227,7 +211,7 @@ const PortfolioScreen: React.FC = () => {
             Current Price
           </Text>
           <Text style={[styles.detailValue, { color: theme.colors.text }]}>
-            {formatCurrency(holding.current_price)}
+            {formatCurrency(holding.stock?.current_price || 0)}
           </Text>
         </View>
       </View>
@@ -300,10 +284,10 @@ const PortfolioScreen: React.FC = () => {
                 <Text
                   style={[
                     styles.statValue,
-                    { color: getChangeColor(portfolio.total_change_amount) },
+                    { color: getChangeColor(portfolio.total_return) },
                   ]}
                 >
-                  {formatCurrency(portfolio.total_change_amount)}
+                  {formatCurrency(portfolio.total_return)}
                 </Text>
                 <Text
                   style={[
@@ -318,10 +302,10 @@ const PortfolioScreen: React.FC = () => {
                 <Text
                   style={[
                     styles.statValue,
-                    { color: getChangeColor(portfolio.total_change_percent) },
+                    { color: getChangeColor(portfolio.return_percentage) },
                   ]}
                 >
-                  {formatPercentage(portfolio.total_change_percent)}
+                  {formatPercentage(portfolio.return_percentage)}
                 </Text>
                 <Text
                   style={[
@@ -340,9 +324,8 @@ const PortfolioScreen: React.FC = () => {
         <View style={styles.holdingsSection}>
           <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
             Holdings
-          </Text>
-          {portfolio?.holdings && portfolio.holdings.length > 0 ? (
-            portfolio.holdings.map(renderHolding)
+          </Text>          {portfolio?.items && portfolio.items.length > 0 ? (
+            portfolio.items.map(renderHolding)
           ) : (
             <View
               style={[
@@ -590,8 +573,7 @@ const styles = StyleSheet.create({
   },
   holdingName: {
     fontSize: 14,
-  },
-  holdingValue: {
+  },  holdingValue: {
     alignItems: 'flex-end',
   },
   valueText: {
