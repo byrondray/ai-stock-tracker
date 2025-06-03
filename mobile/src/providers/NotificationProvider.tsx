@@ -4,7 +4,7 @@
  * Provides notification handling and push notification setup
  */
 
-import React, { createContext, useContext, useEffect } from 'react';
+import React, { createContext, useContext, ReactNode } from 'react';
 import * as Notifications from 'expo-notifications';
 import { Alert } from 'react-native';
 import { useAppDispatch, useAppSelector } from '../store';
@@ -26,6 +26,7 @@ interface NotificationContextType {
     body: string,
     trigger?: Date
   ) => Promise<void>;
+  showNotification: (message: string) => void;
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(
@@ -33,7 +34,7 @@ const NotificationContext = createContext<NotificationContextType | undefined>(
 );
 
 interface NotificationProviderProps {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 export function NotificationProvider({ children }: NotificationProviderProps) {
@@ -118,9 +119,15 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
     }
   };
 
+  const showNotification = (message: string) => {
+    // Basic implementation - could be enhanced with actual notification UI
+    console.log('Notification:', message);
+  };
+
   const value: NotificationContextType = {
     requestPermissions,
     scheduleNotification,
+    showNotification,
   };
 
   return (
@@ -130,11 +137,11 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
   );
 }
 
-export function useNotifications() {
+export function useNotification() {
   const context = useContext(NotificationContext);
   if (context === undefined) {
     throw new Error(
-      'useNotifications must be used within a NotificationProvider'
+      'useNotification must be used within a NotificationProvider'
     );
   }
   return context;

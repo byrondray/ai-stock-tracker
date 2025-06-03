@@ -7,6 +7,7 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { Text, View } from 'react-native';
 
 import { useAppSelector } from '../store';
 import { AuthNavigator } from './AuthNavigator';
@@ -25,18 +26,44 @@ export type RootStackParamList = {
   WatchlistDetail: { watchlistId: number };
   Settings: undefined;
   Notifications: undefined;
+  Home: undefined;
+  Profile: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+
+// Placeholder screen components
+function HomeScreen() {
+  return (
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+      <Text>AI Stock Analyzer Home</Text>
+    </View>
+  );
+}
+
+function ProfileScreen() {
+  return (
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+      <Text>Profile Screen</Text>
+    </View>
+  );
+}
 
 export function AppNavigator() {
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
 
   return (
     <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Navigator
+        screenOptions={{ headerShown: false }}
+        initialRouteName={isAuthenticated ? 'Main' : 'Auth'}
+      >
         {!isAuthenticated ? (
-          <Stack.Screen name='Auth' component={AuthNavigator} />
+          <>
+            <Stack.Screen name='Auth' component={AuthNavigator} />
+            <Stack.Screen name='Home' component={HomeScreen} />
+            <Stack.Screen name='Profile' component={ProfileScreen} />
+          </>
         ) : (
           <>
             <Stack.Screen name='Main' component={MainTabNavigator} />

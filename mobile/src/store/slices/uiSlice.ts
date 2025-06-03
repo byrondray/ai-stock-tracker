@@ -10,6 +10,8 @@ interface UIState {
   theme: 'light' | 'dark' | 'system';
   activeTab: string;
   isOnline: boolean;
+  isLoading: boolean;
+  error: string | null;
   refreshing: boolean;
   notifications: Notification[];
   settings: Settings;
@@ -45,6 +47,8 @@ const initialState: UIState = {
   theme: 'system',
   activeTab: 'dashboard',
   isOnline: true,
+  isLoading: false,
+  error: null,
   refreshing: false,
   notifications: [],
   settings: {
@@ -63,7 +67,7 @@ const initialState: UIState = {
   },
 };
 
-export const uiSlice = createSlice({
+const uiSlice = createSlice({
   name: 'ui',
   initialState,
   reducers: {
@@ -79,6 +83,9 @@ export const uiSlice = createSlice({
     },
     setOnlineStatus: (state, action: PayloadAction<boolean>) => {
       state.isOnline = action.payload;
+    },
+    setLoading: (state, action: PayloadAction<boolean>) => {
+      state.isLoading = action.payload;
     },
     setRefreshing: (state, action: PayloadAction<boolean>) => {
       state.refreshing = action.payload;
@@ -138,6 +145,12 @@ export const uiSlice = createSlice({
         data: null,
       };
     },
+    setError: (state, action: PayloadAction<string | null>) => {
+      state.error = action.payload;
+    },
+    clearError: (state) => {
+      state.error = null;
+    },
   },
 });
 
@@ -146,6 +159,7 @@ export const {
   toggleTheme,
   setActiveTab,
   setOnlineStatus,
+  setLoading,
   setRefreshing,
   addNotification,
   markNotificationAsRead,
@@ -155,6 +169,8 @@ export const {
   updateSettings,
   showModal,
   hideModal,
+  setError,
+  clearError,
 } = uiSlice.actions;
 
 export default uiSlice.reducer;

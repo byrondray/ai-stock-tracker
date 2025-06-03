@@ -1,30 +1,25 @@
 import React from 'react';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useTheme } from '../../hooks/useTheme';
+import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 
-export const LoadingScreen: React.FC = () => {
-  const { theme } = useTheme();
-
+export function LoadingScreen() {
   return (
-    <LinearGradient
-      colors={[theme.colors.primary, theme.colors.secondary]}
-      style={styles.container}
-    >
-      <View style={styles.content}>
-        <ActivityIndicator size='large' color={theme.colors.background} />
-      </View>
-    </LinearGradient>
+    <View style={styles.container}>
+      <ActivityIndicator size='large' color='#2563EB' />
+      <Text style={styles.text}>Loading...</Text>
+    </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  content: {
-    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#1a1a2e',
+  },
+  text: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#fff',
   },
 });
