@@ -14,6 +14,7 @@ import uiSlice from './slices/uiSlice';
 import authSlice from './slices/authSlice';
 import portfolioSlice from './slices/portfolioSlice';
 import watchlistSlice from './slices/watchlistSlice';
+import { apiSlice } from './api/apiSlice';
 
 const persistConfig = {
   key: 'root',
@@ -26,6 +27,7 @@ const rootReducer = combineReducers({
   auth: authSlice,
   portfolio: portfolioSlice,
   watchlist: watchlistSlice,
+  [apiSlice.reducerPath]: apiSlice.reducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
@@ -37,7 +39,7 @@ export const store = configureStore({
       serializableCheck: {
         ignoredActions: ['persist/PERSIST', 'persist/REHYDRATE'],
       },
-    }),
+    }).concat(apiSlice.middleware),
 });
 
 export const persistor = persistStore(store);

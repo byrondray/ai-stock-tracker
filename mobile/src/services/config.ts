@@ -18,8 +18,8 @@ class ConfigService {
     const extra = Constants.expoConfig?.extra || {};
 
     this.config = {
-      apiBaseUrl: extra.apiBaseUrl || 'http://localhost:8000',
-      wsBaseUrl: extra.wsBaseUrl || 'ws://localhost:8000',
+      apiBaseUrl: extra.apiBaseUrl || 'http://192.168.1.93:8000',
+      wsBaseUrl: extra.wsBaseUrl || 'ws://192.168.1.93:8000',
       isDevelopment: __DEV__,
       isProduction: !__DEV__,
       version: Constants.expoConfig?.version || '1.0.0',
@@ -33,6 +33,13 @@ class ConfigService {
       this.config.wsBaseUrl =
         process.env.EXPO_PUBLIC_WS_BASE_URL || this.config.wsBaseUrl;
     }
+
+    // Debug logging
+    console.log('📱 Config loaded:', {
+      apiBaseUrl: this.config.apiBaseUrl,
+      wsBaseUrl: this.config.wsBaseUrl,
+      isDev: this.config.isDevelopment,
+    });
   }
 
   getConfig(): AppConfig {
@@ -67,7 +74,7 @@ class ConfigService {
 
   buildWsUrl(path: string): string {
     const cleanPath = path.startsWith('/') ? path : `/${path}`;
-    return `${this.config.wsBaseUrl}/ws${cleanPath}`;
+    return `${this.config.wsBaseUrl}/api/v1/ws${cleanPath}`;
   }
 }
 

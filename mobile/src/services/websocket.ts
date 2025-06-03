@@ -13,7 +13,16 @@ export interface StockPriceUpdate {
 }
 
 export interface WebSocketMessage {
-  type: 'price_update' | 'error' | 'connection' | 'subscription' | 'ping';
+  type:
+    | 'price_update'
+    | 'error'
+    | 'connection'
+    | 'subscribe'
+    | 'unsubscribe'
+    | 'ping'
+    | 'pong'
+    | 'subscription_confirmed'
+    | 'unsubscription_confirmed';
   data: any;
 }
 
@@ -48,6 +57,7 @@ class WebSocketService {
   private connect(): void {
     try {
       const wsUrl = configService.buildWsUrl('/prices');
+      console.log('🔗 Attempting WebSocket connection to:', wsUrl);
       this.ws = new WebSocket(wsUrl);
 
       this.ws.onopen = this.handleOpen.bind(this);
@@ -65,7 +75,7 @@ class WebSocketService {
    * Handle WebSocket open event
    */
   private handleOpen(): void {
-    console.log('WebSocket connected');
+    console.log('✅ WebSocket connected successfully');
     this.connected = true;
     this.reconnectAttempts = 0;
     this.notifyConnection(true);
@@ -75,7 +85,13 @@ class WebSocketService {
 
     // Re-subscribe to any existing symbols
     if (this.subscribedSymbols.size > 0) {
+      console.log(
+        '🔄 Re-subscribing to existing symbols:',
+        Array.from(this.subscribedSymbols)
+      );
       this.resubscribeAll();
+    } else {
+      console.log('ℹ️ No existing symbols to re-subscribe to');
     }
   }
 
@@ -96,8 +112,14 @@ class WebSocketService {
         case 'connection':
           console.log('Connection status:', message.data);
           break;
-        case 'subscription':
-          console.log('Subscription status:', message.data);
+        case 'subscription_confirmed':
+          console.log('✅ Subscription confirmed:', message.data);
+          break;
+        case 'unsubscription_confirmed':
+          console.log('✅ Unsubscription confirmed:', message.data);
+          break;
+        case 'pong':
+          console.log('Received pong:', message.data);
           break;
         default:
           console.warn('Unknown message type:', message.type);
@@ -182,12 +204,12 @@ class WebSocketService {
    */
   private resubscribeAll(): void {
     const symbols = Array.from(this.subscribedSymbols);
-    symbols.forEach((symbol) => {
+    if (symbols.length > 0) {
       this.send({
-        type: 'subscription',
-        data: { action: 'subscribe', symbol },
+        type: 'subscribe',
+        data: { symbols },
       });
-    });
+    }
   }
 
   /**
@@ -195,13 +217,19 @@ class WebSocketService {
    */
   subscribe(symbol: string): void {
     const upperSymbol = symbol.toUpperCase();
+    console.log(`📈 Subscribing to ${upperSymbol}`);
     this.subscribedSymbols.add(upperSymbol);
 
     if (this.connected) {
+      console.log(`📤 Sending subscription for ${upperSymbol}`);
       this.send({
-        type: 'subscription',
-        data: { action: 'subscribe', symbol: upperSymbol },
+        type: 'subscribe',
+        data: { symbols: [upperSymbol] },
       });
+    } else {
+      console.log(
+        `⏳ WebSocket not connected, will subscribe to ${upperSymbol} when connected`
+      );
     }
   }
 
@@ -214,8 +242,8 @@ class WebSocketService {
 
     if (this.connected) {
       this.send({
-        type: 'subscription',
-        data: { action: 'unsubscribe', symbol: upperSymbol },
+        type: 'unsubscribe',
+        data: { symbols: [upperSymbol] },
       });
     }
   }

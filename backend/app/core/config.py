@@ -33,6 +33,9 @@ class Settings(BaseSettings):
         "http://localhost:3000",
         "http://localhost:8081",  # Expo dev server
         "exp://localhost:19000",  # Expo dev server
+        "http://192.168.1.93:8081",  # Expo dev server with IP
+        "exp://192.168.1.93:19000",  # Expo dev server with IP
+        "*",  # Allow all origins for development
     ]
     ALLOWED_HOSTS: List[str] = ["*"]
     

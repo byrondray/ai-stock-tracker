@@ -70,8 +70,8 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
       });
 
     return () => {
-      Notifications.removeNotificationSubscription(notificationListener);
-      Notifications.removeNotificationSubscription(responseListener);
+      notificationListener.remove();
+      responseListener.remove();
     };
   }, [dispatch, settings.newsNotifications]);
 
