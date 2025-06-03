@@ -142,3 +142,11 @@ def get_current_user_optional(
         return user
     except Exception:
         return None
+
+
+async def get_current_user_websocket(websocket, db: Session) -> Optional[User]:
+    """Get current user from WebSocket connection (for future implementation)."""
+    # For now, we'll return None to skip authentication
+    # In production, you'd extract token from headers or query params
+    # and authenticate the user
+    return None

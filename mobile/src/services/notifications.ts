@@ -4,7 +4,6 @@
  */
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
-import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 
 export interface NotificationData {
@@ -59,10 +58,10 @@ class NotificationService {
       return null;
     }
 
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
-    let finalStatus = existingStatus;
+    const permissions = await Notifications.getPermissionsAsync();
+    let finalStatus = permissions.status;
 
-    if (existingStatus !== 'granted') {
+    if (finalStatus !== 'granted') {
       const { status } = await Notifications.requestPermissionsAsync();
       finalStatus = status;
     }
@@ -74,7 +73,7 @@ class NotificationService {
 
     try {
       const projectId = Constants.expoConfig?.extra?.eas?.projectId;
-      
+
       if (!projectId) {
         console.log('Project ID not found');
         return null;
@@ -86,7 +85,7 @@ class NotificationService {
 
       this.expoPushToken = token.data;
       console.log('Expo push token:', this.expoPushToken);
-      
+
       return this.expoPushToken;
     } catch (error) {
       console.error('Error getting push token:', error);
@@ -99,24 +98,29 @@ class NotificationService {
    */
   private setupListeners(): void {
     // This listener is fired whenever a notification is received while the app is foregrounded
-    this.notificationListener = Notifications.addNotificationReceivedListener(notification => {
-      console.log('Notification received:', notification);
-      this.handleNotificationReceived(notification);
-    });
+    this.notificationListener = Notifications.addNotificationReceivedListener(
+      (notification) => {
+        console.log('Notification received:', notification);
+        this.handleNotificationReceived(notification);
+      }
+    );
 
     // This listener is fired whenever a user taps on or interacts with a notification
-    this.responseListener = Notifications.addNotificationResponseReceivedListener(response => {
-      console.log('Notification response:', response);
-      this.handleNotificationResponse(response);
-    });
+    this.responseListener =
+      Notifications.addNotificationResponseReceivedListener((response) => {
+        console.log('Notification response:', response);
+        this.handleNotificationResponse(response);
+      });
   }
 
   /**
    * Handle received notification
    */
-  private handleNotificationReceived(notification: Notifications.Notification): void {
+  private handleNotificationReceived(
+    notification: Notifications.Notification
+  ): void {
     const { data } = notification.request.content;
-    
+
     // Handle different types of notifications
     if (data?.type === 'price_alert') {
       this.handlePriceAlert(data);
@@ -130,9 +134,11 @@ class NotificationService {
   /**
    * Handle notification response (when user taps notification)
    */
-  private handleNotificationResponse(response: Notifications.NotificationResponse): void {
+  private handleNotificationResponse(
+    response: Notifications.NotificationResponse
+  ): void {
     const { data } = response.notification.request.content;
-    
+
     // Navigate to appropriate screen based on notification type
     if (data?.type === 'price_alert' && data?.symbol) {
       // Navigate to stock detail screen
@@ -173,7 +179,9 @@ class NotificationService {
   /**
    * Send local notification
    */
-  async sendLocalNotification(notificationData: NotificationData): Promise<void> {
+  async sendLocalNotification(
+    notificationData: NotificationData
+  ): Promise<void> {
     try {
       await Notifications.scheduleNotificationAsync({
         content: {
@@ -206,7 +214,7 @@ class NotificationService {
         },
         trigger,
       });
-      
+
       return notificationId;
     } catch (error) {
       console.error('Error scheduling notification:', error);
@@ -241,8 +249,12 @@ class NotificationService {
    */
   async sendPriceAlert(alert: PriceAlert): Promise<void> {
     const title = `${alert.symbol} Price Alert`;
-    const body = `${alert.symbol} has ${alert.type === 'above' ? 'risen above' : 'fallen below'} $${alert.targetPrice.toFixed(2)}. Current price: $${alert.currentPrice.toFixed(2)}`;
-    
+    const body = `${alert.symbol} has ${
+      alert.type === 'above' ? 'risen above' : 'fallen below'
+    } $${alert.targetPrice.toFixed(
+      2
+    )}. Current price: $${alert.currentPrice.toFixed(2)}`;
+
     await this.sendLocalNotification({
       title,
       body,
@@ -259,11 +271,16 @@ class NotificationService {
   /**
    * Send portfolio update notification
    */
-  async sendPortfolioUpdate(change: number, changePercent: number): Promise<void> {
+  async sendPortfolioUpdate(
+    change: number,
+    changePercent: number
+  ): Promise<void> {
     const isPositive = change >= 0;
     const title = `Portfolio Update`;
-    const body = `Your portfolio is ${isPositive ? 'up' : 'down'} ${Math.abs(changePercent).toFixed(2)}% (${isPositive ? '+' : ''}$${change.toFixed(2)}) today`;
-    
+    const body = `Your portfolio is ${isPositive ? 'up' : 'down'} ${Math.abs(
+      changePercent
+    ).toFixed(2)}% (${isPositive ? '+' : ''}$${change.toFixed(2)}) today`;
+
     await this.sendLocalNotification({
       title,
       body,
@@ -278,7 +295,11 @@ class NotificationService {
   /**
    * Send news notification
    */
-  async sendNewsNotification(title: string, summary: string, symbol?: string): Promise<void> {
+  async sendNewsNotification(
+    title: string,
+    summary: string,
+    symbol?: string
+  ): Promise<void> {
     await this.sendLocalNotification({
       title: symbol ? `${symbol} News` : 'Market News',
       body: summary,

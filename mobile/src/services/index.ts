@@ -15,7 +15,4 @@ export type {
 } from './websocket';
 
 export { default as notificationService } from './notifications';
-export type {
-  NotificationData,
-  PriceAlert,
-} from './notifications';
+export type { NotificationData, PriceAlert } from './notifications';
