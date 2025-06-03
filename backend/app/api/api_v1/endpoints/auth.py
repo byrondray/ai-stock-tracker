@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from typing import Any
 
 from app.core.database import get_db
-from app.core.security import create_access_token, create_refresh_token, verify_password, get_password_hash
+from app.core.security import create_access_token, create_refresh_token, verify_password, get_password_hash, get_current_user
 from app.models import User
 from app.schemas import UserCreate, User as UserSchema, Token, RefreshTokenRequest
 from app.services.user_service import UserService
@@ -88,7 +88,7 @@ async def refresh_token(
 
 
 @router.get("/me", response_model=UserSchema)
-async def get_current_user(
+async def get_current_user_profile(
     current_user: User = Depends(get_current_user),
 ) -> Any:
     """Get current user profile."""

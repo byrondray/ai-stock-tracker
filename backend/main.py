@@ -14,16 +14,24 @@ from app.api.api_v1.api import api_router
 async def lifespan(app: FastAPI):
     """Application lifespan manager."""
     # Startup
-    await redis_client.ping()
-    print("✅ Redis connection established")
+    try:
+        await redis_client.ping()
+        print("✅ Redis connection established")
+    except Exception as e:
+        print(f"⚠️ Redis connection failed: {e}")
+        print("⚠️ Continuing without Redis (some features may be limited)")
+    
     print("✅ Database connection established")
     print("🚀 AI Stock Analyzer API started")
     
     yield
     
     # Shutdown
-    await redis_client.close()
-    print("❌ Redis connection closed")
+    try:
+        await redis_client.close()
+        print("❌ Redis connection closed")
+    except Exception:
+        pass
     print("🛑 AI Stock Analyzer API stopped")
 
 

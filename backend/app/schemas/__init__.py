@@ -137,6 +137,26 @@ class PredictionPoint(BaseModel):
     upper_bound: Optional[float] = Field(None, gt=0)
 
 
+class PredictionCreate(BaseModel):
+    """Schema for creating predictions."""
+    symbol: str = Field(..., min_length=1, max_length=10)
+    predictions: List[PredictionPoint]
+    model_version: str
+    model_type: str
+
+
+class PredictionResponse(BaseModel):
+    """Prediction response schema."""
+    symbol: str
+    predictions: List[PredictionPoint]
+    model_version: str
+    model_type: str
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
 class StockPrediction(BaseModel):
     """Stock prediction response schema."""
     symbol: str
@@ -175,6 +195,17 @@ class SentimentData(BaseModel):
     news_sentiment: float = Field(..., ge=-1, le=1)
     social_sentiment: Optional[float] = Field(None, ge=-1, le=1)
     analyst_sentiment: Optional[str] = None
+
+
+class StockAnalysisCreate(BaseModel):
+    """Schema for creating stock analysis."""
+    symbol: str = Field(..., min_length=1, max_length=10)
+    fundamental_score: float = Field(..., ge=0, le=100)
+    technical_score: float = Field(..., ge=0, le=100)
+    sentiment_score: float = Field(..., ge=-1, le=1)
+    overall_rating: str = Field(..., pattern="^(strong_buy|buy|hold|sell|strong_sell)$")
+    risk_score: float = Field(..., ge=0, le=100)
+    analyst_consensus: Optional[str] = None
 
 
 class StockAnalysisResponse(BaseModel):

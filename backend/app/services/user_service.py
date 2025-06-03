@@ -5,7 +5,7 @@ from datetime import datetime
 
 from app.models import User
 from app.schemas import UserCreate, UserUpdate
-from app.core.security import get_password_hash, verify_password
+from app.core.password import get_password_hash, verify_password
 
 
 class UserService:
