@@ -14,19 +14,19 @@ class UserService:
     def __init__(self, db: Session):
         self.db = db
     
-    async def get_by_id(self, user_id: int) -> Optional[User]:
+    def get_by_id(self, user_id: int) -> Optional[User]:
         """Get user by ID."""
         return self.db.query(User).filter(User.id == user_id).first()
     
-    async def get_by_email(self, email: str) -> Optional[User]:
+    def get_by_email(self, email: str) -> Optional[User]:
         """Get user by email."""
         return self.db.query(User).filter(User.email == email).first()
     
-    async def get_by_username(self, username: str) -> Optional[User]:
+    def get_by_username(self, username: str) -> Optional[User]:
         """Get user by username."""
         return self.db.query(User).filter(User.username == username).first()
     
-    async def create(self, user_data: UserCreate) -> User:
+    def create(self, user_data: UserCreate) -> User:
         """Create a new user."""
         hashed_password = get_password_hash(user_data.password)
         
@@ -46,9 +46,9 @@ class UserService:
         self.db.refresh(db_user)
         return db_user
     
-    async def update(self, user_id: int, user_data: UserUpdate) -> Optional[User]:
+    def update(self, user_id: int, user_data: UserUpdate) -> Optional[User]:
         """Update user information."""
-        db_user = await self.get_by_id(user_id)
+        db_user = self.get_by_id(user_id)
         if not db_user:
             return None
         
@@ -60,7 +60,7 @@ class UserService:
         self.db.refresh(db_user)
         return db_user
     
-    async def authenticate(self, email_or_username: str, password: str) -> Optional[User]:
+    def authenticate(self, email_or_username: str, password: str) -> Optional[User]:
         """Authenticate user by email/username and password."""
         user = self.db.query(User).filter(
             or_(
@@ -77,9 +77,9 @@ class UserService:
         
         return user
     
-    async def activate_user(self, user_id: int) -> bool:
+    def activate_user(self, user_id: int) -> bool:
         """Activate user account."""
-        db_user = await self.get_by_id(user_id)
+        db_user = self.get_by_id(user_id)
         if not db_user:
             return False
         
@@ -88,9 +88,9 @@ class UserService:
         self.db.commit()
         return True
     
-    async def deactivate_user(self, user_id: int) -> bool:
+    def deactivate_user(self, user_id: int) -> bool:
         """Deactivate user account."""
-        db_user = await self.get_by_id(user_id)
+        db_user = self.get_by_id(user_id)
         if not db_user:
             return False
         

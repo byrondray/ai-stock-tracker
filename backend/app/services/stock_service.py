@@ -3,6 +3,7 @@ from sqlalchemy import or_, desc
 from typing import Optional, List
 from datetime import datetime, timedelta
 import yfinance as yf
+import pandas as pd
 
 from app.models import Stock, PriceHistory
 from app.schemas import StockCreate, StockUpdate, StockSearchResult, StockPrice
@@ -53,6 +54,7 @@ class StockService:
     
     async def search(self, query: str, limit: int = 10) -> List[StockSearchResult]:
         """Search stocks by symbol or name."""
+        # First check local database
         stocks = self.db.query(Stock).filter(
             or_(
                 Stock.symbol.ilike(f"%{query.upper()}%"),
@@ -69,6 +71,10 @@ class StockService:
                 type="stock",
                 currency=stock.currency
             ))
+        
+        # If no local results, try external search
+        if not results:
+            results = await self._search_external(query, limit)
         
         return results
     
@@ -207,3 +213,66 @@ class StockService:
         except Exception as e:
             print(f"Error updating stock info for {symbol}: {e}")
             return None
+    
+    async def _search_external(self, query: str, limit: int = 10) -> List[StockSearchResult]:
+        """Search stocks using external APIs."""
+        results = []
+        
+        # Try direct symbol lookup first
+        try:
+            ticker = yf.Ticker(query.upper())
+            info = ticker.info
+            
+            # Check if it's a valid ticker
+            if info and 'symbol' in info and info.get('longName'):
+                symbol = info.get('symbol', query.upper())
+                name = info.get('longName', info.get('shortName', symbol))
+                exchange = info.get('exchange', 'Unknown')
+                currency = info.get('currency', 'USD')
+                
+                result = StockSearchResult(
+                    symbol=symbol,
+                    name=name,
+                    exchange=exchange,
+                    type="stock",
+                    currency=currency
+                )
+                results.append(result)
+                
+                # Also create/update the stock in database for future searches
+                await self.update_stock_info(symbol)
+                
+        except Exception as e:
+            print(f"Error searching for {query}: {e}")
+        
+        # If we have some popular stocks to suggest when search fails
+        if not results and len(query) >= 2:
+            popular_stocks = [
+                ("AAPL", "Apple Inc.", "NASDAQ"),
+                ("GOOGL", "Alphabet Inc.", "NASDAQ"),
+                ("MSFT", "Microsoft Corporation", "NASDAQ"),
+                ("AMZN", "Amazon.com Inc.", "NASDAQ"),
+                ("TSLA", "Tesla Inc.", "NASDAQ"),
+                ("META", "Meta Platforms Inc.", "NASDAQ"),
+                ("NFLX", "Netflix Inc.", "NASDAQ"),
+                ("NVDA", "NVIDIA Corporation", "NASDAQ"),
+                ("AMD", "Advanced Micro Devices", "NASDAQ"),
+                ("INTC", "Intel Corporation", "NASDAQ"),
+            ]
+            
+            # Filter popular stocks that match the query
+            for symbol, name, exchange in popular_stocks:
+                if (query.upper() in symbol.upper() or 
+                    query.lower() in name.lower()):
+                    results.append(StockSearchResult(
+                        symbol=symbol,
+                        name=name,
+                        exchange=exchange,
+                        type="stock",
+                        currency="USD"
+                    ))
+                    
+                    if len(results) >= limit:
+                        break
+        
+        return results[:limit]

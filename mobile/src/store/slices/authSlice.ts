@@ -5,6 +5,7 @@
  */
 
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { REHYDRATE } from 'redux-persist';
 
 interface User {
   id: number;
@@ -94,6 +95,25 @@ export const authSlice = createSlice({
       state.isAuthenticated = true;
       state.error = null;
     },
+    restoreAuthState: (state) => {
+      // Called when app rehydrates - if we have a token, consider user authenticated
+      if (state.token && state.user) {
+        state.isAuthenticated = true;
+      } else {
+        state.isAuthenticated = false;
+      }
+    },
+  },
+  extraReducers: (builder) => {
+    builder.addCase(REHYDRATE, (state, action) => {
+      // When redux-persist rehydrates the state, restore auth status
+      if (action.payload && action.payload.auth) {
+        const authState = action.payload.auth;
+        if (authState.token && authState.user) {
+          state.isAuthenticated = true;
+        }
+      }
+    });
   },
 });
 
@@ -106,6 +126,7 @@ export const {
   updateToken,
   clearError,
   setCredentials,
+  restoreAuthState,
 } = authSlice.actions;
 
 export default authSlice.reducer;

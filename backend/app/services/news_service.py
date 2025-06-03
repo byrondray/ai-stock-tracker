@@ -41,7 +41,8 @@ class NewsService:
             if not force_refresh:
                 cached_news = await redis_client.get(cache_key)
                 if cached_news:
-                    news_data = eval(cached_news)  # Consider using json.loads with proper serialization
+                    import json
+                    news_data = json.loads(cached_news)
                     return [NewsItem(**item) for item in news_data]
             
             # Fetch news from multiple sources
@@ -69,8 +70,9 @@ class NewsService:
             limited_news = sorted_news[:limit]
             
             # Cache the results
+            import json
             news_data = [news.model_dump() for news in limited_news]
-            await redis_client.setex(cache_key, 1800, str(news_data))  # Cache for 30 minutes
+            await redis_client.setex(cache_key, 1800, json.dumps(news_data))  # Cache for 30 minutes
             
             return limited_news
             
@@ -91,7 +93,8 @@ class NewsService:
             if not force_refresh:
                 cached_news = await redis_client.get(cache_key)
                 if cached_news:
-                    news_data = eval(cached_news)
+                    import json
+                    news_data = json.loads(cached_news)
                     return [NewsItem(**item) for item in news_data]
             
             # Define search terms based on category
@@ -135,8 +138,9 @@ class NewsService:
             limited_news = sorted_news[:limit]
             
             # Cache the results
+            import json
             news_data = [news.model_dump() for news in limited_news]
-            await redis_client.setex(cache_key, 1800, str(news_data))
+            await redis_client.setex(cache_key, 1800, json.dumps(news_data))
             
             return limited_news
             

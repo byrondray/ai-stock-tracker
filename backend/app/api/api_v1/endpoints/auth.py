@@ -12,7 +12,7 @@ from app.services.user_service import UserService
 router = APIRouter()
 
 
-@router.post("/register", response_model=UserSchema, status_code=status.HTTP_201_CREATED)
+@router.post("/register", status_code=status.HTTP_201_CREATED)
 async def register(
     user_data: UserCreate,
     db: Session = Depends(get_db)
@@ -21,21 +21,46 @@ async def register(
     user_service = UserService(db)
     
     # Check if user already exists
-    if await user_service.get_by_email(user_data.email):
+    if user_service.get_by_email(user_data.email):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email already registered"
         )
     
-    if await user_service.get_by_username(user_data.username):
+    if user_service.get_by_username(user_data.username):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Username already taken"
         )
     
     # Create user
-    user = await user_service.create(user_data)
-    return user
+    user = user_service.create(user_data)
+    
+    # Create tokens for immediate login
+    access_token = create_access_token(subject=user.email)
+    refresh_token = create_refresh_token(subject=user.email)
+    
+    # Convert user to dict to avoid serialization issues
+    user_dict = {
+        "id": user.id,
+        "email": user.email,
+        "username": user.username,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "risk_profile": user.risk_profile,
+        "is_active": user.is_active,
+        "is_verified": user.is_verified,
+        "created_at": user.created_at.isoformat() if user.created_at else None,
+        "updated_at": user.updated_at.isoformat() if user.updated_at else None
+    }
+    
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_type": "bearer",
+        "expires_in": 30 * 60,  # 30 minutes
+        "user": user_dict
+    }
 
 
 @router.post("/login", response_model=Token)
@@ -47,7 +72,7 @@ async def login(
     user_service = UserService(db)
     
     # Authenticate user
-    user = await user_service.authenticate(form_data.username, form_data.password)
+    user = user_service.authenticate(form_data.username, form_data.password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

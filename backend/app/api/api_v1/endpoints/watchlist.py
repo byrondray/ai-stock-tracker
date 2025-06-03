@@ -12,6 +12,7 @@ router = APIRouter()
 
 
 @router.get("/", response_model=List[WatchlistItem])
+@router.get("", response_model=List[WatchlistItem])
 async def get_watchlist(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -23,6 +24,7 @@ async def get_watchlist(
 
 
 @router.post("/", response_model=WatchlistItem, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=WatchlistItem, status_code=status.HTTP_201_CREATED)
 async def add_to_watchlist(
     item_data: WatchlistItemCreate,
     current_user: User = Depends(get_current_user),

@@ -93,7 +93,7 @@ async def get_current_user(
     
     # Get user from database
     user_service = UserService(db)
-    user = await user_service.get_by_email(email)
+    user = user_service.get_by_email(email)
     if user is None:
         raise credentials_exception
     

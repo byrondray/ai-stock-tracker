@@ -362,8 +362,10 @@ class NewsItem(BaseModel):
     url: str
     source: str
     published_at: datetime
+    sentiment: Optional[str] = None  # "positive", "negative", "neutral"
     sentiment_score: Optional[float] = Field(None, ge=-1, le=1)
     relevance_score: Optional[float] = Field(None, ge=0, le=1)
+    tags: Optional[List[str]] = None
 
 
 class NewsResponse(BaseModel):
