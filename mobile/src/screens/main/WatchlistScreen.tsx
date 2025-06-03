@@ -209,7 +209,7 @@ const WatchlistScreen: React.FC = () => {
         activeOpacity={0.7}
       >
         <View style={styles.stockHeader}>
-          {' '}
+          
           <View style={styles.stockInfo}>
             <Text style={[styles.stockSymbol, { color: theme.colors.text }]}>
               {item.stock_symbol}
@@ -244,7 +244,7 @@ const WatchlistScreen: React.FC = () => {
               </Text>
             </View>
           </View>
-        </View>{' '}
+        </View>
         <View style={styles.stockDetails}>
           <View style={styles.detailRow}>
             <Text
@@ -326,7 +326,7 @@ const WatchlistScreen: React.FC = () => {
     <View
       style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
-      {' '}
+      
       {/* Header */}
       <LinearGradient
         colors={isDark ? ['#1a1a2e', '#16213e'] : ['#667eea', '#764ba2']}
@@ -361,7 +361,7 @@ const WatchlistScreen: React.FC = () => {
           </Text>
         </View>
       </LinearGradient>
-      {/* Stock List */}{' '}
+      {/* Stock List */}
       {watchlist && watchlist.length > 0 ? (
         <FlatList
           data={watchlist}

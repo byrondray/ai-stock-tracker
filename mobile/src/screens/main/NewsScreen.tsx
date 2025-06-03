@@ -138,7 +138,7 @@ const NewsScreen: React.FC = () => {
           >
             {item.summary}
           </Text>
-        )}{' '}
+        )}
         <View style={styles.newsFooter}>
           {(item as any).symbols && (item as any).symbols.length > 0 && (
             <View style={styles.symbolsContainer}>
@@ -231,7 +231,7 @@ const NewsScreen: React.FC = () => {
         <Text style={[styles.headerSubtitle, { color: theme.colors.surface }]}>
           Stay updated with the latest market insights
         </Text>
-      </LinearGradient>{' '}
+      </LinearGradient>
       {/* News List */}
       {news && news.news_items && news.news_items.length > 0 ? (
         <FlatList

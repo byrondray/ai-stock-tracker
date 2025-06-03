@@ -330,7 +330,7 @@ const PortfolioScreen: React.FC = () => {
         <View style={styles.holdingsSection}>
           <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
             Holdings
-          </Text>{' '}
+          </Text>
           {portfolio?.items && portfolio.items.length > 0 ? (
             portfolio.items.map(renderHolding)
           ) : (

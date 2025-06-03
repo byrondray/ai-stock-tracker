@@ -158,7 +158,6 @@ const DashboardScreen: React.FC = () => {
                     {formatCurrency(portfolio.total_value)}
                   </Text>
                   <View style={styles.portfolioChange}>
-                    {' '}
                     <Text
                       style={[
                         styles.portfolioChangeText,
@@ -284,7 +283,6 @@ const DashboardScreen: React.FC = () => {
                       </Text>
                     </View>
                     <View style={styles.stockPrice}>
-                      {' '}
                       <Text
                         style={[styles.priceText, { color: theme.colors.text }]}
                       >
@@ -367,7 +365,7 @@ const DashboardScreen: React.FC = () => {
                           { color: theme.colors.textSecondary },
                         ]}
                       >
-                        {article.source} •{' '}
+                        {article.source}
                         {new Date(article.published_at).toLocaleDateString()}
                       </Text>
                     </TouchableOpacity>

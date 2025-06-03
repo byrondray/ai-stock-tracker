@@ -178,7 +178,7 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
                       handleInputChange('lastName', value)
                     }
                     autoCapitalize='words'
-                  />{' '}
+                  />
                 </View>
               </View>
 

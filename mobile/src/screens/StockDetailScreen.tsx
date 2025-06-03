@@ -620,7 +620,7 @@ export const StockDetailScreen: React.FC = () => {
                   { color: theme.colors.textSecondary },
                 ]}
               >
-                {news.source} •{' '}
+                {news.source}
                 {new Date(news.published_at).toLocaleDateString()}
               </Text>
               <Text

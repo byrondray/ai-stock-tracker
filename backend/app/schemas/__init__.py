@@ -125,7 +125,7 @@ class PredictionRequest(BaseModel):
     symbol: str = Field(..., min_length=1, max_length=10)
     days: int = Field(default=7, ge=1, le=365)
     include_confidence_bands: bool = True
-    model_type: Optional[str] = Field(None, regex="^(lstm|random_forest|ensemble)$")
+    model_type: Optional[str] = Field(None, pattern="^(lstm|random_forest|ensemble)$")
 
 
 class PredictionPoint(BaseModel):
@@ -183,7 +183,7 @@ class StockAnalysisResponse(BaseModel):
     fundamental_score: float = Field(..., ge=0, le=100)
     technical_score: float = Field(..., ge=0, le=100)
     sentiment_score: float = Field(..., ge=-1, le=1)
-    overall_rating: str = Field(..., regex="^(strong_buy|buy|hold|sell|strong_sell)$")
+    overall_rating: str = Field(..., pattern="^(strong_buy|buy|hold|sell|strong_sell)$")
     risk_score: float = Field(..., ge=0, le=100)
     
     # Detailed data

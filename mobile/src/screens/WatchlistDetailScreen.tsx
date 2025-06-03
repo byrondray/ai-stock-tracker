@@ -184,7 +184,6 @@ export const WatchlistDetailScreen: React.FC = () => {
         {/* Header Card */}
         <Card style={styles.headerCard}>
           <View style={styles.stockHeader}>
-            {' '}
             <View style={styles.stockInfo}>
               <Text style={[styles.stockSymbol, { color: theme.colors.text }]}>
                 {watchlistItem.stock_symbol}
@@ -224,7 +223,7 @@ export const WatchlistDetailScreen: React.FC = () => {
                 ]}
               >
                 Added to Watchlist
-              </Text>{' '}
+              </Text>
               <Text style={[styles.infoValue, { color: theme.colors.text }]}>
                 {new Date(watchlistItem.added_at || '').toLocaleDateString()}
               </Text>
@@ -264,7 +263,7 @@ export const WatchlistDetailScreen: React.FC = () => {
                   ]}
                 >
                   ${(watchlistItem.price_change || 0).toFixed(2)}
-                </Text>{' '}
+                </Text>
                 <Text
                   style={[
                     styles.changePercent,
@@ -298,7 +297,7 @@ export const WatchlistDetailScreen: React.FC = () => {
                 ]}
               >
                 Symbol
-              </Text>{' '}
+              </Text>
               <Text style={[styles.statValue, { color: theme.colors.text }]}>
                 {watchlistItem.stock_symbol}
               </Text>
@@ -347,7 +346,7 @@ export const WatchlistDetailScreen: React.FC = () => {
                 ]}
               >
                 Change %
-              </Text>{' '}
+              </Text>
               <Text
                 style={[
                   styles.statValue,
@@ -411,7 +410,7 @@ export const WatchlistDetailScreen: React.FC = () => {
               { color: theme.colors.textSecondary },
             ]}
           >
-            Set price alerts to get notified when {watchlistItem.stock_symbol}{' '}
+            Set price alerts to get notified when {watchlistItem.stock_symbol}
             reaches your target price.
           </Text>
           <Button

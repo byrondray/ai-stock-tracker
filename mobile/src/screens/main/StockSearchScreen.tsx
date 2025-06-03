@@ -102,7 +102,7 @@ const StockSearchScreen: React.FC = () => {
         <Text
           style={[styles.stockExchange, { color: theme.colors.textSecondary }]}
         >
-          {item.exchange}{' '}
+          {item.exchange}
         </Text>
       </View>
       <TouchableOpacity
@@ -158,7 +158,6 @@ const StockSearchScreen: React.FC = () => {
         </View>
 
         <View style={styles.priceSection}>
-          {' '}
           <Text style={[styles.currentPrice, { color: theme.colors.text }]}>
             {formatCurrency(stockDetails.current_price || 0)}
           </Text>
@@ -189,7 +188,7 @@ const StockSearchScreen: React.FC = () => {
               style={[styles.statLabel, { color: theme.colors.textSecondary }]}
             >
               Open
-            </Text>{' '}
+            </Text>
             <Text style={[styles.statValue, { color: theme.colors.text }]}>
               {formatCurrency(stockDetails.open_price || 0)}
             </Text>
