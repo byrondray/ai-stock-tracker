@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAppSelector } from '../../store';
+import { useStockPrices } from '../../hooks/useWebSocket';
 import {
   useGetPortfolioQuery,
   useGetWatchlistQuery,
@@ -46,6 +47,34 @@ const DashboardScreen: React.FC = () => {
   } = useGetGeneralNewsQuery({
     limit: 5,
   });
+
+  // Get all unique symbols from portfolio and watchlist for real-time updates
+  const portfolioSymbols =
+    portfolio?.items?.map((item) => item.stock_symbol) || [];
+  const watchlistSymbols = watchlist?.map((item) => item.stock_symbol) || [];
+  const allSymbols = [...new Set([...portfolioSymbols, ...watchlistSymbols])];
+
+  const { prices: realtimePrices, connected: isConnected } =
+    useStockPrices(allSymbols);
+
+  // Helper function to get real-time price for a symbol
+  const getCurrentPrice = (symbol: string, fallbackPrice?: number) => {
+    const realtimeData = realtimePrices[symbol];
+    return realtimeData?.price || fallbackPrice || 0;
+  };
+
+  // Helper function to get real-time change data
+  const getChangeData = (
+    symbol: string,
+    fallbackChange?: number,
+    fallbackPercent?: number
+  ) => {
+    const realtimeData = realtimePrices[symbol];
+    return {
+      change: realtimeData?.change || fallbackChange || 0,
+      changePercent: realtimeData?.changePercent || fallbackPercent || 0,
+    };
+  };
 
   const onRefresh = async () => {
     setRefreshing(true);

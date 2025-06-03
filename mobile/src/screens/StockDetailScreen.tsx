@@ -31,7 +31,7 @@ import { addToPortfolio } from '../store/slices/portfolioSlice';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { ChangeIndicator } from '../components/ui/ChangeIndicator';
-import LineChart from '../components/charts/LineChart';
+import { LineChart, CandlestickChart } from '../components/charts';
 
 type RootStackParamList = {
   StockDetail: { symbol: string };
@@ -163,17 +163,63 @@ export const StockDetailScreen: React.FC = () => {
 
     if (historyLoading || !priceHistory || priceHistory.length === 0) {
       return (
-        <View
-          style={[
-            styles.chartContainer,
-            { backgroundColor: theme.colors.card },
-          ]}
-        >
-          <ActivityIndicator size='large' color={theme.colors.primary} />
-        </View>
+        <Card style={styles.chartCard}>
+          <View style={styles.chartHeader}>
+            <Text style={[styles.chartTitle, { color: theme.colors.text }]}>
+              Price Chart
+            </Text>
+            <View style={styles.timeframeButtons}>
+              {(['1D', '1W', '1M', '3M', '1Y'] as const).map((tf) => (
+                <Button
+                  key={tf}
+                  title={tf}
+                  onPress={() => setTimeframe(tf)}
+                  style={[
+                    styles.timeframeButton,
+                    ...(timeframe === tf
+                      ? [{ backgroundColor: theme.colors.primary }]
+                      : [
+                          {
+                            backgroundColor: 'transparent',
+                            borderWidth: 1,
+                            borderColor: theme.colors.border,
+                          },
+                        ]),
+                  ]}
+                  textStyle={[
+                    styles.timeframeButtonText,
+                    {
+                      color:
+                        timeframe === tf
+                          ? theme.colors.surface
+                          : theme.colors.text,
+                    },
+                  ]}
+                />
+              ))}
+            </View>
+          </View>
+          <View
+            style={[
+              styles.chartContainer,
+              { backgroundColor: theme.colors.surface },
+            ]}
+          >
+            <ActivityIndicator size='large' color={theme.colors.primary} />
+            <Text
+              style={[
+                styles.loadingText,
+                { color: theme.colors.textSecondary },
+              ]}
+            >
+              Loading chart data...
+            </Text>
+          </View>
+        </Card>
       );
     }
 
+    // Prepare data for LineChart
     const chartData = {
       labels: priceHistory.map((item) =>
         new Date(item.date).toLocaleDateString('en-US', {
@@ -190,12 +236,76 @@ export const StockDetailScreen: React.FC = () => {
       ],
     };
 
+    // Prepare data for CandlestickChart
+    const candlestickData = priceHistory.map((item) => ({
+      date: item.date,
+      open: item.open,
+      high: item.high,
+      low: item.low,
+      close: item.close,
+      volume: item.volume,
+    }));
     return (
       <Card style={styles.chartCard}>
         <View style={styles.chartHeader}>
           <Text style={[styles.chartTitle, { color: theme.colors.text }]}>
             Price Chart
           </Text>
+        </View>
+
+        {/* Chart Controls */}
+        <View style={styles.chartControls}>
+          {/* Chart Type Toggle */}
+          <View style={styles.chartTypeButtons}>
+            <Button
+              title='Line'
+              onPress={() => setChartType('line')}
+              style={[
+                styles.chartTypeButton,
+                chartType === 'line'
+                  ? { backgroundColor: theme.colors.primary }
+                  : {
+                      backgroundColor: 'transparent',
+                      borderWidth: 1,
+                      borderColor: theme.colors.border,
+                    },
+              ]}
+              textStyle={[
+                styles.chartTypeButtonText,
+                {
+                  color:
+                    chartType === 'line'
+                      ? theme.colors.surface
+                      : theme.colors.text,
+                },
+              ]}
+            />
+            <Button
+              title='Candle'
+              onPress={() => setChartType('candlestick')}
+              style={[
+                styles.chartTypeButton,
+                chartType === 'candlestick'
+                  ? { backgroundColor: theme.colors.primary }
+                  : {
+                      backgroundColor: 'transparent',
+                      borderWidth: 1,
+                      borderColor: theme.colors.border,
+                    },
+              ]}
+              textStyle={[
+                styles.chartTypeButtonText,
+                {
+                  color:
+                    chartType === 'candlestick'
+                      ? theme.colors.surface
+                      : theme.colors.text,
+                },
+              ]}
+            />
+          </View>
+
+          {/* Timeframe Buttons */}
           <View style={styles.timeframeButtons}>
             {(['1D', '1W', '1M', '3M', '1Y'] as const).map((tf) => (
               <Button
@@ -204,16 +314,20 @@ export const StockDetailScreen: React.FC = () => {
                 onPress={() => setTimeframe(tf)}
                 style={[
                   styles.timeframeButton,
-                  ...(timeframe === tf
-                    ? [{ backgroundColor: theme.colors.primary }]
-                    : []),
+                  timeframe === tf
+                    ? { backgroundColor: theme.colors.primary }
+                    : {
+                        backgroundColor: 'transparent',
+                        borderWidth: 1,
+                        borderColor: theme.colors.border,
+                      },
                 ]}
                 textStyle={[
                   styles.timeframeButtonText,
                   {
                     color:
                       timeframe === tf
-                        ? theme.colors.background
+                        ? theme.colors.surface
                         : theme.colors.text,
                   },
                 ]}
@@ -221,28 +335,44 @@ export const StockDetailScreen: React.FC = () => {
             ))}
           </View>
         </View>
-        <LineChart
-          data={chartData}
-          width={screenWidth - 60}
-          height={220}
-          chartConfig={{
-            backgroundColor: theme.colors.card,
-            backgroundGradientFrom: theme.colors.card,
-            backgroundGradientTo: theme.colors.card,
-            decimalPlaces: 2,
-            color: (opacity = 1) =>
-              `rgba(${theme.colors.primary.replace('#', '')}, ${opacity})`,
-            labelColor: () => theme.colors.text,
-            style: {
-              borderRadius: 16,
-            },
-            propsForDots: {
-              r: '0',
-            },
-          }}
-          bezier
-          style={styles.chart}
-        />
+
+        {/* Render appropriate chart */}
+        {chartType === 'line' ? (
+          <LineChart
+            data={chartData}
+            width={screenWidth - 60}
+            height={220}
+            chartConfig={{
+              backgroundColor: theme.colors.surface,
+              backgroundGradientFrom: theme.colors.surface,
+              backgroundGradientTo: theme.colors.surface,
+              decimalPlaces: 2,
+              color: (opacity = 1) =>
+                theme.colors.primary
+                  .replace('rgb', 'rgba')
+                  .replace(')', `, ${opacity})`),
+              labelColor: (opacity = 1) =>
+                theme.colors.textSecondary
+                  .replace('rgb', 'rgba')
+                  .replace(')', `, ${opacity})`),
+              style: {
+                borderRadius: 16,
+              },
+              propsForDots: {
+                r: '0', // Hide dots on line chart for cleaner look
+              },
+            }}
+            bezier
+            style={styles.chart}
+          />
+        ) : (
+          <CandlestickChart
+            data={candlestickData}
+            width={screenWidth - 60}
+            height={220}
+            style={styles.chart}
+          />
+        )}
       </Card>
     );
   };
@@ -648,18 +778,39 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
   },
+  chartControls: {
+    flexDirection: 'column',
+    gap: 12,
+  },
+  chartTypeButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  chartTypeButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    minWidth: 70,
+    alignItems: 'center',
+  },
+  chartTypeButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
   timeframeButtons: {
     flexDirection: 'row',
+    gap: 8,
   },
   timeframeButton: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    marginLeft: 4,
-    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    minWidth: 40,
+    alignItems: 'center',
   },
   timeframeButtonText: {
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   chart: {
     marginVertical: 8,

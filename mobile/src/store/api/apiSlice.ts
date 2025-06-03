@@ -1,9 +1,10 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import type { RootState } from '../index';
 import { ReactNode } from 'react';
+import { configService } from '../../services/config';
 
-// Base URL - adjust according to your backend
-const baseUrl = 'http://localhost:8000/api/v1';
+// Base URL from config service
+const baseUrl = configService.buildApiUrl('');
 
 // Types matching backend schemas exactly
 export interface User {

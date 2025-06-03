@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../hooks/useTheme';
+import { useStockPrices } from '../../hooks/useWebSocket';
 import {
   useGetWatchlistQuery,
   useRemoveFromWatchlistMutation,
@@ -38,6 +39,9 @@ const WatchlistScreen: React.FC = () => {
   const [removeFromWatchlist, { isLoading: removing }] =
     useRemoveFromWatchlistMutation();
   const [addToPortfolio, { isLoading: adding }] = useAddToPortfolioMutation();
+  const { prices: realtimePrices, connected: isConnected } = useStockPrices(
+    watchlist?.map((item) => item.stock_symbol) || []
+  );
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -172,62 +176,76 @@ const WatchlistScreen: React.FC = () => {
     if (change < 0) return theme.colors.error;
     return theme.colors.textSecondary;
   };
+  const getCurrentPrice = (item: WatchlistItem) => {
+    const realtimeData = realtimePrices[item.stock_symbol];
+    return realtimeData?.price || item.current_price;
+  };
+  const getChangeData = (item: WatchlistItem) => {
+    const realtimeData = realtimePrices[item.stock_symbol];
 
-  const renderStockItem = ({ item }: { item: WatchlistItem }) => (
-    <TouchableOpacity
-      style={[styles.stockCard, { backgroundColor: theme.colors.surface }]}
-      onLongPress={() => handleRemoveStock(item.stock_symbol)}
-      activeOpacity={0.7}
-    >
-      <View style={styles.stockHeader}>
-        {' '}
-        <View style={styles.stockInfo}>
-          <Text style={[styles.stockSymbol, { color: theme.colors.text }]}>
-            {item.stock_symbol}
-          </Text>
-          <Text
-            style={[styles.stockName, { color: theme.colors.textSecondary }]}
-          >
-            {item.stock.name}
-          </Text>
-        </View>
-        <View style={styles.priceInfo}>
-          <Text style={[styles.currentPrice, { color: theme.colors.text }]}>
-            {formatCurrency(item.current_price || 0)}
-          </Text>
-          <View style={styles.changeInfo}>
-            <Text
-              style={[
-                styles.changeAmount,
-                { color: getChangeColor(item.price_change || 0) },
-              ]}
-            >
-              {(item.price_change || 0) >= 0 ? '+' : ''}
-              {formatCurrency(Math.abs(item.price_change || 0))}
+    if (realtimeData) {
+      // Use real-time data
+      return {
+        currentPrice: realtimeData.price,
+        changeAmount: realtimeData.change,
+        changePercent: realtimeData.changePercent,
+      };
+    } else {
+      // Fallback to cached data
+      return {
+        currentPrice: item.current_price || 0,
+        changeAmount: item.price_change || 0,
+        changePercent: item.price_change_percent || 0,
+      };
+    }
+  };
+  const renderStockItem = ({ item }: { item: WatchlistItem }) => {
+    const { currentPrice, changeAmount, changePercent } = getChangeData(item);
+
+    return (
+      <TouchableOpacity
+        style={[styles.stockCard, { backgroundColor: theme.colors.surface }]}
+        onLongPress={() => handleRemoveStock(item.stock_symbol)}
+        activeOpacity={0.7}
+      >
+        <View style={styles.stockHeader}>
+          {' '}
+          <View style={styles.stockInfo}>
+            <Text style={[styles.stockSymbol, { color: theme.colors.text }]}>
+              {item.stock_symbol}
             </Text>
             <Text
-              style={[
-                styles.changePercent,
-                { color: getChangeColor(item.price_change_percent || 0) },
-              ]}
+              style={[styles.stockName, { color: theme.colors.textSecondary }]}
             >
-              ({formatPercentage(item.price_change_percent || 0)})
+              {item.stock.name}
             </Text>
           </View>
-        </View>
-      </View>{' '}
-      <View style={styles.stockDetails}>
-        <View style={styles.detailRow}>
-          <Text
-            style={[styles.detailLabel, { color: theme.colors.textSecondary }]}
-          >
-            Volume
-          </Text>
-          <Text style={[styles.detailValue, { color: theme.colors.text }]}>
-            {formatVolume(item.stock.volume || 0)}
-          </Text>
-        </View>
-        {item.stock.market_cap && (
+          <View style={styles.priceInfo}>
+            <Text style={[styles.currentPrice, { color: theme.colors.text }]}>
+              {formatCurrency(currentPrice || 0)}
+            </Text>
+            <View style={styles.changeInfo}>
+              <Text
+                style={[
+                  styles.changeAmount,
+                  { color: getChangeColor(changeAmount || 0) },
+                ]}
+              >
+                {changeAmount >= 0 ? '+' : ''}
+                {formatCurrency(Math.abs(changeAmount || 0))}
+              </Text>
+              <Text
+                style={[
+                  styles.changePercent,
+                  { color: getChangeColor(changePercent || 0) },
+                ]}
+              >
+                ({formatPercentage(changePercent || 0)})
+              </Text>
+            </View>
+          </View>
+        </View>{' '}
+        <View style={styles.stockDetails}>
           <View style={styles.detailRow}>
             <Text
               style={[
@@ -235,41 +253,56 @@ const WatchlistScreen: React.FC = () => {
                 { color: theme.colors.textSecondary },
               ]}
             >
-              Market Cap
+              Volume
             </Text>
             <Text style={[styles.detailValue, { color: theme.colors.text }]}>
-              {formatVolume(item.stock.market_cap)}
+              {formatVolume(item.stock.volume || 0)}
             </Text>
           </View>
-        )}
-      </View>
-      <View style={styles.actionButtons}>
-        <TouchableOpacity
-          style={[
-            styles.portfolioButton,
-            { backgroundColor: theme.colors.primary },
-          ]}
-          onPress={() => handleAddToPortfolio(item)}
-          disabled={adding}
-        >
-          <Text style={[styles.buttonText, { color: theme.colors.surface }]}>
-            {adding ? 'Adding...' : 'Add to Portfolio'}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.removeButton, { borderColor: theme.colors.error }]}
-          onPress={() => handleRemoveStock(item.stock_symbol)}
-          disabled={removing}
-        >
-          <Text
-            style={[styles.removeButtonText, { color: theme.colors.error }]}
+          {item.stock.market_cap && (
+            <View style={styles.detailRow}>
+              <Text
+                style={[
+                  styles.detailLabel,
+                  { color: theme.colors.textSecondary },
+                ]}
+              >
+                Market Cap
+              </Text>
+              <Text style={[styles.detailValue, { color: theme.colors.text }]}>
+                {formatVolume(item.stock.market_cap)}
+              </Text>
+            </View>
+          )}
+        </View>
+        <View style={styles.actionButtons}>
+          <TouchableOpacity
+            style={[
+              styles.portfolioButton,
+              { backgroundColor: theme.colors.primary },
+            ]}
+            onPress={() => handleAddToPortfolio(item)}
+            disabled={adding}
           >
-            {removing ? 'Removing...' : 'Remove'}
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </TouchableOpacity>
-  );
+            <Text style={[styles.buttonText, { color: theme.colors.surface }]}>
+              {adding ? 'Adding...' : 'Add to Portfolio'}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.removeButton, { borderColor: theme.colors.error }]}
+            onPress={() => handleRemoveStock(item.stock_symbol)}
+            disabled={removing}
+          >
+            <Text
+              style={[styles.removeButtonText, { color: theme.colors.error }]}
+            >
+              {removing ? 'Removing...' : 'Remove'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   if (isLoading) {
     return (
@@ -293,20 +326,40 @@ const WatchlistScreen: React.FC = () => {
     <View
       style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
+      {' '}
       {/* Header */}
       <LinearGradient
         colors={isDark ? ['#1a1a2e', '#16213e'] : ['#667eea', '#764ba2']}
         style={styles.header}
       >
-        {' '}
-        <Text style={[styles.headerTitle, { color: theme.colors.surface }]}>
-          Watchlist
-        </Text>
-        {watchlist && (
-          <Text style={[styles.stockCount, { color: theme.colors.surface }]}>
-            {watchlist.length} stocks
+        <View style={styles.headerTop}>
+          <Text style={[styles.headerTitle, { color: theme.colors.surface }]}>
+            Watchlist
           </Text>
-        )}
+          {watchlist && (
+            <Text style={[styles.stockCount, { color: theme.colors.surface }]}>
+              {watchlist.length} stocks
+            </Text>
+          )}
+        </View>
+        {/* Real-time connection status */}
+        <View style={styles.connectionStatus}>
+          <View
+            style={[
+              styles.connectionDot,
+              {
+                backgroundColor: isConnected
+                  ? theme.colors.success
+                  : theme.colors.error,
+              },
+            ]}
+          />
+          <Text
+            style={[styles.connectionText, { color: theme.colors.surface }]}
+          >
+            {isConnected ? 'Live prices' : 'Offline'}
+          </Text>
+        </View>
       </LinearGradient>
       {/* Stock List */}{' '}
       {watchlist && watchlist.length > 0 ? (
@@ -357,9 +410,12 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingBottom: 24,
     paddingHorizontal: 24,
+  },
+  headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 8,
   },
   headerTitle: {
     fontSize: 28,
@@ -368,6 +424,21 @@ const styles = StyleSheet.create({
   stockCount: {
     fontSize: 16,
     opacity: 0.8,
+  },
+  connectionStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  connectionDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
+  },
+  connectionText: {
+    fontSize: 12,
+    opacity: 0.9,
   },
   listContent: {
     padding: 16,
