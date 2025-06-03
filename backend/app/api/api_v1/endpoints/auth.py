@@ -6,7 +6,7 @@ from typing import Any
 from app.core.database import get_db
 from app.core.security import create_access_token, create_refresh_token, verify_password, get_password_hash, get_current_user
 from app.models import User
-from app.schemas import UserCreate, User as UserSchema, Token, RefreshTokenRequest
+from app.schemas import UserCreate, User as UserSchema, Token, RefreshTokenRequest, LoginRequest
 from app.services.user_service import UserService
 
 router = APIRouter()
@@ -45,8 +45,8 @@ async def register(
         "id": user.id,
         "email": user.email,
         "username": user.username,
-        "first_name": user.first_name,
-        "last_name": user.last_name,
+        "first_name": user.first_name or "",
+        "last_name": user.last_name or "",
         "risk_profile": user.risk_profile,
         "is_active": user.is_active,
         "is_verified": user.is_verified,
@@ -65,14 +65,16 @@ async def register(
 
 @router.post("/login", response_model=Token)
 async def login(
-    form_data: OAuth2PasswordRequestForm = Depends(),
+    login_data: LoginRequest,
     db: Session = Depends(get_db)
 ) -> Any:
     """Login and get access token."""
     user_service = UserService(db)
     
+    print(f"🔐 Login attempt - username: {login_data.username}, password length: {len(login_data.password) if login_data.password else 0}")
+    
     # Authenticate user
-    user = user_service.authenticate(form_data.username, form_data.password)
+    user = user_service.authenticate(login_data.username, login_data.password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

@@ -15,6 +15,11 @@ import { useTheme } from '../hooks/useTheme';
 import { logout } from '../store/slices/authSlice';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
+import {
+  performLogout,
+  clearAllAppData,
+  debugStorage,
+} from '../utils/authUtils';
 
 interface SettingsSection {
   title: string;
@@ -48,7 +53,9 @@ export const SettingsScreen: React.FC = () => {
       {
         text: 'Logout',
         style: 'destructive',
-        onPress: () => dispatch(logout()),
+        onPress: async () => {
+          await performLogout(dispatch);
+        },
       },
     ]);
   };

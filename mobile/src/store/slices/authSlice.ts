@@ -6,6 +6,7 @@
 
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { REHYDRATE } from 'redux-persist';
+import { isValidToken } from '../../utils/tokenUtils';
 
 interface User {
   id: number;
@@ -109,8 +110,18 @@ export const authSlice = createSlice({
       // When redux-persist rehydrates the state, restore auth status
       if (action.payload && action.payload.auth) {
         const authState = action.payload.auth;
-        if (authState.token && authState.user) {
+        if (
+          authState.token &&
+          authState.user &&
+          isValidToken(authState.token)
+        ) {
           state.isAuthenticated = true;
+        } else if (authState.token && !isValidToken(authState.token)) {
+          // Token is expired, clear auth state
+          state.token = null;
+          state.refreshToken = null;
+          state.user = null;
+          state.isAuthenticated = false;
         }
       }
     });

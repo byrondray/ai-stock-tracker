@@ -257,13 +257,7 @@ export const apiSlice = createApi({
       query: (credentials) => ({
         url: '/auth/login',
         method: 'POST',
-        body: new URLSearchParams({
-          username: credentials.username,
-          password: credentials.password,
-        }),
-        headers: {
-          'content-type': 'application/x-www-form-urlencoded',
-        },
+        body: credentials,
       }),
     }),
     register: builder.mutation<AuthResponse, RegisterRequest>({

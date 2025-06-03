@@ -34,12 +34,53 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
   const [password, setPassword] = useState('');
   const [login, { isLoading }] = useLoginMutation();
 
+  // Clear form when component mounts (e.g., after logout)
+  React.useEffect(() => {
+    setEmail('');
+    setPassword('');
+  }, []);
+
   const handleLogin = async () => {
+    // Prevent multiple simultaneous login attempts
+    if (isLoading) {
+      return;
+    }
+
+    // Basic validation
+    if (!email || !password) {
+      Alert.alert('Error', 'Please enter both email and password');
+      return;
+    }
+
     if (!email.trim() || !password.trim()) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
+
+    // Additional validation to prevent 422 errors
+    if (email.trim().length < 3) {
+      Alert.alert('Error', 'Please enter a valid email address');
+      return;
+    }
+
+    if (password.length < 6) {
+      Alert.alert('Error', 'Password must be at least 6 characters long');
+      return;
+    }
+
+    // Basic email format check
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      Alert.alert('Error', 'Please enter a valid email address');
+      return;
+    }
+
     try {
+      console.log('🔐 Attempting login with:', {
+        username: email.trim().toLowerCase(),
+        passwordLength: password.length,
+      });
+
       const result = await login({
         username: email.trim().toLowerCase(),
         password: password,
@@ -53,10 +94,25 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
       );
     } catch (error: any) {
       console.error('Login error:', error);
-      Alert.alert(
-        'Login Failed',
-        error?.data?.detail || 'An error occurred during login'
-      );
+
+      // Handle different types of errors
+      let errorMessage = 'An error occurred during login';
+
+      if (error?.status === 422) {
+        errorMessage = 'Please check your email and password format';
+      } else if (error?.status === 401) {
+        errorMessage = 'Invalid email or password';
+      } else if (error?.data?.detail) {
+        if (typeof error.data.detail === 'string') {
+          errorMessage = error.data.detail;
+        } else if (Array.isArray(error.data.detail)) {
+          errorMessage = error.data.detail
+            .map((item) => item.msg || item)
+            .join(', ');
+        }
+      }
+
+      Alert.alert('Login Failed', errorMessage);
     }
   };
 

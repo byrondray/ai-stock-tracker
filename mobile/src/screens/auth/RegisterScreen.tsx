@@ -82,6 +82,11 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   const handleRegister = async () => {
+    // Prevent multiple simultaneous registration attempts
+    if (isLoading) {
+      return;
+    }
+
     if (!validateForm()) return;
     try {
       const result = await register({
@@ -101,10 +106,26 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
       );
     } catch (error: any) {
       console.error('Register error:', error);
-      Alert.alert(
-        'Registration Failed',
-        error?.data?.detail || 'An error occurred during registration'
-      );
+
+      // Handle different types of errors
+      let errorMessage = 'An error occurred during registration';
+
+      if (error?.status === 422) {
+        errorMessage = 'Please check your input fields for errors';
+      } else if (error?.status === 400) {
+        errorMessage =
+          error?.data?.detail || 'Email or username already exists';
+      } else if (error?.data?.detail) {
+        if (typeof error.data.detail === 'string') {
+          errorMessage = error.data.detail;
+        } else if (Array.isArray(error.data.detail)) {
+          errorMessage = error.data.detail
+            .map((item) => item.msg || item)
+            .join(', ');
+        }
+      }
+
+      Alert.alert('Registration Failed', errorMessage);
     }
   };
 

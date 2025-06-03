@@ -57,6 +57,13 @@ class User(UserInDB):
     pass
 
 
+# Auth schemas
+class LoginRequest(BaseModel):
+    """Login request schema."""
+    username: str = Field(..., min_length=1)
+    password: str = Field(..., min_length=1)
+
+
 # Stock schemas
 class StockBase(BaseModel):
     """Base stock schema."""

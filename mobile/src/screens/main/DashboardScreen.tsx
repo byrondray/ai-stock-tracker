@@ -7,9 +7,11 @@ import {
   RefreshControl,
   TouchableOpacity,
   Dimensions,
+  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useAppSelector } from '../../store';
+import { Ionicons } from '@expo/vector-icons';
+import { useAppSelector, useAppDispatch } from '../../store';
 import { useStockPrices } from '../../hooks/useWebSocket';
 import {
   useGetPortfolioQuery,
@@ -17,13 +19,32 @@ import {
   useGetGeneralNewsQuery,
 } from '../../store/api/apiSlice';
 import { useTheme } from '../../hooks/useTheme';
+import { performLogout } from '../../utils/authUtils';
 
 const { width } = Dimensions.get('window');
 
 const DashboardScreen: React.FC = () => {
   const { theme, isDark } = useTheme();
   const { user } = useAppSelector((state) => state.auth);
+  const dispatch = useAppDispatch();
   const [refreshing, setRefreshing] = useState(false);
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Logout',
+      'This will clear all stored data and log you out. Continue?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            await performLogout(dispatch);
+          },
+        },
+      ]
+    );
+  };
 
   const {
     data: portfolio,
@@ -120,12 +141,26 @@ const DashboardScreen: React.FC = () => {
         colors={isDark ? ['#1a1a2e', '#16213e'] : ['#667eea', '#764ba2']}
         style={styles.header}
       >
-        <Text style={[styles.greeting, { color: theme.colors.surface }]}>
-          Welcome back,
-        </Text>
-        <Text style={[styles.userName, { color: theme.colors.surface }]}>
-          {user?.first_name || 'Investor'}
-        </Text>
+        <View style={styles.headerContent}>
+          <View>
+            <Text style={[styles.greeting, { color: theme.colors.surface }]}>
+              Welcome back,
+            </Text>
+            <Text style={[styles.userName, { color: theme.colors.surface }]}>
+              {user?.first_name || 'Investor'}
+            </Text>
+          </View>
+          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+            <Ionicons
+              name='log-out-outline'
+              size={24}
+              color={theme.colors.surface}
+            />
+            <Text style={[styles.logoutText, { color: theme.colors.surface }]}>
+              Logout
+            </Text>
+          </TouchableOpacity>
+        </View>
       </LinearGradient>
 
       <View style={styles.content}>
@@ -401,6 +436,23 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingBottom: 32,
     paddingHorizontal: 24,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  logoutText: {
+    marginLeft: 6,
+    fontSize: 14,
+    fontWeight: '600',
   },
   greeting: {
     fontSize: 16,
