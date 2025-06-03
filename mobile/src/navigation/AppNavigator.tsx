@@ -8,7 +8,7 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
-import { useAppSelector } from '../hooks/redux';
+import { useAppSelector } from '../store';
 import { AuthNavigator } from './AuthNavigator';
 import { MainTabNavigator } from './MainTabNavigator';
 import { StockDetailScreen } from '../screens/StockDetailScreen';

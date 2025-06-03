@@ -32,13 +32,15 @@ export const watchlistSlice = createSlice({
       state.items.push(action.payload);
     },
     updateWatchlistItem: (state, action: PayloadAction<WatchlistItem>) => {
-      const index = state.items.findIndex(item => item.id === action.payload.id);
+      const index = state.items.findIndex(
+        (item) => item.id === action.payload.id
+      );
       if (index !== -1) {
         state.items[index] = action.payload;
       }
     },
     removeWatchlistItem: (state, action: PayloadAction<number>) => {
-      state.items = state.items.filter(item => item.id !== action.payload);
+      state.items = state.items.filter((item) => item.id !== action.payload);
     },
     setLoading: (state, action: PayloadAction<boolean>) => {
       state.isLoading = action.payload;

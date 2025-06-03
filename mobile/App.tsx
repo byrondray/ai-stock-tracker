@@ -17,7 +17,7 @@ import { AppNavigator } from './src/navigation/AppNavigator';
 import { ThemeProvider } from './src/providers/ThemeProvider';
 import { NotificationProvider } from './src/providers/NotificationProvider';
 import { LoadingScreen } from './src/components/common/LoadingScreen';
-import { useAppDispatch } from './src/hooks/redux';
+import { useAppDispatch } from './src/store';
 import { setOnlineStatus } from './src/store/slices/uiSlice';
 
 // Keep the splash screen visible while we fetch resources

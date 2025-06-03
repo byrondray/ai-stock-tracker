@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useAppDispatch } from '../../hooks/redux';
+import { useAppDispatch } from '../../store';
 import { useRegisterMutation } from '../../store/api/apiSlice';
 import { setCredentials } from '../../store/slices/authSlice';
 import { AuthStackParamList } from '../../navigation/AuthNavigator';
@@ -178,7 +178,8 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
                       handleInputChange('lastName', value)
                     }
                     autoCapitalize='words'
-                  />                </View>
+                  />{' '}
+                </View>
               </View>
 
               <View style={styles.inputContainer}>

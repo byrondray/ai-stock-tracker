@@ -10,7 +10,7 @@ import {
   TextInput,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useAppSelector, useAppDispatch } from '../hooks/redux';
+import { useAppSelector, useAppDispatch } from '../store';
 import { useTheme } from '../hooks/useTheme';
 import { logout } from '../store/slices/authSlice';
 import { toggleTheme } from '../store/slices/uiSlice';

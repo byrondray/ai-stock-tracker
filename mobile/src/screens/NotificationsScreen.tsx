@@ -10,7 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useAppSelector } from '../hooks/redux';
+import { useAppSelector } from '../store';
 import { useTheme } from '../hooks/useTheme';
 import {
   useGetNotificationsQuery,

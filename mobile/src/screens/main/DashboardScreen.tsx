@@ -9,11 +9,11 @@ import {
   Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useAppSelector } from '../../hooks/redux';
+import { useAppSelector } from '../../store';
 import {
   useGetPortfolioQuery,
   useGetWatchlistQuery,
-  useGetNewsQuery,
+  useGetGeneralNewsQuery,
 } from '../../store/api/apiSlice';
 import { useTheme } from '../../hooks/useTheme';
 
@@ -43,8 +43,7 @@ const DashboardScreen: React.FC = () => {
     data: news,
     isLoading: newsLoading,
     refetch: refetchNews,
-  } = useGetNewsQuery({
-    symbol: 'MARKET',
+  } = useGetGeneralNewsQuery({
     limit: 5,
   });
 
@@ -129,7 +128,9 @@ const DashboardScreen: React.FC = () => {
                   >
                     {formatCurrency(portfolio.total_value)}
                   </Text>
-                  <View style={styles.portfolioChange}>                    <Text
+                  <View style={styles.portfolioChange}>
+                    {' '}
+                    <Text
                       style={[
                         styles.portfolioChangeText,
                         {
@@ -178,7 +179,8 @@ const DashboardScreen: React.FC = () => {
                     </Text>
                     <Text
                       style={[
-                        styles.statValue,                        { color: getChangeColor(portfolio.total_return || 0) },
+                        styles.statValue,
+                        { color: getChangeColor(portfolio.total_return || 0) },
                       ]}
                     >
                       {formatCurrency(portfolio.total_return || 0)}
@@ -229,50 +231,51 @@ const DashboardScreen: React.FC = () => {
                 ]}
               >
                 Loading watchlist...
-              </Text>            ) : watchlist && watchlist.length > 0 ? (
+              </Text>
+            ) : watchlist && watchlist.length > 0 ? (
               <View style={styles.watchlistContainer}>
-                {watchlist
-                  .slice(0, 5)
-                  .map((item: any, index: number) => (
-                    <View key={item.stock_symbol} style={styles.watchlistItem}>
-                      <View style={styles.stockInfo}>
-                        <Text
-                          style={[
-                            styles.stockSymbol,
-                            { color: theme.colors.text },
-                          ]}
-                        >
-                          {item.stock_symbol}
-                        </Text>
-                        <Text
-                          style={[
-                            styles.stockName,
-                            { color: theme.colors.textSecondary },
-                          ]}
-                        >
-                          {item.stock.name}
-                        </Text>
-                      </View>
-                      <View style={styles.stockPrice}>
-                        <Text
-                          style={[
-                            styles.priceText,
-                            { color: theme.colors.text },
-                          ]}
-                        >
-                          {formatCurrency(stock.current_price)}
-                        </Text>
-                        <Text
-                          style={[
-                            styles.changeText,
-                            { color: getChangeColor(stock.change_percent) },
-                          ]}
-                        >
-                          {formatPercentage(stock.change_percent)}
-                        </Text>
-                      </View>
+                {watchlist.slice(0, 5).map((item: any, index: number) => (
+                  <View key={item.stock_symbol} style={styles.watchlistItem}>
+                    <View style={styles.stockInfo}>
+                      <Text
+                        style={[
+                          styles.stockSymbol,
+                          { color: theme.colors.text },
+                        ]}
+                      >
+                        {item.stock_symbol}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.stockName,
+                          { color: theme.colors.textSecondary },
+                        ]}
+                      >
+                        {item.stock.name}
+                      </Text>
                     </View>
-                  ))}
+                    <View style={styles.stockPrice}>
+                      {' '}
+                      <Text
+                        style={[styles.priceText, { color: theme.colors.text }]}
+                      >
+                        {formatCurrency(item.stock.current_price)}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.changeText,
+                          {
+                            color: getChangeColor(
+                              item.price_change_percent || 0
+                            ),
+                          },
+                        ]}
+                      >
+                        {formatPercentage(item.price_change_percent || 0)}
+                      </Text>
+                    </View>
+                  </View>
+                ))}
               </View>
             ) : (
               <View style={styles.emptyState}>
@@ -318,26 +321,28 @@ const DashboardScreen: React.FC = () => {
               >
                 Loading news...
               </Text>
-            ) : news && news.length > 0 ? (
+            ) : news && news.news_items && news.news_items.length > 0 ? (
               <View style={styles.newsContainer}>
-                {news.slice(0, 3).map((article: any, index: number) => (
-                  <TouchableOpacity key={index} style={styles.newsItem}>
-                    <Text
-                      style={[styles.newsTitle, { color: theme.colors.text }]}
-                    >
-                      {article.title}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.newsSource,
-                        { color: theme.colors.textSecondary },
-                      ]}
-                    >
-                      {article.source} •{' '}
-                      {new Date(article.published_at).toLocaleDateString()}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                {news.news_items
+                  .slice(0, 3)
+                  .map((article: any, index: number) => (
+                    <TouchableOpacity key={index} style={styles.newsItem}>
+                      <Text
+                        style={[styles.newsTitle, { color: theme.colors.text }]}
+                      >
+                        {article.title}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.newsSource,
+                          { color: theme.colors.textSecondary },
+                        ]}
+                      >
+                        {article.source} •{' '}
+                        {new Date(article.published_at).toLocaleDateString()}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
               </View>
             ) : (
               <View style={styles.emptyState}>

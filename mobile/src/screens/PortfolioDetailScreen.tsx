@@ -13,7 +13,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { RouteProp, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useAppSelector, useAppDispatch } from '../hooks/redux';
+import { useAppSelector, useAppDispatch } from '../store';
 import { useTheme } from '../hooks/useTheme';
 import {
   useGetPortfolioQuery,
