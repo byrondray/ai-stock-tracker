@@ -26,7 +26,6 @@ export function AuthNavigator() {
         gestureEnabled: true,
       }}
     >
-      {' '}
       <Stack.Screen name='Welcome' component={WelcomeScreen} />
       <Stack.Screen name='Login' component={LoginScreen} />
       <Stack.Screen name='Register' component={RegisterScreen} />

@@ -11,17 +11,27 @@ import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
 import NetInfo from '@react-native-community/netinfo';
 import * as SplashScreen from 'expo-splash-screen';
+import { View, ActivityIndicator, Text, StyleSheet } from 'react-native';
 
 import { store, persistor } from './src/store';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { ThemeProvider } from './src/providers/ThemeProvider';
 import { NotificationProvider } from './src/providers/NotificationProvider';
-import { LoadingScreen } from './src/components/common/LoadingScreen';
 import { useAppDispatch } from './src/store';
 import { setOnlineStatus } from './src/store/slices/uiSlice';
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
+
+// Simple loading component that doesn't use theme context
+function SimpleLoadingScreen() {
+  return (
+    <View style={styles.loadingContainer}>
+      <ActivityIndicator size='large' color='#007AFF' />
+      <Text style={styles.loadingText}>Loading...</Text>
+    </View>
+  );
+}
 
 function AppContent() {
   const dispatch = useAppDispatch();
@@ -58,9 +68,23 @@ function AppContent() {
 export default function App() {
   return (
     <Provider store={store}>
-      <PersistGate loading={<LoadingScreen />} persistor={persistor}>
+      <PersistGate loading={<SimpleLoadingScreen />} persistor={persistor}>
         <AppContent />
       </PersistGate>
     </Provider>
   );
 }
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#000000',
+  },
+});

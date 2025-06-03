@@ -181,7 +181,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
               <Text
                 style={[styles.footerText, { color: theme.colors.surface }]}
               >
-                Don't have an account?{' '}
+                Don't have an account?
               </Text>
               <TouchableOpacity onPress={handleRegister}>
                 <Text

@@ -13,7 +13,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useAppSelector, useAppDispatch } from '../store';
 import { useTheme } from '../hooks/useTheme';
 import { logout } from '../store/slices/authSlice';
-import { toggleTheme } from '../store/slices/uiSlice';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 
@@ -32,7 +31,7 @@ interface SettingsItem {
 
 export const SettingsScreen: React.FC = () => {
   const dispatch = useAppDispatch();
-  const { theme, isDarkMode } = useTheme();
+  const { theme, toggleTheme: toggleAppTheme } = useTheme();
   const { user } = useAppSelector((state) => state.auth);
 
   const [changePasswordModalVisible, setChangePasswordModalVisible] =
@@ -156,8 +155,8 @@ export const SettingsScreen: React.FC = () => {
         {
           title: 'Dark Mode',
           type: 'switch',
-          value: isDarkMode,
-          onToggle: () => dispatch(toggleTheme()),
+          value: theme.mode === 'dark',
+          onToggle: toggleAppTheme,
         },
       ],
     },

@@ -9,7 +9,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { debounce } from 'lodash';
+import _ from 'lodash';
 import { useTheme } from '../../hooks/useTheme';
 import {
   useSearchStocksQuery,
@@ -40,7 +40,7 @@ const StockSearchScreen: React.FC = () => {
     useAddToWatchlistMutation();
 
   const debouncedSearch = useCallback(
-    debounce((query: string) => {
+    _.debounce((query: string) => {
       setSearchQuery(query);
     }, 300),
     []

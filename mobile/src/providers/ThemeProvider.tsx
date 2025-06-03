@@ -47,15 +47,15 @@ const darkTheme: Theme = {
   colors: {
     primary: '#0A84FF',
     secondary: '#5E5CE6',
-    background: '#000000',
-    surface: '#1C1C1E',
-    card: '#2C2C2E',
+    background: '#1A1A2E',
+    surface: '#2D2D44',
+    card: '#353559',
     text: '#FFFFFF',
-    textSecondary: '#8E8E93',
-    border: '#38383A',
-    error: '#FF453A',
-    success: '#32D74B',
-    warning: '#FF9F0A',
+    textSecondary: '#B8B8CC',
+    border: '#4A4A6A',
+    error: '#FF6B6B',
+    success: '#51CF66',
+    warning: '#FFD43B',
   },
 };
 
@@ -71,7 +71,7 @@ interface ThemeProviderProps {
 }
 
 export function ThemeProvider({ children }: ThemeProviderProps) {
-  const [mode, setMode] = React.useState<'light' | 'dark'>('dark');
+  const [mode, setMode] = React.useState<'light' | 'dark'>('light');
 
   const toggleTheme = () => {
     setMode((prev) => (prev === 'light' ? 'dark' : 'light'));

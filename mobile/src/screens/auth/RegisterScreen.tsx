@@ -295,7 +295,7 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
               <Text
                 style={[styles.footerText, { color: theme.colors.surface }]}
               >
-                Already have an account?{' '}
+                Already have an account?
               </Text>
               <TouchableOpacity onPress={handleLogin}>
                 <Text
