@@ -5,7 +5,19 @@
  */
 
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import type { User } from '../api/apiSlice';
+
+interface User {
+  id: number;
+  email: string;
+  username: string;
+  first_name?: string;
+  last_name?: string;
+  risk_profile: 'conservative' | 'moderate' | 'aggressive';
+  is_active: boolean;
+  is_verified: boolean;
+  created_at: string;
+  updated_at?: string;
+}
 
 interface AuthState {
   token: string | null;

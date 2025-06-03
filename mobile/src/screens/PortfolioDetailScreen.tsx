@@ -22,7 +22,7 @@ import {
 } from '../store/api/apiSlice';
 import {
   updatePortfolioItem,
-  removeFromPortfolio,
+  removePortfolioItem,
 } from '../store/slices/portfolioSlice';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -155,7 +155,7 @@ export const PortfolioDetailScreen: React.FC = () => {
               await deletePortfolioItemMutation(
                 parseInt(portfolioId, 10)
               ).unwrap();
-              dispatch(removeFromPortfolio(parseInt(portfolioId, 10)));
+              dispatch(removePortfolioItem(parseInt(portfolioId, 10)));
               // Navigate back
             } catch (error) {
               console.error('Error deleting portfolio item:', error);
@@ -226,7 +226,7 @@ export const PortfolioDetailScreen: React.FC = () => {
           <View style={styles.stockHeader}>
             <View style={styles.stockInfo}>
               <Text style={[styles.stockSymbol, { color: theme.colors.text }]}>
-                {portfolioItem.stock_symbol}
+                {portfolioItem.symbol}
               </Text>
               <Text
                 style={[
@@ -241,7 +241,7 @@ export const PortfolioDetailScreen: React.FC = () => {
               <Text style={[styles.currentPrice, { color: theme.colors.text }]}>
                 $
                 {portfolioItem.current_price?.toFixed(2) ||
-                  portfolioItem.averagePrice.toFixed(2)}
+                  portfolioItem.average_cost.toFixed(2)}
               </Text>
               {portfolioItem.current_price !== undefined &&
                 portfolioItem.current_price !== portfolioItem.average_cost && (

@@ -11,15 +11,21 @@ import { combineReducers } from '@reduxjs/toolkit';
 
 // Import your slices here
 import uiSlice from './slices/uiSlice';
+import authSlice from './slices/authSlice';
+import portfolioSlice from './slices/portfolioSlice';
+import watchlistSlice from './slices/watchlistSlice';
 
 const persistConfig = {
   key: 'root',
   storage: AsyncStorage,
-  whitelist: ['ui'], // Add slices you want to persist
+  whitelist: ['ui', 'auth', 'portfolio', 'watchlist'], // Add slices you want to persist
 };
 
 const rootReducer = combineReducers({
   ui: uiSlice,
+  auth: authSlice,
+  portfolio: portfolioSlice,
+  watchlist: watchlistSlice,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
@@ -41,9 +47,3 @@ export type AppDispatch = typeof store.dispatch;
 
 // Export hooks
 export { useAppDispatch, useAppSelector } from './hooks';
-
-// Typed hooks
-import { useDispatch, useSelector, TypedUseSelectorHook } from 'react-redux';
-
-export const useAppDispatch = () => useDispatch<AppDispatch>();
-export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector;

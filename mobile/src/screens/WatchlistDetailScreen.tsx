@@ -17,8 +17,8 @@ import {
   useGetWatchlistQuery,
   useDeleteWatchlistItemMutation,
 } from '../store/api/apiSlice';
-import { removeFromWatchlist } from '../store/slices/watchlistSlice';
-import { addToPortfolio } from '../store/slices/portfolioSlice';
+import { removeItem } from '../store/slices/watchlistSlice';
+import { addPortfolioItem } from '../store/slices/portfolioSlice';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { ChangeIndicator } from '../components/ui/ChangeIndicator';
@@ -80,7 +80,7 @@ export const WatchlistDetailScreen: React.FC = () => {
               await deleteWatchlistItemMutation(
                 parseInt(watchlistId, 10)
               ).unwrap();
-              dispatch(removeFromWatchlist(parseInt(watchlistId, 10)));
+              dispatch(removeItem(parseInt(watchlistId, 10)));
               // Navigate back
             } catch (error) {
               console.error('Error removing from watchlist:', error);
@@ -111,16 +111,17 @@ export const WatchlistDetailScreen: React.FC = () => {
               // ... rest of imports
 
               dispatch(
-                addToPortfolio({
+                addPortfolioItem({
                   id: Date.now(),
-                  stock_symbol: watchlistItem.stock_symbol,
-                  name: watchlistItem.stock?.name || watchlistItem.stock_symbol,
+                  symbol: watchlistItem.stock_symbol,
+                  name: watchlistItem.stock || watchlistItem.stock_symbol,
                   quantity: numShares,
                   average_cost: watchlistItem.current_price || 0,
-                  averagePrice: watchlistItem.current_price || 0,
                   purchase_date: new Date().toISOString(),
-                  created_at: new Date().toISOString(),
-                  stock: watchlistItem.stock || null,
+                  current_price: watchlistItem.current_price || 0,
+                  value: numShares * (watchlistItem.current_price || 0),
+                  gain: 0,
+                  gainPercent: 0,
                 })
               );
             }
@@ -194,7 +195,7 @@ export const WatchlistDetailScreen: React.FC = () => {
                   { color: theme.colors.textSecondary },
                 ]}
               >
-                {watchlistItem.stock?.name || watchlistItem.stock_symbol}
+                {watchlistItem.stock || watchlistItem.stock_symbol}
               </Text>
             </View>
             <View style={styles.priceInfo}>
@@ -410,8 +411,8 @@ export const WatchlistDetailScreen: React.FC = () => {
               { color: theme.colors.textSecondary },
             ]}
           >
-            Set price alerts to get notified when {watchlistItem.symbol} reaches
-            your target price.
+            Set price alerts to get notified when {watchlistItem.stock_symbol}{' '}
+            reaches your target price.
           </Text>
           <Button
             title='Set Price Alert'

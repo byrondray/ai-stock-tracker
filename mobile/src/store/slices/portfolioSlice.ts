@@ -1,15 +1,44 @@
+/**
+ * Portfolio Slice
+ *
+ * Manages portfolio state and operations
+ */
+
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { Portfolio, PortfolioItem } from '../api/apiSlice';
+
+export interface PortfolioItem {
+  id: number;
+  symbol: string;
+  name: string;
+  quantity: number;
+  average_cost: number;
+  purchase_date: string;
+  current_price: number;
+  value: number;
+  gain: number;
+  gainPercent: number;
+}
+
+export interface Portfolio {
+  id: number;
+  name: string;
+  items: PortfolioItem[];
+  totalValue: number;
+  totalGain: number;
+  totalGainPercent: number;
+}
 
 interface PortfolioState {
   portfolio: Portfolio | null;
-  isLoading: boolean;
+  portfolios: Portfolio[];
+  loading: boolean;
   error: string | null;
 }
 
 const initialState: PortfolioState = {
   portfolio: null,
-  isLoading: false,
+  portfolios: [],
+  loading: false,
   error: null,
 };
 
@@ -19,11 +48,20 @@ const portfolioSlice = createSlice({
   reducers: {
     setPortfolio: (state, action: PayloadAction<Portfolio>) => {
       state.portfolio = action.payload;
-      state.error = null;
     },
-    addToPortfolio: (state, action: PayloadAction<PortfolioItem>) => {
+    setPortfolios: (state, action: PayloadAction<Portfolio[]>) => {
+      state.portfolios = action.payload;
+    },
+    addPortfolioItem: (state, action: PayloadAction<PortfolioItem>) => {
       if (state.portfolio) {
         state.portfolio.items.push(action.payload);
+      }
+    },
+    removePortfolioItem: (state, action: PayloadAction<number>) => {
+      if (state.portfolio) {
+        state.portfolio.items = state.portfolio.items.filter(
+          (item) => item.id !== action.payload
+        );
       }
     },
     updatePortfolioItem: (state, action: PayloadAction<PortfolioItem>) => {
@@ -36,35 +74,23 @@ const portfolioSlice = createSlice({
         }
       }
     },
-    removeFromPortfolio: (state, action: PayloadAction<number>) => {
-      if (state.portfolio) {
-        state.portfolio.items = state.portfolio.items.filter(
-          (item) => item.id !== action.payload
-        );
-      }
-    },
     setLoading: (state, action: PayloadAction<boolean>) => {
-      state.isLoading = action.payload;
+      state.loading = action.payload;
     },
     setError: (state, action: PayloadAction<string | null>) => {
       state.error = action.payload;
-    },
-    clearPortfolio: (state) => {
-      state.portfolio = null;
-      state.error = null;
     },
   },
 });
 
 export const {
   setPortfolio,
-  addToPortfolio,
+  setPortfolios,
+  addPortfolioItem,
+  removePortfolioItem,
   updatePortfolioItem,
-  removeFromPortfolio,
   setLoading,
   setError,
-  clearPortfolio,
 } = portfolioSlice.actions;
 
 export default portfolioSlice.reducer;
-export { portfolioSlice };

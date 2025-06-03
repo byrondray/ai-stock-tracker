@@ -1,37 +1,66 @@
 /**
  * Watchlist Slice
  *
- * Manages watchlist state
+ * Manages watchlist state and operations
  */
 
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import type { WatchlistItem } from '../api/apiSlice';
+
+export interface WatchlistItem {
+  id: number;
+  stock_symbol: string;
+  stock: string;
+  current_price: number;
+  price_change: number;
+  price_change_percent: number;
+  added_at: string;
+}
+
+export interface Watchlist {
+  id: number;
+  name: string;
+  description?: string;
+  items: WatchlistItem[];
+  createdAt: string;
+  updatedAt: string;
+}
 
 interface WatchlistState {
   items: WatchlistItem[];
-  isLoading: boolean;
+  watchlists: Watchlist[];
+  currentWatchlist: Watchlist | null;
+  loading: boolean;
   error: string | null;
 }
 
 const initialState: WatchlistState = {
   items: [],
-  isLoading: false,
+  watchlists: [],
+  currentWatchlist: null,
+  loading: false,
   error: null,
 };
 
-export const watchlistSlice = createSlice({
+const watchlistSlice = createSlice({
   name: 'watchlist',
   initialState,
   reducers: {
-    setWatchlistItems: (state, action: PayloadAction<WatchlistItem[]>) => {
+    setItems: (state, action: PayloadAction<WatchlistItem[]>) => {
       state.items = action.payload;
-      state.isLoading = false;
-      state.error = null;
     },
-    addWatchlistItem: (state, action: PayloadAction<WatchlistItem>) => {
+    setWatchlists: (state, action: PayloadAction<Watchlist[]>) => {
+      state.watchlists = action.payload;
+    },
+    setCurrentWatchlist: (state, action: PayloadAction<Watchlist>) => {
+      state.currentWatchlist = action.payload;
+    },
+    addItem: (state, action: PayloadAction<WatchlistItem>) => {
       state.items.push(action.payload);
     },
-    updateWatchlistItem: (state, action: PayloadAction<WatchlistItem>) => {
+    removeItem: (state, action: PayloadAction<number>) => {
+      state.items = state.items.filter((item) => item.id !== action.payload);
+    },
+    updateItem: (state, action: PayloadAction<WatchlistItem>) => {
       const index = state.items.findIndex(
         (item) => item.id === action.payload.id
       );
@@ -39,39 +68,43 @@ export const watchlistSlice = createSlice({
         state.items[index] = action.payload;
       }
     },
-    removeWatchlistItem: (state, action: PayloadAction<number>) => {
-      state.items = state.items.filter((item) => item.id !== action.payload);
+    addWatchlist: (state, action: PayloadAction<Watchlist>) => {
+      state.watchlists.push(action.payload);
+    },
+    removeWatchlist: (state, action: PayloadAction<number>) => {
+      state.watchlists = state.watchlists.filter(
+        (watchlist) => watchlist.id !== action.payload
+      );
+    },
+    updateWatchlist: (state, action: PayloadAction<Watchlist>) => {
+      const index = state.watchlists.findIndex(
+        (watchlist) => watchlist.id === action.payload.id
+      );
+      if (index !== -1) {
+        state.watchlists[index] = action.payload;
+      }
     },
     setLoading: (state, action: PayloadAction<boolean>) => {
-      state.isLoading = action.payload;
+      state.loading = action.payload;
     },
     setError: (state, action: PayloadAction<string | null>) => {
       state.error = action.payload;
-      state.isLoading = false;
-    },
-    clearError: (state) => {
-      state.error = null;
-    },
-    clearWatchlist: (state) => {
-      state.items = [];
-      state.error = null;
     },
   },
 });
 
 export const {
-  setWatchlistItems,
-  addWatchlistItem,
-  updateWatchlistItem,
-  removeWatchlistItem,
+  setItems,
+  setWatchlists,
+  setCurrentWatchlist,
+  addItem,
+  removeItem,
+  updateItem,
+  addWatchlist,
+  removeWatchlist,
+  updateWatchlist,
   setLoading,
   setError,
-  clearError,
-  clearWatchlist,
 } = watchlistSlice.actions;
-
-// Add individual exports for components that expect them
-export const addToWatchlist = addWatchlistItem;
-export const removeFromWatchlist = removeWatchlistItem;
 
 export default watchlistSlice.reducer;

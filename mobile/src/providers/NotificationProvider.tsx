@@ -4,7 +4,7 @@
  * Provides notification handling and push notification setup
  */
 
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { createContext, useContext, ReactNode, useEffect } from 'react';
 import * as Notifications from 'expo-notifications';
 import { Alert } from 'react-native';
 import { useAppDispatch, useAppSelector } from '../store';
@@ -16,6 +16,8 @@ Notifications.setNotificationHandler({
     shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
   }),
 });
 
@@ -112,7 +114,7 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
           body,
           sound: 'default',
         },
-        trigger: trigger ? { date: trigger } : null,
+        trigger: null, // TODO: Fix trigger type - trigger ? { date: trigger, repeats: false } : null,
       });
     } catch (error) {
       console.error('Error scheduling notification:', error);
