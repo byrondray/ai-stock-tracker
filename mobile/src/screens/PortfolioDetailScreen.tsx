@@ -111,17 +111,17 @@ export const PortfolioDetailScreen: React.FC = () => {
         shares,
         averagePrice,
         totalValue: shares * (portfolioItem.currentPrice || averagePrice),
-      };
-
-      await updatePortfolioItemMutation({
-        id: portfolioId,
-        data: updatedItem,
-      }).unwrap();
-
-      dispatch(
+      };      await updatePortfolioItemMutation({
+        id: parseInt(portfolioId, 10),
+        data: {
+          quantity: shares,
+          average_cost: averagePrice,
+        },
+      }).unwrap();      dispatch(
         updatePortfolioItem({
-          id: portfolioId,
-          updates: updatedItem,
+          ...portfolioItem!,
+          quantity: shares,
+          average_cost: averagePrice,
         })
       );
 
@@ -144,9 +144,8 @@ export const PortfolioDetailScreen: React.FC = () => {
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: async () => {
-            try {
-              await deletePortfolioItemMutation(portfolioId).unwrap();
+          onPress: async () => {            try {
+              await deletePortfolioItemMutation(parseInt(portfolioId, 10)).unwrap();
               dispatch(removeFromPortfolio(parseInt(portfolioId, 10)));
               // Navigate back
             } catch (error) {

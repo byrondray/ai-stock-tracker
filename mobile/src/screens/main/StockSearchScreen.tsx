@@ -15,16 +15,8 @@ import {
   useSearchStocksQuery,
   useGetStockDetailsQuery,
   useAddToWatchlistMutation,
+  type StockSearchResult,
 } from '../../store/api/apiSlice';
-
-interface StockSearchResult {
-  symbol: string;
-  name: string;
-  exchange: string;
-  type: string;
-  current_price?: number;
-  change_percent?: number;
-}
 
 const StockSearchScreen: React.FC = () => {
   const { theme } = useTheme();
@@ -61,10 +53,9 @@ const StockSearchScreen: React.FC = () => {
   const handleStockPress = (symbol: string) => {
     setSelectedStock(symbol);
   };
-
   const handleAddToWatchlist = async (symbol: string) => {
     try {
-      await addToWatchlist({ symbol }).unwrap();
+      await addToWatchlist({ stock_symbol: symbol }).unwrap();
       Alert.alert('Success', `${symbol} added to watchlist`);
     } catch (error: any) {
       Alert.alert(
@@ -183,27 +174,26 @@ const StockSearchScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.priceSection}>
-          <Text style={[styles.currentPrice, { color: theme.colors.text }]}>
-            {formatCurrency(stockDetails.current_price)}
+        <View style={styles.priceSection}>          <Text style={[styles.currentPrice, { color: theme.colors.text }]}>
+            {formatCurrency(stockDetails.current_price || 0)}
           </Text>
           <View style={styles.changeInfo}>
             <Text
               style={[
                 styles.changeAmount,
-                { color: getChangeColor(stockDetails.change_amount) },
+                { color: getChangeColor(stockDetails.change_amount || 0) },
               ]}
             >
-              {stockDetails.change_amount >= 0 ? '+' : ''}
-              {formatCurrency(Math.abs(stockDetails.change_amount))}
+              {(stockDetails.change_amount || 0) >= 0 ? '+' : ''}
+              {formatCurrency(Math.abs(stockDetails.change_amount || 0))}
             </Text>
             <Text
               style={[
                 styles.changePercent,
-                { color: getChangeColor(stockDetails.change_percent) },
+                { color: getChangeColor(stockDetails.change_percent || 0) },
               ]}
             >
-              ({formatPercentage(stockDetails.change_percent)})
+              ({formatPercentage(stockDetails.change_percent || 0)})
             </Text>
           </View>
         </View>
@@ -214,9 +204,8 @@ const StockSearchScreen: React.FC = () => {
               style={[styles.statLabel, { color: theme.colors.textSecondary }]}
             >
               Open
-            </Text>
-            <Text style={[styles.statValue, { color: theme.colors.text }]}>
-              {formatCurrency(stockDetails.open_price)}
+            </Text>            <Text style={[styles.statValue, { color: theme.colors.text }]}>
+              {formatCurrency(stockDetails.open_price || 0)}
             </Text>
           </View>
           <View style={styles.statItem}>
@@ -226,7 +215,7 @@ const StockSearchScreen: React.FC = () => {
               High
             </Text>
             <Text style={[styles.statValue, { color: theme.colors.text }]}>
-              {formatCurrency(stockDetails.high_price)}
+              {formatCurrency(stockDetails.high_price || 0)}
             </Text>
           </View>
           <View style={styles.statItem}>
@@ -236,7 +225,7 @@ const StockSearchScreen: React.FC = () => {
               Low
             </Text>
             <Text style={[styles.statValue, { color: theme.colors.text }]}>
-              {formatCurrency(stockDetails.low_price)}
+              {formatCurrency(stockDetails.low_price || 0)}
             </Text>
           </View>
           <View style={styles.statItem}>
@@ -316,10 +305,9 @@ const StockSearchScreen: React.FC = () => {
           <Text style={[styles.errorText, { color: theme.colors.error }]}>
             Error searching stocks
           </Text>
-        </View>
-      ) : searchResults && searchResults.length > 0 ? (
+        </View>      ) : searchResults && searchResults.results && searchResults.results.length > 0 ? (
         <FlatList
-          data={searchResults}
+          data={searchResults.results}
           keyExtractor={(item) => item.symbol}
           renderItem={renderSearchResult}
           style={styles.resultsList}

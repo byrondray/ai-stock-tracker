@@ -78,6 +78,12 @@ export interface WatchlistItem {
   current_price?: number;
   price_change?: number;
   price_change_percent?: number;
+  // Additional properties used in screens
+  symbol?: string; // For backward compatibility
+  name?: string; // For backward compatibility  
+  change?: number; // For backward compatibility
+  changePercent?: number; // For backward compatibility
+  addedAt?: string; // For backward compatibility
 }
 
 export interface StockSearchResult {
@@ -190,11 +196,22 @@ export interface WatchlistItemUpdate {
 
 export interface StockPrice {
   symbol: string;
+  date: string;
   price: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume?: number;
   change: number;
   change_percent: number;
-  volume?: number;
   last_updated: string;
+}
+
+export interface PriceHistoryResponse {
+  symbol: string;
+  timeframe: string;
+  prices: StockPrice[];
 }
 
 export interface Notification {
@@ -260,6 +277,7 @@ export const apiSlice = createApi({
     // Stock endpoints
     searchStocks: builder.query<SearchResponse, string>({
       query: (query) => `/stocks/search?q=${encodeURIComponent(query)}`,
+      providesTags: ['Stock'],
     }),
     getStock: builder.query<Stock, string>({
       query: (symbol) => `/stocks/${symbol}`,
@@ -346,6 +364,18 @@ export const apiSlice = createApi({
     getGeneralNews: builder.query<NewsResponse, { limit?: number }>({
       query: ({ limit = 20 }) => `/news?limit=${limit}`,
       providesTags: ['News'],
+    }),
+
+    // Price history endpoint
+    getStockPriceHistory: builder.query<
+      PriceHistoryResponse,
+      { symbol: string; timeframe: string }
+    >({
+      query: ({ symbol, timeframe }) =>
+        `/stocks/${symbol}/price-history?timeframe=${timeframe}`,
+      providesTags: (result, error, { symbol }) => [
+        { type: 'Stock', id: symbol },
+      ],
     }),
 
     // Prediction endpoints

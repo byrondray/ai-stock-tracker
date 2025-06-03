@@ -242,13 +242,11 @@ const NewsScreen: React.FC = () => {
         <Text style={[styles.headerSubtitle, { color: theme.colors.surface }]}>
           Stay updated with the latest market insights
         </Text>
-      </LinearGradient>
-
-      {/* News List */}
-      {news && news.length > 0 ? (
+      </LinearGradient>      {/* News List */}
+      {news && news.news_items && news.news_items.length > 0 ? (
         <FlatList
-          data={news}
-          keyExtractor={(item, index) => `${item.id || item.url}-${index}`}
+          data={news.news_items}
+          keyExtractor={(item, index) => `${item.url}-${index}`}
           renderItem={renderNewsItem}
           contentContainerStyle={styles.listContent}
           refreshControl={

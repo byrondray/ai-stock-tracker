@@ -56,10 +56,13 @@ const WatchlistScreen: React.FC = () => {
         {
           text: 'Remove',
           style: 'destructive',
-          onPress: async () => {
-            try {
-              await removeFromWatchlist({ symbol }).unwrap();
-              Alert.alert('Success', 'Stock removed from watchlist');
+          onPress: async () => {            try {
+              // Find the watchlist item to get its ID
+              const watchlistItem = watchlist?.find(item => item.stock_symbol === symbol);
+              if (watchlistItem) {
+                await removeFromWatchlist(watchlistItem.id).unwrap();
+                Alert.alert('Success', 'Stock removed from watchlist');
+              }
             } catch (error: any) {
               Alert.alert(
                 'Error',
@@ -108,13 +111,12 @@ const WatchlistScreen: React.FC = () => {
                   ) {
                     Alert.alert('Error', 'Please enter valid numbers');
                     return;
-                  }
-
-                  try {
+                  }                  try {
                     await addToPortfolio({
-                      symbol: stock.symbol,
+                      stock_symbol: stock.stock_symbol,
                       quantity,
-                      purchase_price: price,
+                      average_cost: price,
+                      purchase_date: new Date().toISOString(),
                     }).unwrap();
                     Alert.alert('Success', 'Stock added to portfolio');
                   } catch (error: any) {

@@ -19,6 +19,9 @@ import {
   useGetStockPriceHistoryQuery,
   useGetStockAnalysisQuery,
   useGetStockPredictionQuery,
+  useAddToWatchlistMutation,
+  useRemoveFromWatchlistMutation,
+  useAddToPortfolioMutation,
 } from '../store/api/apiSlice';
 import {
   addToWatchlist,
@@ -60,14 +63,12 @@ export const StockDetailScreen: React.FC = () => {
     isLoading: detailsLoading,
     error: detailsError,
     refetch: refetchDetails,
-  } = useGetStockDetailsQuery(symbol);
-
-  const {
+  } = useGetStockDetailsQuery(symbol);  const {
     data: priceHistory,
     isLoading: historyLoading,
     error: historyError,
     refetch: refetchHistory,
-  } = useGetStockPriceHistoryQuery({ symbol, timeframe });
+  } = useGetStockPriceHistoryQuery(symbol);
 
   const {
     data: analysis,
@@ -98,21 +99,23 @@ export const StockDetailScreen: React.FC = () => {
       setRefreshing(false);
     }
   };
-
-  const handleToggleWatchlist = () => {
-    if (isInWatchlist) {
-      dispatch(removeFromWatchlist(symbol));
-    } else {
-      dispatch(
-        addToWatchlist({
-          id: Date.now().toString(),
-          symbol,
-          name: stockDetails?.name || symbol,
-          currentPrice: stockDetails?.currentPrice || 0,
-          change: stockDetails?.change || 0,
-          changePercent: stockDetails?.changePercent || 0,
-          addedAt: new Date().toISOString(),
-        })
+  const handleToggleWatchlist = async () => {
+    try {
+      if (isInWatchlist) {
+        // Find the watchlist item to get its ID
+        const watchlistItem = watchlist.find(item => item.stock_symbol === symbol);
+        if (watchlistItem) {
+          await removeFromWatchlistMutation(watchlistItem.id).unwrap();
+        }
+      } else {
+        await addToWatchlistMutation({
+          stock_symbol: symbol,
+        }).unwrap();
+      }
+    } catch (error: any) {
+      Alert.alert(
+        'Error',
+        error?.data?.detail || 'Failed to update watchlist'
       );
     }
   };
