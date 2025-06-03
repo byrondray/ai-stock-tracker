@@ -1,5 +1,6 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import type { RootState } from '../index';
+import { ReactNode } from 'react';
 
 // Base URL - adjust according to your backend
 const baseUrl = 'http://localhost:8000/api/v1';
@@ -43,6 +44,8 @@ export interface Stock {
 }
 
 export interface PortfolioItem {
+  averagePrice: any;
+  name: ReactNode;
   id: number;
   stock_symbol: string;
   quantity: number;
@@ -80,7 +83,7 @@ export interface WatchlistItem {
   price_change_percent?: number;
   // Additional properties used in screens
   symbol?: string; // For backward compatibility
-  name?: string; // For backward compatibility  
+  name?: string; // For backward compatibility
   change?: number; // For backward compatibility
   changePercent?: number; // For backward compatibility
   addedAt?: string; // For backward compatibility
@@ -427,6 +430,7 @@ export const {
   useSearchStocksQuery,
   useGetStockQuery,
   useGetStockPriceQuery,
+  useGetStockPriceHistoryQuery,
   useGetPortfolioQuery,
   useAddToPortfolioMutation,
   useUpdatePortfolioItemMutation,
@@ -446,7 +450,6 @@ export const {
 
 // Add aliases for backward compatibility
 export const useGetStockDetailsQuery = useGetStockQuery;
-export const useGetStockPriceHistoryQuery = useGetStockPriceQuery;
 export const useUpdatePortfolioHoldingMutation = useUpdatePortfolioItemMutation;
 export const useDeletePortfolioItemMutation = useRemoveFromPortfolioMutation;
 export const useDeleteWatchlistItemMutation = useRemoveFromWatchlistMutation;

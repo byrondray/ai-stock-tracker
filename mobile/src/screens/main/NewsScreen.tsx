@@ -12,19 +12,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../hooks/useTheme';
-import { useGetMarketNewsQuery } from '../../store/api/apiSlice';
-
-interface NewsArticle {
-  id: string;
-  title: string;
-  summary: string;
-  url: string;
-  source: string;
-  published_at: string;
-  image_url?: string;
-  sentiment_score?: number;
-  symbols?: string[];
-}
+import { useGetMarketNewsQuery, type NewsItem } from '../../store/api/apiSlice';
 
 const NewsScreen: React.FC = () => {
   const { theme, isDark } = useTheme();
@@ -94,12 +82,11 @@ const NewsScreen: React.FC = () => {
     if (score < -0.1) return 'Negative';
     return 'Neutral';
   };
-
   const renderNewsItem = ({
     item,
     index,
   }: {
-    item: NewsArticle;
+    item: NewsItem;
     index: number;
   }) => (
     <TouchableOpacity
@@ -111,9 +98,9 @@ const NewsScreen: React.FC = () => {
       onPress={() => handleArticlePress(item.url)}
       activeOpacity={0.7}
     >
-      {item.image_url && (
+      {(item as any).image_url && (
         <Image
-          source={{ uri: item.image_url }}
+          source={{ uri: (item as any).image_url }}
           style={[styles.newsImage, index === 0 && styles.featuredImage]}
           resizeMode='cover'
         />
@@ -130,7 +117,6 @@ const NewsScreen: React.FC = () => {
             {formatTimeAgo(item.published_at)}
           </Text>
         </View>
-
         <Text
           style={[
             styles.newsTitle,
@@ -141,7 +127,6 @@ const NewsScreen: React.FC = () => {
         >
           {item.title}
         </Text>
-
         {item.summary && (
           <Text
             style={[
@@ -153,34 +138,38 @@ const NewsScreen: React.FC = () => {
           >
             {item.summary}
           </Text>
-        )}
-
+        )}{' '}
         <View style={styles.newsFooter}>
-          {item.symbols && item.symbols.length > 0 && (
+          {(item as any).symbols && (item as any).symbols.length > 0 && (
             <View style={styles.symbolsContainer}>
-              {item.symbols.slice(0, 3).map((symbol, idx) => (
-                <View
-                  key={idx}
-                  style={[
-                    styles.symbolTag,
-                    { backgroundColor: theme.colors.primary },
-                  ]}
-                >
-                  <Text
-                    style={[styles.symbolText, { color: theme.colors.surface }]}
+              {(item as any).symbols
+                .slice(0, 3)
+                .map((symbol: string, idx: number) => (
+                  <View
+                    key={idx}
+                    style={[
+                      styles.symbolTag,
+                      { backgroundColor: theme.colors.primary },
+                    ]}
                   >
-                    {symbol}
-                  </Text>
-                </View>
-              ))}
-              {item.symbols.length > 3 && (
+                    <Text
+                      style={[
+                        styles.symbolText,
+                        { color: theme.colors.surface },
+                      ]}
+                    >
+                      {symbol}
+                    </Text>
+                  </View>
+                ))}
+              {(item as any).symbols.length > 3 && (
                 <Text
                   style={[
                     styles.moreSymbols,
                     { color: theme.colors.textSecondary },
                   ]}
                 >
-                  +{item.symbols.length - 3}
+                  +{(item as any).symbols.length - 3}
                 </Text>
               )}
             </View>
@@ -242,7 +231,8 @@ const NewsScreen: React.FC = () => {
         <Text style={[styles.headerSubtitle, { color: theme.colors.surface }]}>
           Stay updated with the latest market insights
         </Text>
-      </LinearGradient>      {/* News List */}
+      </LinearGradient>{' '}
+      {/* News List */}
       {news && news.news_items && news.news_items.length > 0 ? (
         <FlatList
           data={news.news_items}

@@ -82,7 +82,8 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   const handleRegister = async () => {
-    if (!validateForm()) return;    try {
+    if (!validateForm()) return;
+    try {
       const result = await register({
         first_name: formData.firstName.trim(),
         last_name: formData.lastName.trim(),

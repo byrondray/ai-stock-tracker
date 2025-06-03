@@ -55,8 +55,12 @@ export const PortfolioDetailScreen: React.FC = () => {
     averagePrice: '',
   });
 
-  const portfolioItems = useAppSelector((state) => state.portfolio.items);
-  const portfolioItem = portfolioItems.find((item) => item.id === portfolioId);
+  const portfolioItems = useAppSelector(
+    (state) => state.portfolio.portfolio?.items
+  );
+  const portfolioItem = portfolioItems?.find(
+    (item) => item.id === parseInt(portfolioId, 10)
+  );
 
   const {
     data: portfolioData,
@@ -83,8 +87,8 @@ export const PortfolioDetailScreen: React.FC = () => {
     if (!portfolioItem) return;
 
     setEditModalData({
-      shares: portfolioItem.shares.toString(),
-      averagePrice: portfolioItem.averagePrice.toString(),
+      shares: portfolioItem.quantity.toString(),
+      averagePrice: portfolioItem.average_cost.toString(),
     });
     setEditModalVisible(true);
   };
@@ -110,14 +114,16 @@ export const PortfolioDetailScreen: React.FC = () => {
         ...portfolioItem,
         shares,
         averagePrice,
-        totalValue: shares * (portfolioItem.currentPrice || averagePrice),
-      };      await updatePortfolioItemMutation({
+        totalValue: shares * (portfolioItem.current_price || averagePrice),
+      };
+      await updatePortfolioItemMutation({
         id: parseInt(portfolioId, 10),
         data: {
           quantity: shares,
           average_cost: averagePrice,
         },
-      }).unwrap();      dispatch(
+      }).unwrap();
+      dispatch(
         updatePortfolioItem({
           ...portfolioItem!,
           quantity: shares,
@@ -144,8 +150,11 @@ export const PortfolioDetailScreen: React.FC = () => {
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: async () => {            try {
-              await deletePortfolioItemMutation(parseInt(portfolioId, 10)).unwrap();
+          onPress: async () => {
+            try {
+              await deletePortfolioItemMutation(
+                parseInt(portfolioId, 10)
+              ).unwrap();
               dispatch(removeFromPortfolio(parseInt(portfolioId, 10)));
               // Navigate back
             } catch (error) {
@@ -193,12 +202,13 @@ export const PortfolioDetailScreen: React.FC = () => {
   }
 
   const currentValue =
-    portfolioItem.shares *
-    (portfolioItem.currentPrice || portfolioItem.averagePrice);
+    portfolioItem.quantity *
+    (portfolioItem.current_price || portfolioItem.average_cost);
   const totalGainLoss =
-    currentValue - portfolioItem.shares * portfolioItem.averagePrice;
+    currentValue - portfolioItem.quantity * portfolioItem.average_cost;
   const gainLossPercent =
-    (totalGainLoss / (portfolioItem.shares * portfolioItem.averagePrice)) * 100;
+    (totalGainLoss / (portfolioItem.quantity * portfolioItem.average_cost)) *
+    100;
 
   return (
     <LinearGradient
@@ -216,7 +226,7 @@ export const PortfolioDetailScreen: React.FC = () => {
           <View style={styles.stockHeader}>
             <View style={styles.stockInfo}>
               <Text style={[styles.stockSymbol, { color: theme.colors.text }]}>
-                {portfolioItem.symbol}
+                {portfolioItem.stock_symbol}
               </Text>
               <Text
                 style={[
@@ -230,15 +240,23 @@ export const PortfolioDetailScreen: React.FC = () => {
             <View style={styles.priceInfo}>
               <Text style={[styles.currentPrice, { color: theme.colors.text }]}>
                 $
-                {portfolioItem.currentPrice?.toFixed(2) ||
+                {portfolioItem.current_price?.toFixed(2) ||
                   portfolioItem.averagePrice.toFixed(2)}
               </Text>
-              {portfolioItem.change !== undefined && (
-                <ChangeIndicator
-                  value={portfolioItem.change}
-                  percentage={portfolioItem.changePercent}
-                />
-              )}
+              {portfolioItem.current_price !== undefined &&
+                portfolioItem.current_price !== portfolioItem.average_cost && (
+                  <ChangeIndicator
+                    value={
+                      portfolioItem.current_price - portfolioItem.average_cost
+                    }
+                    percentage={
+                      ((portfolioItem.current_price -
+                        portfolioItem.average_cost) /
+                        portfolioItem.average_cost) *
+                      100
+                    }
+                  />
+                )}
             </View>
           </View>
         </Card>
@@ -259,7 +277,7 @@ export const PortfolioDetailScreen: React.FC = () => {
                 Shares Owned
               </Text>
               <Text style={[styles.summaryValue, { color: theme.colors.text }]}>
-                {portfolioItem.shares.toLocaleString()}
+                {portfolioItem.quantity.toLocaleString()}
               </Text>
             </View>
             <View style={styles.summaryItem}>
@@ -272,7 +290,7 @@ export const PortfolioDetailScreen: React.FC = () => {
                 Average Price
               </Text>
               <Text style={[styles.summaryValue, { color: theme.colors.text }]}>
-                ${portfolioItem.averagePrice.toFixed(2)}
+                ${portfolioItem.average_cost.toFixed(2)}
               </Text>
             </View>
             <View style={styles.summaryItem}>
@@ -286,7 +304,9 @@ export const PortfolioDetailScreen: React.FC = () => {
               </Text>
               <Text style={[styles.summaryValue, { color: theme.colors.text }]}>
                 $
-                {(portfolioItem.shares * portfolioItem.averagePrice).toFixed(2)}
+                {(portfolioItem.quantity * portfolioItem.average_cost).toFixed(
+                  2
+                )}
               </Text>
             </View>
             <View style={styles.summaryItem}>
@@ -362,7 +382,7 @@ export const PortfolioDetailScreen: React.FC = () => {
               <Text
                 style={[styles.performanceValue, { color: theme.colors.text }]}
               >
-                {new Date(portfolioItem.purchaseDate).toLocaleDateString()}
+                {new Date(portfolioItem.purchase_date).toLocaleDateString()}
               </Text>
             </View>
           </View>

@@ -22,6 +22,7 @@ import { addToPortfolio } from '../store/slices/portfolioSlice';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { ChangeIndicator } from '../components/ui/ChangeIndicator';
+import { v4 as uuidv4 } from 'uuid';
 
 type RootStackParamList = {
   WatchlistDetail: { watchlistId: string };
@@ -41,7 +42,9 @@ export const WatchlistDetailScreen: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
 
   const watchlistItems = useAppSelector((state) => state.watchlist.items);
-  const watchlistItem = watchlistItems.find((item) => item.id === watchlistId);
+  const watchlistItem = watchlistItems.find(
+    (item) => item.id === parseInt(watchlistId, 10)
+  );
 
   const {
     data: watchlistData,
@@ -74,8 +77,10 @@ export const WatchlistDetailScreen: React.FC = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              await deleteWatchlistItemMutation(watchlistId).unwrap();
-              dispatch(removeFromWatchlist(watchlistItem?.symbol || ''));
+              await deleteWatchlistItemMutation(
+                parseInt(watchlistId, 10)
+              ).unwrap();
+              dispatch(removeFromWatchlist(parseInt(watchlistId, 10)));
               // Navigate back
             } catch (error) {
               console.error('Error removing from watchlist:', error);
@@ -103,15 +108,19 @@ export const WatchlistDetailScreen: React.FC = () => {
           onPress: (shares) => {
             const numShares = parseInt(shares || '0', 10);
             if (numShares > 0) {
+              // ... rest of imports
+
               dispatch(
                 addToPortfolio({
-                  id: Date.now().toString(),
-                  symbol: watchlistItem.symbol,
-                  name: watchlistItem.name,
-                  shares: numShares,
-                  averagePrice: watchlistItem.currentPrice,
-                  totalValue: watchlistItem.currentPrice * numShares,
-                  purchaseDate: new Date().toISOString(),
+                  id: Date.now(),
+                  stock_symbol: watchlistItem.stock_symbol,
+                  name: watchlistItem.stock?.name || watchlistItem.stock_symbol,
+                  quantity: numShares,
+                  average_cost: watchlistItem.current_price || 0,
+                  averagePrice: watchlistItem.current_price || 0,
+                  purchase_date: new Date().toISOString(),
+                  created_at: new Date().toISOString(),
+                  stock: watchlistItem.stock || null,
                 })
               );
             }
@@ -174,9 +183,10 @@ export const WatchlistDetailScreen: React.FC = () => {
         {/* Header Card */}
         <Card style={styles.headerCard}>
           <View style={styles.stockHeader}>
+            {' '}
             <View style={styles.stockInfo}>
               <Text style={[styles.stockSymbol, { color: theme.colors.text }]}>
-                {watchlistItem.symbol}
+                {watchlistItem.stock_symbol}
               </Text>
               <Text
                 style={[
@@ -184,16 +194,16 @@ export const WatchlistDetailScreen: React.FC = () => {
                   { color: theme.colors.textSecondary },
                 ]}
               >
-                {watchlistItem.name}
+                {watchlistItem.stock?.name || watchlistItem.stock_symbol}
               </Text>
             </View>
             <View style={styles.priceInfo}>
               <Text style={[styles.currentPrice, { color: theme.colors.text }]}>
-                ${watchlistItem.currentPrice.toFixed(2)}
+                ${(watchlistItem.current_price || 0).toFixed(2)}
               </Text>
               <ChangeIndicator
-                value={watchlistItem.change}
-                percentage={watchlistItem.changePercent}
+                value={watchlistItem.price_change || 0}
+                percentage={watchlistItem.price_change_percent || 0}
               />
             </View>
           </View>
@@ -213,9 +223,9 @@ export const WatchlistDetailScreen: React.FC = () => {
                 ]}
               >
                 Added to Watchlist
-              </Text>
+              </Text>{' '}
               <Text style={[styles.infoValue, { color: theme.colors.text }]}>
-                {new Date(watchlistItem.addedAt).toLocaleDateString()}
+                {new Date(watchlistItem.added_at || '').toLocaleDateString()}
               </Text>
             </View>
             <View style={styles.infoItem}>
@@ -228,7 +238,7 @@ export const WatchlistDetailScreen: React.FC = () => {
                 Current Price
               </Text>
               <Text style={[styles.infoValue, { color: theme.colors.text }]}>
-                ${watchlistItem.currentPrice.toFixed(2)}
+                ${(watchlistItem.current_price || 0).toFixed(2)}
               </Text>
             </View>
             <View style={styles.infoItem}>
@@ -246,27 +256,27 @@ export const WatchlistDetailScreen: React.FC = () => {
                     styles.changeValue,
                     {
                       color:
-                        watchlistItem.change >= 0
+                        (watchlistItem.price_change || 0) >= 0
                           ? theme.colors.success
                           : theme.colors.error,
                     },
                   ]}
                 >
-                  ${watchlistItem.change.toFixed(2)}
-                </Text>
+                  ${(watchlistItem.price_change || 0).toFixed(2)}
+                </Text>{' '}
                 <Text
                   style={[
                     styles.changePercent,
                     {
                       color:
-                        watchlistItem.change >= 0
+                        (watchlistItem.price_change || 0) >= 0
                           ? theme.colors.success
                           : theme.colors.error,
                     },
                   ]}
                 >
-                  ({watchlistItem.changePercent >= 0 ? '+' : ''}
-                  {watchlistItem.changePercent.toFixed(2)}%)
+                  ({(watchlistItem.price_change_percent || 0) >= 0 ? '+' : ''}
+                  {(watchlistItem.price_change_percent || 0).toFixed(2)}%)
                 </Text>
               </View>
             </View>
@@ -287,9 +297,9 @@ export const WatchlistDetailScreen: React.FC = () => {
                 ]}
               >
                 Symbol
-              </Text>
+              </Text>{' '}
               <Text style={[styles.statValue, { color: theme.colors.text }]}>
-                {watchlistItem.symbol}
+                {watchlistItem.stock_symbol}
               </Text>
             </View>
             <View style={styles.statItem}>
@@ -302,7 +312,7 @@ export const WatchlistDetailScreen: React.FC = () => {
                 Price
               </Text>
               <Text style={[styles.statValue, { color: theme.colors.text }]}>
-                ${watchlistItem.currentPrice.toFixed(2)}
+                ${(watchlistItem.current_price || 0).toFixed(2)}
               </Text>
             </View>
             <View style={styles.statItem}>
@@ -319,13 +329,13 @@ export const WatchlistDetailScreen: React.FC = () => {
                   styles.statValue,
                   {
                     color:
-                      watchlistItem.change >= 0
+                      (watchlistItem.price_change || 0) >= 0
                         ? theme.colors.success
                         : theme.colors.error,
                   },
                 ]}
               >
-                ${watchlistItem.change.toFixed(2)}
+                ${(watchlistItem.price_change || 0).toFixed(2)}
               </Text>
             </View>
             <View style={styles.statItem}>
@@ -336,20 +346,20 @@ export const WatchlistDetailScreen: React.FC = () => {
                 ]}
               >
                 Change %
-              </Text>
+              </Text>{' '}
               <Text
                 style={[
                   styles.statValue,
                   {
                     color:
-                      watchlistItem.change >= 0
+                      (watchlistItem.price_change || 0) >= 0
                         ? theme.colors.success
                         : theme.colors.error,
                   },
                 ]}
               >
-                {watchlistItem.changePercent >= 0 ? '+' : ''}
-                {watchlistItem.changePercent.toFixed(2)}%
+                {(watchlistItem.price_change_percent || 0) >= 0 ? '+' : ''}
+                {(watchlistItem.price_change_percent || 0).toFixed(2)}%
               </Text>
             </View>
           </View>

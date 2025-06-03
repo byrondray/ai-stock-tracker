@@ -102,26 +102,9 @@ const StockSearchScreen: React.FC = () => {
         <Text
           style={[styles.stockExchange, { color: theme.colors.textSecondary }]}
         >
-          {item.exchange}
+          {item.exchange}{' '}
         </Text>
       </View>
-      {item.current_price && (
-        <View style={styles.priceInfo}>
-          <Text style={[styles.priceText, { color: theme.colors.text }]}>
-            {formatCurrency(item.current_price)}
-          </Text>
-          {item.change_percent !== undefined && (
-            <Text
-              style={[
-                styles.changeText,
-                { color: getChangeColor(item.change_percent) },
-              ]}
-            >
-              {formatPercentage(item.change_percent)}
-            </Text>
-          )}
-        </View>
-      )}
       <TouchableOpacity
         style={[styles.addButton, { backgroundColor: theme.colors.primary }]}
         onPress={() => handleAddToWatchlist(item.symbol)}
@@ -174,7 +157,9 @@ const StockSearchScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.priceSection}>          <Text style={[styles.currentPrice, { color: theme.colors.text }]}>
+        <View style={styles.priceSection}>
+          {' '}
+          <Text style={[styles.currentPrice, { color: theme.colors.text }]}>
             {formatCurrency(stockDetails.current_price || 0)}
           </Text>
           <View style={styles.changeInfo}>
@@ -204,7 +189,8 @@ const StockSearchScreen: React.FC = () => {
               style={[styles.statLabel, { color: theme.colors.textSecondary }]}
             >
               Open
-            </Text>            <Text style={[styles.statValue, { color: theme.colors.text }]}>
+            </Text>{' '}
+            <Text style={[styles.statValue, { color: theme.colors.text }]}>
               {formatCurrency(stockDetails.open_price || 0)}
             </Text>
           </View>
@@ -305,7 +291,10 @@ const StockSearchScreen: React.FC = () => {
           <Text style={[styles.errorText, { color: theme.colors.error }]}>
             Error searching stocks
           </Text>
-        </View>      ) : searchResults && searchResults.results && searchResults.results.length > 0 ? (
+        </View>
+      ) : searchResults &&
+        searchResults.results &&
+        searchResults.results.length > 0 ? (
         <FlatList
           data={searchResults.results}
           keyExtractor={(item) => item.symbol}

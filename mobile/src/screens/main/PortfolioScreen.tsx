@@ -24,7 +24,8 @@ import { ChangeIndicator } from '../../components/ui/ChangeIndicator';
 const PortfolioScreen: React.FC = () => {
   const { theme, isDark } = useTheme();
   const [refreshing, setRefreshing] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);  const [editingHolding, setEditingHolding] = useState<PortfolioItem | null>(
+  const [modalVisible, setModalVisible] = useState(false);
+  const [editingHolding, setEditingHolding] = useState<PortfolioItem | null>(
     null
   );
   const [formData, setFormData] = useState({
@@ -84,14 +85,15 @@ const PortfolioScreen: React.FC = () => {
     ) {
       Alert.alert('Error', 'Please enter valid numbers');
       return;
-    }    try {
+    }
+    try {
       if (editingHolding) {
         await updateHolding({
           id: editingHolding.id,
           data: {
             quantity: quantityNum,
             average_cost: priceNum,
-          }
+          },
         }).unwrap();
         Alert.alert('Success', 'Holding updated successfully');
       } else {
@@ -118,10 +120,13 @@ const PortfolioScreen: React.FC = () => {
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Remove',
-          style: 'destructive',          onPress: async () => {
+          style: 'destructive',
+          onPress: async () => {
             try {
               // Find the holding by symbol to get the ID
-              const holdingToRemove = portfolio?.items.find(item => item.stock_symbol === symbol);
+              const holdingToRemove = portfolio?.items.find(
+                (item) => item.stock_symbol === symbol
+              );
               if (holdingToRemove) {
                 await removeFromPortfolio(holdingToRemove.id).unwrap();
                 Alert.alert('Success', 'Stock removed from portfolio');
@@ -154,7 +159,8 @@ const PortfolioScreen: React.FC = () => {
     if (change > 0) return theme.colors.success;
     if (change < 0) return theme.colors.error;
     return theme.colors.textSecondary;
-  };  const renderHolding = (holding: PortfolioItem) => (
+  };
+  const renderHolding = (holding: PortfolioItem) => (
     <TouchableOpacity
       key={holding.stock_symbol}
       style={[styles.holdingCard, { backgroundColor: theme.colors.surface }]}
@@ -324,7 +330,8 @@ const PortfolioScreen: React.FC = () => {
         <View style={styles.holdingsSection}>
           <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
             Holdings
-          </Text>          {portfolio?.items && portfolio.items.length > 0 ? (
+          </Text>{' '}
+          {portfolio?.items && portfolio.items.length > 0 ? (
             portfolio.items.map(renderHolding)
           ) : (
             <View
@@ -573,7 +580,8 @@ const styles = StyleSheet.create({
   },
   holdingName: {
     fontSize: 14,
-  },  holdingValue: {
+  },
+  holdingValue: {
     alignItems: 'flex-end',
   },
   valueText: {

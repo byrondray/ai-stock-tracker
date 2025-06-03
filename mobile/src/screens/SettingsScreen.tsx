@@ -295,7 +295,8 @@ export const SettingsScreen: React.FC = () => {
               thumbColor={theme.colors.background}
             />
           </View>
-        );      case 'button':
+        );
+      case 'button':
         return (
           <View style={styles.settingsItem}>
             <Button
@@ -303,7 +304,7 @@ export const SettingsScreen: React.FC = () => {
               onPress={item.onPress || (() => {})}
               style={[
                 styles.settingsButton,
-                sectionTitle === 'Danger Zone' 
+                sectionTitle === 'Danger Zone'
                   ? { backgroundColor: theme.colors.error }
                   : { backgroundColor: theme.colors.surface },
               ]}

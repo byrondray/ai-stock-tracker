@@ -50,6 +50,11 @@ export const StockDetailScreen: React.FC = () => {
   const { theme } = useTheme();
   const { symbol } = route.params;
 
+  // Mutation hooks
+  const [addToWatchlistMutation] = useAddToWatchlistMutation();
+  const [removeFromWatchlistMutation] = useRemoveFromWatchlistMutation();
+  const [addToPortfolioMutation] = useAddToPortfolioMutation();
+
   const [chartType, setChartType] = useState<'line' | 'candlestick'>('line');
   const [timeframe, setTimeframe] = useState<'1D' | '1W' | '1M' | '3M' | '1Y'>(
     '1M'
@@ -63,12 +68,13 @@ export const StockDetailScreen: React.FC = () => {
     isLoading: detailsLoading,
     error: detailsError,
     refetch: refetchDetails,
-  } = useGetStockDetailsQuery(symbol);  const {
-    data: priceHistory,
+  } = useGetStockDetailsQuery(symbol);
+  const {
+    data: priceHistoryResponse,
     isLoading: historyLoading,
     error: historyError,
     refetch: refetchHistory,
-  } = useGetStockPriceHistoryQuery(symbol);
+  } = useGetStockPriceHistoryQuery({ symbol, timeframe });
 
   const {
     data: analysis,
@@ -103,7 +109,9 @@ export const StockDetailScreen: React.FC = () => {
     try {
       if (isInWatchlist) {
         // Find the watchlist item to get its ID
-        const watchlistItem = watchlist.find(item => item.stock_symbol === symbol);
+        const watchlistItem = watchlist.find(
+          (item) => item.stock_symbol === symbol
+        );
         if (watchlistItem) {
           await removeFromWatchlistMutation(watchlistItem.id).unwrap();
         }
@@ -113,13 +121,9 @@ export const StockDetailScreen: React.FC = () => {
         }).unwrap();
       }
     } catch (error: any) {
-      Alert.alert(
-        'Error',
-        error?.data?.detail || 'Failed to update watchlist'
-      );
+      Alert.alert('Error', error?.data?.detail || 'Failed to update watchlist');
     }
   };
-
   const handleAddToPortfolio = () => {
     Alert.prompt(
       'Add to Portfolio',
@@ -128,20 +132,23 @@ export const StockDetailScreen: React.FC = () => {
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Add',
-          onPress: (shares) => {
-            const numShares = parseInt(shares || '0', 10);
+          onPress: async (shares) => {
+            const numShares = parseFloat(shares || '0');
             if (numShares > 0 && stockDetails) {
-              dispatch(
-                addToPortfolio({
-                  id: Date.now().toString(),
-                  symbol,
-                  name: stockDetails.name,
-                  shares: numShares,
-                  averagePrice: stockDetails.currentPrice,
-                  totalValue: stockDetails.currentPrice * numShares,
-                  purchaseDate: new Date().toISOString(),
-                })
-              );
+              try {
+                await addToPortfolioMutation({
+                  stock_symbol: symbol,
+                  quantity: numShares,
+                  average_cost: stockDetails.current_price || 0,
+                  purchase_date: new Date().toISOString(),
+                }).unwrap();
+                Alert.alert('Success', 'Stock added to portfolio');
+              } catch (error: any) {
+                Alert.alert(
+                  'Error',
+                  error?.data?.detail || 'Failed to add to portfolio'
+                );
+              }
             }
           },
         },
@@ -151,8 +158,9 @@ export const StockDetailScreen: React.FC = () => {
       'numeric'
     );
   };
-
   const renderChart = () => {
+    const priceHistory = priceHistoryResponse?.prices;
+
     if (historyLoading || !priceHistory || priceHistory.length === 0) {
       return (
         <View
@@ -196,7 +204,9 @@ export const StockDetailScreen: React.FC = () => {
                 onPress={() => setTimeframe(tf)}
                 style={[
                   styles.timeframeButton,
-                  timeframe === tf && { backgroundColor: theme.colors.primary },
+                  ...(timeframe === tf
+                    ? [{ backgroundColor: theme.colors.primary }]
+                    : []),
                 ]}
                 textStyle={[
                   styles.timeframeButtonText,
@@ -314,13 +324,17 @@ export const StockDetailScreen: React.FC = () => {
               ]}
             >
               1 Week
-            </Text>            <Text
+            </Text>{' '}
+            <Text
               style={[styles.predictionPrice, { color: theme.colors.text }]}
             >
               ${prediction.predictions[0]?.predicted_price?.toFixed(2) || 'N/A'}
             </Text>
             <ChangeIndicator
-              value={prediction.predictions[0]?.predicted_price - (stockDetails?.current_price || 0) || 0}
+              value={
+                prediction.predictions[0]?.predicted_price -
+                  (stockDetails?.current_price || 0) || 0
+              }
               showIcon={false}
             />
           </View>
@@ -335,10 +349,15 @@ export const StockDetailScreen: React.FC = () => {
             </Text>
             <Text
               style={[styles.predictionPrice, { color: theme.colors.text }]}
-            >              ${prediction.predictions[1]?.predicted_price?.toFixed(2) || 'N/A'}
+            >
+              {' '}
+              ${prediction.predictions[1]?.predicted_price?.toFixed(2) || 'N/A'}
             </Text>
             <ChangeIndicator
-              value={prediction.predictions[1]?.predicted_price - (stockDetails?.current_price || 0) || 0}
+              value={
+                prediction.predictions[1]?.predicted_price -
+                  (stockDetails?.current_price || 0) || 0
+              }
               showIcon={false}
             />
           </View>
@@ -350,13 +369,17 @@ export const StockDetailScreen: React.FC = () => {
               ]}
             >
               3 Months
-            </Text>            <Text
+            </Text>{' '}
+            <Text
               style={[styles.predictionPrice, { color: theme.colors.text }]}
             >
               ${prediction.predictions[2]?.predicted_price?.toFixed(2) || 'N/A'}
             </Text>
             <ChangeIndicator
-              value={prediction.predictions[2]?.predicted_price - (stockDetails?.current_price || 0) || 0}
+              value={
+                prediction.predictions[2]?.predicted_price -
+                  (stockDetails?.current_price || 0) || 0
+              }
               showIcon={false}
             />
           </View>
@@ -364,7 +387,8 @@ export const StockDetailScreen: React.FC = () => {
         <Text
           style={[styles.confidenceText, { color: theme.colors.textSecondary }]}
         >
-          Confidence: {(prediction.predictions[0]?.confidence * 100)?.toFixed(1) || 'N/A'}%
+          Confidence:{' '}
+          {(prediction.predictions[0]?.confidence * 100)?.toFixed(1) || 'N/A'}%
         </Text>
       </Card>
     );
@@ -415,7 +439,9 @@ export const StockDetailScreen: React.FC = () => {
                   {stockDetails.name}
                 </Text>
               </View>
-              <View style={styles.priceInfo}>                <Text
+              <View style={styles.priceInfo}>
+                {' '}
+                <Text
                   style={[styles.currentPrice, { color: theme.colors.text }]}
                 >
                   ${stockDetails.current_price?.toFixed(2) || 'N/A'}
@@ -471,7 +497,8 @@ export const StockDetailScreen: React.FC = () => {
                   ]}
                 >
                   Market Cap
-                </Text>                <Text style={[styles.statValue, { color: theme.colors.text }]}>
+                </Text>{' '}
+                <Text style={[styles.statValue, { color: theme.colors.text }]}>
                   ${stockDetails.market_cap?.toLocaleString() || 'N/A'}
                 </Text>
               </View>
@@ -496,7 +523,8 @@ export const StockDetailScreen: React.FC = () => {
                   ]}
                 >
                   52W High
-                </Text>                <Text style={[styles.statValue, { color: theme.colors.text }]}>
+                </Text>{' '}
+                <Text style={[styles.statValue, { color: theme.colors.text }]}>
                   N/A {/* Stock model doesn't have high52w */}
                 </Text>
               </View>
@@ -534,7 +562,8 @@ export const StockDetailScreen: React.FC = () => {
                   ]}
                 >
                   Avg Volume
-                </Text>                <Text style={[styles.statValue, { color: theme.colors.text }]}>
+                </Text>{' '}
+                <Text style={[styles.statValue, { color: theme.colors.text }]}>
                   N/A {/* Stock model doesn't have avgVolume */}
                 </Text>
               </View>

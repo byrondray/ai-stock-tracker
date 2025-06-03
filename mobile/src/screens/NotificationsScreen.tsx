@@ -106,7 +106,9 @@ export const NotificationsScreen: React.FC = () => {
       ]
     );
   };
-  const getNotificationIcon = (type: 'info' | 'warning' | 'error' | 'success') => {
+  const getNotificationIcon = (
+    type: 'info' | 'warning' | 'error' | 'success'
+  ) => {
     switch (type) {
       case 'info':
         return '📱';
@@ -121,7 +123,9 @@ export const NotificationsScreen: React.FC = () => {
     }
   };
 
-  const getNotificationColor = (type: 'info' | 'warning' | 'error' | 'success') => {
+  const getNotificationColor = (
+    type: 'info' | 'warning' | 'error' | 'success'
+  ) => {
     switch (type) {
       case 'info':
         return theme.colors.primary;
@@ -258,12 +262,17 @@ export const NotificationsScreen: React.FC = () => {
         ) : (
           filteredNotifications.map((notification) => (
             <Card
-              key={notification.id}              style={[
+              key={notification.id}
+              style={[
                 styles.notificationCard,
-                ...((!notification.isRead) ? [{
-                  borderLeftWidth: 4,
-                  borderLeftColor: theme.colors.primary,
-                }] : []),
+                ...(!notification.isRead
+                  ? [
+                      {
+                        borderLeftWidth: 4,
+                        borderLeftColor: theme.colors.primary,
+                      },
+                    ]
+                  : []),
               ]}
             >
               <View style={styles.notificationHeader}>

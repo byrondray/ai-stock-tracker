@@ -14,6 +14,7 @@ import {
   useGetWatchlistQuery,
   useRemoveFromWatchlistMutation,
   useAddToPortfolioMutation,
+  type WatchlistItem,
 } from '../../store/api/apiSlice';
 
 interface WatchlistStock {
@@ -56,9 +57,12 @@ const WatchlistScreen: React.FC = () => {
         {
           text: 'Remove',
           style: 'destructive',
-          onPress: async () => {            try {
+          onPress: async () => {
+            try {
               // Find the watchlist item to get its ID
-              const watchlistItem = watchlist?.find(item => item.stock_symbol === symbol);
+              const watchlistItem = watchlist?.find(
+                (item) => item.stock_symbol === symbol
+              );
               if (watchlistItem) {
                 await removeFromWatchlist(watchlistItem.id).unwrap();
                 Alert.alert('Success', 'Stock removed from watchlist');
@@ -74,67 +78,72 @@ const WatchlistScreen: React.FC = () => {
       ]
     );
   };
+  const handleAddToPortfolio = (stock: WatchlistItem) => {
+    Alert.alert(
+      'Add to Portfolio',
+      `Add ${stock.stock_symbol} to your portfolio?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Add',
+          onPress: () => {
+            Alert.prompt(
+              'Add to Portfolio',
+              'Enter the number of shares and purchase price:',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Add',
+                  onPress: async (input) => {
+                    if (!input) return;
 
-  const handleAddToPortfolio = (stock: WatchlistStock) => {
-    Alert.alert('Add to Portfolio', `Add ${stock.symbol} to your portfolio?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Add',
-        onPress: () => {
-          Alert.prompt(
-            'Add to Portfolio',
-            'Enter the number of shares and purchase price:',
-            [
-              { text: 'Cancel', style: 'cancel' },
-              {
-                text: 'Add',
-                onPress: async (input) => {
-                  if (!input) return;
+                    const parts = input.split(',');
+                    if (parts.length !== 2) {
+                      Alert.alert(
+                        'Error',
+                        'Please enter quantity and price separated by comma (e.g., 10, 150.50)'
+                      );
+                      return;
+                    }
 
-                  const parts = input.split(',');
-                  if (parts.length !== 2) {
-                    Alert.alert(
-                      'Error',
-                      'Please enter quantity and price separated by comma (e.g., 10, 150.50)'
-                    );
-                    return;
-                  }
+                    const quantity = parseFloat(parts[0].trim());
+                    const price = parseFloat(parts[1].trim());
 
-                  const quantity = parseFloat(parts[0].trim());
-                  const price = parseFloat(parts[1].trim());
-
-                  if (
-                    isNaN(quantity) ||
-                    isNaN(price) ||
-                    quantity <= 0 ||
-                    price <= 0
-                  ) {
-                    Alert.alert('Error', 'Please enter valid numbers');
-                    return;
-                  }                  try {
-                    await addToPortfolio({
-                      stock_symbol: stock.stock_symbol,
-                      quantity,
-                      average_cost: price,
-                      purchase_date: new Date().toISOString(),
-                    }).unwrap();
-                    Alert.alert('Success', 'Stock added to portfolio');
-                  } catch (error: any) {
-                    Alert.alert(
-                      'Error',
-                      error?.data?.detail || 'Failed to add stock to portfolio'
-                    );
-                  }
+                    if (
+                      isNaN(quantity) ||
+                      isNaN(price) ||
+                      quantity <= 0 ||
+                      price <= 0
+                    ) {
+                      Alert.alert('Error', 'Please enter valid numbers');
+                      return;
+                    }
+                    try {
+                      await addToPortfolio({
+                        stock_symbol: stock.stock_symbol,
+                        quantity,
+                        average_cost: price,
+                        purchase_date: new Date().toISOString(),
+                      }).unwrap();
+                      Alert.alert('Success', 'Stock added to portfolio');
+                    } catch (error: any) {
+                      Alert.alert(
+                        'Error',
+                        error?.data?.detail ||
+                          'Failed to add stock to portfolio'
+                      );
+                    }
+                  },
                 },
-              },
-            ],
-            'plain-text',
-            '',
-            'number-pad'
-          );
+              ],
+              'plain-text',
+              '',
+              'number-pad'
+            );
+          },
         },
-      },
-    ]);
+      ]
+    );
   };
 
   const formatCurrency = (amount: number) => {
@@ -164,49 +173,49 @@ const WatchlistScreen: React.FC = () => {
     return theme.colors.textSecondary;
   };
 
-  const renderStockItem = ({ item }: { item: WatchlistStock }) => (
+  const renderStockItem = ({ item }: { item: WatchlistItem }) => (
     <TouchableOpacity
       style={[styles.stockCard, { backgroundColor: theme.colors.surface }]}
-      onLongPress={() => handleRemoveStock(item.symbol)}
+      onLongPress={() => handleRemoveStock(item.stock_symbol)}
       activeOpacity={0.7}
     >
       <View style={styles.stockHeader}>
+        {' '}
         <View style={styles.stockInfo}>
           <Text style={[styles.stockSymbol, { color: theme.colors.text }]}>
-            {item.symbol}
+            {item.stock_symbol}
           </Text>
           <Text
             style={[styles.stockName, { color: theme.colors.textSecondary }]}
           >
-            {item.name}
+            {item.stock.name}
           </Text>
         </View>
         <View style={styles.priceInfo}>
           <Text style={[styles.currentPrice, { color: theme.colors.text }]}>
-            {formatCurrency(item.current_price)}
+            {formatCurrency(item.current_price || 0)}
           </Text>
           <View style={styles.changeInfo}>
             <Text
               style={[
                 styles.changeAmount,
-                { color: getChangeColor(item.change_amount) },
+                { color: getChangeColor(item.price_change || 0) },
               ]}
             >
-              {item.change_amount >= 0 ? '+' : ''}
-              {formatCurrency(Math.abs(item.change_amount))}
+              {(item.price_change || 0) >= 0 ? '+' : ''}
+              {formatCurrency(Math.abs(item.price_change || 0))}
             </Text>
             <Text
               style={[
                 styles.changePercent,
-                { color: getChangeColor(item.change_percent) },
+                { color: getChangeColor(item.price_change_percent || 0) },
               ]}
             >
-              ({formatPercentage(item.change_percent)})
+              ({formatPercentage(item.price_change_percent || 0)})
             </Text>
           </View>
         </View>
-      </View>
-
+      </View>{' '}
       <View style={styles.stockDetails}>
         <View style={styles.detailRow}>
           <Text
@@ -215,10 +224,10 @@ const WatchlistScreen: React.FC = () => {
             Volume
           </Text>
           <Text style={[styles.detailValue, { color: theme.colors.text }]}>
-            {formatVolume(item.volume)}
+            {formatVolume(item.stock.volume || 0)}
           </Text>
         </View>
-        {item.market_cap && (
+        {item.stock.market_cap && (
           <View style={styles.detailRow}>
             <Text
               style={[
@@ -229,27 +238,11 @@ const WatchlistScreen: React.FC = () => {
               Market Cap
             </Text>
             <Text style={[styles.detailValue, { color: theme.colors.text }]}>
-              {formatVolume(item.market_cap)}
-            </Text>
-          </View>
-        )}
-        {item.high_52w && item.low_52w && (
-          <View style={styles.detailRow}>
-            <Text
-              style={[
-                styles.detailLabel,
-                { color: theme.colors.textSecondary },
-              ]}
-            >
-              52W Range
-            </Text>
-            <Text style={[styles.detailValue, { color: theme.colors.text }]}>
-              {formatCurrency(item.low_52w)} - {formatCurrency(item.high_52w)}
+              {formatVolume(item.stock.market_cap)}
             </Text>
           </View>
         )}
       </View>
-
       <View style={styles.actionButtons}>
         <TouchableOpacity
           style={[
@@ -265,7 +258,7 @@ const WatchlistScreen: React.FC = () => {
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.removeButton, { borderColor: theme.colors.error }]}
-          onPress={() => handleRemoveStock(item.symbol)}
+          onPress={() => handleRemoveStock(item.stock_symbol)}
           disabled={removing}
         >
           <Text
@@ -305,21 +298,21 @@ const WatchlistScreen: React.FC = () => {
         colors={isDark ? ['#1a1a2e', '#16213e'] : ['#667eea', '#764ba2']}
         style={styles.header}
       >
+        {' '}
         <Text style={[styles.headerTitle, { color: theme.colors.surface }]}>
           Watchlist
         </Text>
-        {watchlist?.stocks && (
+        {watchlist && (
           <Text style={[styles.stockCount, { color: theme.colors.surface }]}>
-            {watchlist.stocks.length} stocks
+            {watchlist.length} stocks
           </Text>
         )}
       </LinearGradient>
-
-      {/* Stock List */}
-      {watchlist?.stocks && watchlist.stocks.length > 0 ? (
+      {/* Stock List */}{' '}
+      {watchlist && watchlist.length > 0 ? (
         <FlatList
-          data={watchlist.stocks}
-          keyExtractor={(item) => item.symbol}
+          data={watchlist}
+          keyExtractor={(item) => item.id.toString()}
           renderItem={renderStockItem}
           contentContainerStyle={styles.listContent}
           refreshControl={

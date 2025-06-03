@@ -29,7 +29,7 @@ const portfolioSlice = createSlice({
     updatePortfolioItem: (state, action: PayloadAction<PortfolioItem>) => {
       if (state.portfolio) {
         const index = state.portfolio.items.findIndex(
-          item => item.id === action.payload.id
+          (item) => item.id === action.payload.id
         );
         if (index !== -1) {
           state.portfolio.items[index] = action.payload;
@@ -39,7 +39,7 @@ const portfolioSlice = createSlice({
     removeFromPortfolio: (state, action: PayloadAction<number>) => {
       if (state.portfolio) {
         state.portfolio.items = state.portfolio.items.filter(
-          item => item.id !== action.payload
+          (item) => item.id !== action.payload
         );
       }
     },
