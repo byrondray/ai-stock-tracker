@@ -33,6 +33,7 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
+    username: '',
     email: '',
     password: '',
     confirmPassword: '',
@@ -45,13 +46,14 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
       [field]: value,
     }));
   };
-
   const validateForm = () => {
-    const { firstName, lastName, email, password, confirmPassword } = formData;
+    const { firstName, lastName, username, email, password, confirmPassword } =
+      formData;
 
     if (
       !firstName.trim() ||
       !lastName.trim() ||
+      !username.trim() ||
       !email.trim() ||
       !password ||
       !confirmPassword
@@ -86,6 +88,7 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
       const result = await register({
         first_name: formData.firstName.trim(),
         last_name: formData.lastName.trim(),
+        username: formData.username.trim(),
         email: formData.email.trim().toLowerCase(),
         password: formData.password,
       }).unwrap();
@@ -175,8 +178,26 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
                       handleInputChange('lastName', value)
                     }
                     autoCapitalize='words'
-                  />
-                </View>
+                  />                </View>
+              </View>
+
+              <View style={styles.inputContainer}>
+                <TextInput
+                  style={[
+                    styles.input,
+                    {
+                      backgroundColor: theme.colors.surface,
+                      color: theme.colors.text,
+                      borderColor: theme.colors.border,
+                    },
+                  ]}
+                  placeholder='Username'
+                  placeholderTextColor={theme.colors.textSecondary}
+                  value={formData.username}
+                  onChangeText={(value) => handleInputChange('username', value)}
+                  autoCapitalize='none'
+                  autoCorrect={false}
+                />
               </View>
 
               <View style={styles.inputContainer}>

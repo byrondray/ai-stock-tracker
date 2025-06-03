@@ -5,20 +5,16 @@
  */
 
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import type { Watchlist } from '../api/apiSlice';
+import type { WatchlistItem } from '../api/apiSlice';
 
 interface WatchlistState {
-  watchlists: Watchlist[];
-  items: any[]; // Watchlist items for backward compatibility
-  selectedWatchlistId: number | null;
+  items: WatchlistItem[];
   isLoading: boolean;
   error: string | null;
 }
 
 const initialState: WatchlistState = {
-  watchlists: [],
-  items: [], // Backward compatibility
-  selectedWatchlistId: null,
+  items: [],
   isLoading: false,
   error: null,
 };
@@ -27,41 +23,22 @@ export const watchlistSlice = createSlice({
   name: 'watchlist',
   initialState,
   reducers: {
-    setWatchlists: (state, action: PayloadAction<Watchlist[]>) => {
-      state.watchlists = action.payload;
+    setWatchlistItems: (state, action: PayloadAction<WatchlistItem[]>) => {
+      state.items = action.payload;
       state.isLoading = false;
       state.error = null;
-
-      // Set default selected watchlist if none selected
-      if (state.selectedWatchlistId === null && action.payload.length > 0) {
-        state.selectedWatchlistId = action.payload[0].id;
-      }
     },
-    setSelectedWatchlist: (state, action: PayloadAction<number | null>) => {
-      state.selectedWatchlistId = action.payload;
+    addWatchlistItem: (state, action: PayloadAction<WatchlistItem>) => {
+      state.items.push(action.payload);
     },
-    addWatchlist: (state, action: PayloadAction<Watchlist>) => {
-      state.watchlists.push(action.payload);
-      if (state.selectedWatchlistId === null) {
-        state.selectedWatchlistId = action.payload.id;
-      }
-    },
-    updateWatchlist: (state, action: PayloadAction<Watchlist>) => {
-      const index = state.watchlists.findIndex(
-        (w) => w.id === action.payload.id
-      );
+    updateWatchlistItem: (state, action: PayloadAction<WatchlistItem>) => {
+      const index = state.items.findIndex(item => item.id === action.payload.id);
       if (index !== -1) {
-        state.watchlists[index] = action.payload;
+        state.items[index] = action.payload;
       }
     },
-    removeWatchlist: (state, action: PayloadAction<number>) => {
-      state.watchlists = state.watchlists.filter(
-        (w) => w.id !== action.payload
-      );
-      if (state.selectedWatchlistId === action.payload) {
-        state.selectedWatchlistId =
-          state.watchlists.length > 0 ? state.watchlists[0].id : null;
-      }
+    removeWatchlistItem: (state, action: PayloadAction<number>) => {
+      state.items = state.items.filter(item => item.id !== action.payload);
     },
     setLoading: (state, action: PayloadAction<boolean>) => {
       state.isLoading = action.payload;
@@ -73,29 +50,22 @@ export const watchlistSlice = createSlice({
     clearError: (state) => {
       state.error = null;
     },
-    // Individual stock actions for backward compatibility
-    addToWatchlist: (state, action: PayloadAction<any>) => {
-      state.items.push(action.payload);
-    },
-    removeFromWatchlist: (state, action: PayloadAction<string>) => {
-      state.items = state.items.filter(
-        (item) => item.symbol !== action.payload
-      );
+    clearWatchlist: (state) => {
+      state.items = [];
+      state.error = null;
     },
   },
 });
 
 export const {
-  setWatchlists,
-  setSelectedWatchlist,
-  addWatchlist,
-  updateWatchlist,
-  removeWatchlist,
+  setWatchlistItems,
+  addWatchlistItem,
+  updateWatchlistItem,
+  removeWatchlistItem,
   setLoading,
   setError,
   clearError,
-  addToWatchlist,
-  removeFromWatchlist,
+  clearWatchlist,
 } = watchlistSlice.actions;
 
 export default watchlistSlice.reducer;

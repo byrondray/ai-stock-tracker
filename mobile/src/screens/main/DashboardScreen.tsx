@@ -13,7 +13,7 @@ import { useAppSelector } from '../../hooks/redux';
 import {
   useGetPortfolioQuery,
   useGetWatchlistQuery,
-  useGetMarketNewsQuery,
+  useGetNewsQuery,
 } from '../../store/api/apiSlice';
 import { useTheme } from '../../hooks/useTheme';
 
@@ -39,12 +39,12 @@ const DashboardScreen: React.FC = () => {
   } = useGetWatchlistQuery(undefined, {
     skip: !user,
   });
-
   const {
     data: news,
     isLoading: newsLoading,
     refetch: refetchNews,
-  } = useGetMarketNewsQuery({
+  } = useGetNewsQuery({
+    symbol: 'MARKET',
     limit: 5,
   });
 
@@ -129,26 +129,25 @@ const DashboardScreen: React.FC = () => {
                   >
                     {formatCurrency(portfolio.total_value)}
                   </Text>
-                  <View style={styles.portfolioChange}>
-                    <Text
+                  <View style={styles.portfolioChange}>                    <Text
                       style={[
                         styles.portfolioChangeText,
                         {
-                          color: getChangeColor(portfolio.total_change_percent),
+                          color: getChangeColor(portfolio.return_percentage),
                         },
                       ]}
                     >
-                      {formatPercentage(portfolio.total_change_percent)}
+                      {formatPercentage(portfolio.return_percentage)}
                     </Text>
                     <Text
                       style={[
                         styles.portfolioChangeAmount,
                         {
-                          color: getChangeColor(portfolio.total_change_amount),
+                          color: getChangeColor(portfolio.total_return),
                         },
                       ]}
                     >
-                      {formatCurrency(portfolio.total_change_amount)}
+                      {formatCurrency(portfolio.total_return)}
                     </Text>
                   </View>
                 </View>
@@ -165,7 +164,7 @@ const DashboardScreen: React.FC = () => {
                     <Text
                       style={[styles.statValue, { color: theme.colors.text }]}
                     >
-                      {portfolio.holdings?.length || 0}
+                      {portfolio.items?.length || 0}
                     </Text>
                   </View>
                   <View style={styles.statItem}>
@@ -179,11 +178,10 @@ const DashboardScreen: React.FC = () => {
                     </Text>
                     <Text
                       style={[
-                        styles.statValue,
-                        { color: getChangeColor(portfolio.daily_change || 0) },
+                        styles.statValue,                        { color: getChangeColor(portfolio.total_return || 0) },
                       ]}
                     >
-                      {formatCurrency(portfolio.daily_change || 0)}
+                      {formatCurrency(portfolio.total_return || 0)}
                     </Text>
                   </View>
                 </View>
@@ -231,13 +229,12 @@ const DashboardScreen: React.FC = () => {
                 ]}
               >
                 Loading watchlist...
-              </Text>
-            ) : watchlist?.stocks && watchlist.stocks.length > 0 ? (
+              </Text>            ) : watchlist && watchlist.length > 0 ? (
               <View style={styles.watchlistContainer}>
-                {watchlist.stocks
+                {watchlist
                   .slice(0, 5)
-                  .map((stock: any, index: number) => (
-                    <View key={stock.symbol} style={styles.watchlistItem}>
+                  .map((item: any, index: number) => (
+                    <View key={item.stock_symbol} style={styles.watchlistItem}>
                       <View style={styles.stockInfo}>
                         <Text
                           style={[
@@ -245,7 +242,7 @@ const DashboardScreen: React.FC = () => {
                             { color: theme.colors.text },
                           ]}
                         >
-                          {stock.symbol}
+                          {item.stock_symbol}
                         </Text>
                         <Text
                           style={[
@@ -253,7 +250,7 @@ const DashboardScreen: React.FC = () => {
                             { color: theme.colors.textSecondary },
                           ]}
                         >
-                          {stock.name}
+                          {item.stock.name}
                         </Text>
                       </View>
                       <View style={styles.stockPrice}>
