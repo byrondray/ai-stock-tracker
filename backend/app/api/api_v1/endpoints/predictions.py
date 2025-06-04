@@ -15,23 +15,34 @@ router = APIRouter()
 async def get_stock_prediction(
     symbol: str,
     days: int = Query(default=7, ge=1, le=365, description="Number of days to predict"),
-    model_type: str = Query(default="ensemble", regex="^(lstm|random_forest|ensemble)$"),
+    model_type: str = Query(default="lstm", regex="^(lstm|random_forest|ensemble)$"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ) -> StockPrediction:
     """Get AI predictions for a stock."""
-    prediction_service = PredictionService(db)
-    
-    request = PredictionRequest(
-        symbol=symbol.upper(),
-        days=days,
-        model_type=model_type,
-        include_confidence_bands=True
-    )
-    
     try:
-        prediction = await prediction_service.get_prediction(request)
-        return prediction
+        prediction = await PredictionService.get_prediction(
+            db=db,
+            symbol=symbol.upper(),
+            days_ahead=days,
+            force_refresh=False
+        )
+        
+        if not prediction:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Could not generate prediction for {symbol}"
+            )
+        
+        # Convert PredictionResponse to StockPrediction format
+        return StockPrediction(
+            symbol=prediction.symbol,
+            predictions=prediction.predictions,
+            model_version=prediction.model_version,
+            model_type=prediction.model_type,
+            created_at=prediction.created_at
+        )
+        
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -51,11 +62,29 @@ async def create_prediction(
     db: Session = Depends(get_db)
 ) -> StockPrediction:
     """Generate new prediction for a stock."""
-    prediction_service = PredictionService(db)
-    
     try:
-        prediction = await prediction_service.generate_prediction(request)
-        return prediction
+        prediction = await PredictionService.get_prediction(
+            db=db,
+            symbol=request.symbol,
+            days_ahead=request.days,
+            force_refresh=True  # Force refresh for POST requests
+        )
+        
+        if not prediction:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Could not generate prediction for {request.symbol}"
+            )
+        
+        # Convert PredictionResponse to StockPrediction format
+        return StockPrediction(
+            symbol=prediction.symbol,
+            predictions=prediction.predictions,
+            model_version=prediction.model_version,
+            model_type=prediction.model_type,
+            created_at=prediction.created_at
+        )
+        
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

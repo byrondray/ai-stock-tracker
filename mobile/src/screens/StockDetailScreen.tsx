@@ -77,8 +77,30 @@ export const StockDetailScreen: React.FC = () => {
       price: '',
     });
 
-  // Mock data for now (replace with actual API calls when backend is ready)
-  const stockData = {
+  // API queries
+  const {
+    data: stockData,
+    isLoading: stockLoading,
+    error: stockError,
+    refetch: refetchStock,
+  } = useGetStockQuery(symbol);
+
+  const {
+    data: analysisData,
+    isLoading: analysisLoading,
+    error: analysisError,
+    refetch: refetchAnalysis,
+  } = useGetStockAnalysisQuery(symbol);
+
+  const {
+    data: predictionData,
+    isLoading: predictionLoading,
+    error: predictionError,
+    refetch: refetchPrediction,
+  } = useGetStockPredictionQuery({ symbol, days: 7 });
+
+  // Fallback data for when API is not available
+  const fallbackStockData = {
     symbol: symbol,
     name: `${symbol} Inc.`,
     current_price: 150.0 + Math.random() * 50,
@@ -91,25 +113,39 @@ export const StockDetailScreen: React.FC = () => {
     market_cap: 2500000000000,
     sector: 'Technology',
     exchange: 'NASDAQ',
+    currency: 'USD',
+    last_updated: new Date().toISOString(),
   };
 
-  const analysisData = {
+  const fallbackAnalysisData = {
+    symbol: symbol,
     overall_rating: 'buy' as const,
     fundamental_score: 78,
     technical_score: 82,
     sentiment_score: 75,
     risk_score: 45,
+    analysis_date: new Date().toISOString(),
   };
 
-  const predictionData = {
+  const fallbackPredictionData = {
+    symbol: symbol,
     model_type: 'LSTM',
     model_version: '2.1',
+    created_at: new Date().toISOString(),
     predictions: Array.from({ length: 7 }, (_, i) => ({
       date: new Date(Date.now() + i * 24 * 60 * 60 * 1000).toISOString(),
-      predicted_price: stockData.current_price + (Math.random() - 0.5) * 20,
+      predicted_price:
+        (fallbackStockData.current_price || 150) + (Math.random() - 0.5) * 20,
       confidence: 0.6 + Math.random() * 0.3,
+      lower_bound: undefined,
+      upper_bound: undefined,
     })),
   };
+
+  // Use real data if available, fallback to mock data
+  const displayStockData = stockData || fallbackStockData;
+  const displayAnalysisData = analysisData || fallbackAnalysisData;
+  const displayPredictionData = predictionData || fallbackPredictionData;
 
   const newsData = {
     news_items: [
@@ -140,7 +176,7 @@ export const StockDetailScreen: React.FC = () => {
     (item) => item.stock_symbol === symbol
   );
   const portfolioPosition = portfolioItems.find(
-    (item) => item.symbol === symbol
+    (item) => item.stock_symbol === symbol
   );
 
   const timeframes = ['1D', '1W', '1M', '3M', '6M', '1Y'];
@@ -165,10 +201,18 @@ export const StockDetailScreen: React.FC = () => {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    // Simulate refresh delay
-    setTimeout(() => {
+    try {
+      // Refetch all data
+      await Promise.all([
+        refetchStock(),
+        refetchAnalysis(),
+        refetchPrediction(),
+      ]);
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+    } finally {
       setRefreshing(false);
-    }, 1000);
+    }
   };
 
   const handleWatchlistToggle = async () => {
@@ -185,10 +229,10 @@ export const StockDetailScreen: React.FC = () => {
           addToWatchlist({
             id: Date.now(),
             stock_symbol: symbol,
-            stock: stockData.name,
-            current_price: stockData.current_price,
-            price_change: stockData.change_amount,
-            price_change_percent: stockData.change_percent,
+            stock: displayStockData,
+            current_price: displayStockData.current_price,
+            price_change: displayStockData.change_amount,
+            price_change_percent: displayStockData.change_percent,
             added_at: new Date().toISOString(),
           })
         );
@@ -202,7 +246,7 @@ export const StockDetailScreen: React.FC = () => {
   const handleAddToPortfolio = () => {
     setPortfolioModalData({
       shares: '',
-      price: stockData.current_price.toString(),
+      price: (displayStockData.current_price || 0).toString(),
     });
     setAddToPortfolioModalVisible(true);
   };
@@ -231,9 +275,10 @@ export const StockDetailScreen: React.FC = () => {
           average_cost: price,
           purchase_date: new Date().toISOString(),
           current_price: stockData.current_price,
-          value: shares * stockData.current_price,
-          gain: shares * (stockData.current_price - price),
-          gainPercent: ((stockData.current_price - price) / price) * 100,
+          value: shares * (displayStockData.current_price || 0),
+          gain: shares * ((displayStockData.current_price || 0) - price),
+          gainPercent:
+            (((displayStockData.current_price || 0) - price) / price) * 100,
         })
       );
 

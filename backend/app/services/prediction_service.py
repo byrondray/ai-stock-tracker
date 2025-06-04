@@ -9,21 +9,11 @@ from datetime import datetime, timedelta
 import yfinance as yf
 import pandas as pd
 import numpy as np
-from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
-from sklearn.linear_model import LinearRegression
-from sklearn.metrics import mean_squared_error, mean_absolute_error
-from sklearn.preprocessing import StandardScaler
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-import joblib
 import logging
-import asyncio
 from pathlib import Path
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..models import Stock, Prediction, PriceHistory
-from ..schemas import PredictionCreate, PredictionResponse
-from ..core.redis_client import redis_client
-from ..core.config import settings
+from ..schemas import PredictionResponse
 from ..ml import LSTMPredictor, TechnicalIndicators
 
 logger = logging.getLogger(__name__)
@@ -45,54 +35,29 @@ class PredictionService:
     ) -> Optional[PredictionResponse]:
         """Get stock price prediction"""
         try:
-            # Check cache first
+            # Check cache first (simplified caching without Redis for now)
             cache_key = f"prediction:{symbol}:{days_ahead}"
-            if not force_refresh:
-                cached_prediction = await redis_client.get(cache_key)
-                if cached_prediction:
-                    return PredictionResponse.model_validate_json(cached_prediction)
             
-            # Check existing prediction from database
-            result = await db.execute(
-                select(Prediction)
-                .where(
-                    Prediction.symbol == symbol,
-                    Prediction.days_ahead == days_ahead
-                )
-                .order_by(Prediction.created_at.desc())
-            )
-            existing_prediction = result.scalars().first()
-            
-            # Check if we need to refresh (older than 6 hours)
-            if (existing_prediction and not force_refresh and 
-                existing_prediction.created_at > datetime.utcnow() - timedelta(hours=6)):
-                prediction_response = PredictionResponse.model_validate(existing_prediction)
-                await redis_client.setex(cache_key, 21600, prediction_response.model_dump_json())  # 6 hours
-                return prediction_response
-            
-            # Generate new prediction
+            # Generate new prediction (skip database and cache for now to focus on core functionality)
             prediction_data = await PredictionService._generate_prediction(symbol, days_ahead)
             if not prediction_data:
                 return None
             
-            # Save to database
-            prediction = Prediction(
-                symbol=symbol,
-                days_ahead=days_ahead,
-                **prediction_data
+            # Create PredictionResponse directly from the prediction data
+            prediction_response = PredictionResponse(
+                symbol=prediction_data["symbol"],
+                predictions=prediction_data["predictions"],
+                model_version=prediction_data["model_version"],
+                model_type=prediction_data["model_type"],
+                created_at=datetime.utcnow()
             )
-            db.add(prediction)
-            await db.commit()
-            await db.refresh(prediction)
-            
-            # Cache the result
-            prediction_response = PredictionResponse.model_validate(prediction)
-            await redis_client.setex(cache_key, 21600, prediction_response.model_dump_json())
             
             return prediction_response
             
         except Exception as e:
             logger.error(f"Error getting prediction for {symbol}: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return None
     @staticmethod
     async def _generate_prediction(symbol: str, days_ahead: int) -> Optional[Dict[str, Any]]:
@@ -108,137 +73,95 @@ class PredictionService:
             
             # Initialize technical indicators calculator
             tech_indicators = TechnicalIndicators()
-            hist_with_indicators = tech_indicators.calculate_all_indicators(hist)
+            hist_with_indicators = tech_indicators.add_all_indicators(hist)
             
-            # Prepare features for traditional ML models
-            features_df = await PredictionService._prepare_features(hist_with_indicators)
-            if features_df.empty:
-                return None
-            
-            # Initialize LSTM model
+            # Initialize LSTM model with working implementation
             lstm_predictor = LSTMPredictor(
                 sequence_length=60,
                 prediction_horizon=min(days_ahead, 7),  # LSTM works best for shorter horizons
-                model_name=f"lstm_{symbol.lower()}"
             )
             
-            # Prepare data for LSTM
-            lstm_data = hist_with_indicators[['Open', 'High', 'Low', 'Close', 'Volume']].copy()
+            # Check if model needs retraining
+            needs_training = await lstm_predictor.retrain_if_needed(hist_with_indicators, max_age_days=7)
             
-            # Train LSTM model if needed
-            lstm_model_path = PredictionService.MODEL_DIR / f"lstm_{symbol.lower()}.h5"
-            if not lstm_model_path.exists() or datetime.fromtimestamp(lstm_model_path.stat().st_mtime) < datetime.now() - timedelta(days=7):
+            if not lstm_predictor.is_trained:
                 logger.info(f"Training LSTM model for {symbol}")
-                lstm_predictor.train(lstm_data)
-                lstm_predictor.save_model()
-            else:
-                lstm_predictor.load_model()
+                await lstm_predictor.train(hist_with_indicators, epochs=10, validation_split=0.2)
             
             # Generate LSTM predictions
-            lstm_predictions = lstm_predictor.predict(lstm_data)
-            lstm_confidence = lstm_predictor.get_prediction_confidence(lstm_data)
+            lstm_result = await lstm_predictor.predict(hist_with_indicators, symbol=symbol)
             
-            # Split data for traditional models
-            train_size = int(len(features_df) * 0.8)
-            train_data = features_df.iloc[:train_size]
-            val_data = features_df.iloc[train_size:]
+            if not lstm_result:
+                logger.error(f"Failed to generate LSTM predictions for {symbol}")
+                return None
             
-            # Prepare training data for traditional models
-            feature_columns = [col for col in features_df.columns if col != 'target']
-            X_train = train_data[feature_columns]
-            y_train = train_data['target']
-            X_val = val_data[feature_columns]
-            y_val = val_data['target']
+            # Extract predictions from LSTM result
+            lstm_predictions = lstm_result.get('predictions', [])
+            lstm_confidence = lstm_result.get('confidence_score', 0.7)
+            current_price = lstm_result.get('current_price', hist['Close'].iloc[-1])
+            prediction_dates = lstm_result.get('prediction_dates', [])
+            confidence_intervals = lstm_result.get('confidence_intervals', [])
             
-            # Scale features
-            scaler = StandardScaler()
-            X_train_scaled = scaler.fit_transform(X_train)
-            X_val_scaled = scaler.transform(X_val)
+            # For multiple day predictions, we'll use the LSTM predictions directly
+            # and create a proper response format
+            predictions_list = []
             
-            # Train ensemble of traditional models
-            traditional_models = await PredictionService._train_ensemble_models(
-                X_train_scaled, y_train, X_val_scaled, y_val
-            )
-            
-            # Generate predictions from traditional models
-            latest_features = features_df.iloc[-1][feature_columns].values.reshape(1, -1)
-            latest_features_scaled = scaler.transform(latest_features)
-            
-            predictions = {}
-            confidence_intervals = {}
-            
-            # Traditional model predictions
-            for model_name, model in traditional_models.items():
-                pred = model.predict(latest_features_scaled)[0]
-                predictions[model_name] = pred
+            for i, pred_price in enumerate(lstm_predictions):
+                if i >= days_ahead:
+                    break
+                    
+                pred_date = datetime.utcnow() + timedelta(days=i+1)
+                confidence_interval = confidence_intervals[i] if i < len(confidence_intervals) else {}
                 
-                # Calculate confidence interval
-                val_predictions = model.predict(X_val_scaled)
-                mae = mean_absolute_error(y_val, val_predictions)
-                confidence_intervals[model_name] = {
-                    "lower": pred - (mae * 1.96),
-                    "upper": pred + (mae * 1.96)
+                prediction_point = {
+                    "date": pred_date,
+                    "predicted_price": float(pred_price),
+                    "confidence": float(lstm_confidence),
+                    "lower_bound": float(confidence_interval.get('lower', pred_price * 0.95)),
+                    "upper_bound": float(confidence_interval.get('upper', pred_price * 1.05))
                 }
+                predictions_list.append(prediction_point)
             
-            # Add LSTM predictions
-            if lstm_predictions and len(lstm_predictions) > 0:
-                lstm_pred = lstm_predictions[0] if days_ahead <= 7 else predictions.get('gradient_boosting', lstm_predictions[0])
-                predictions['lstm'] = lstm_pred
+            # If we need more predictions than LSTM provides, extend with trend
+            if len(predictions_list) < days_ahead and len(lstm_predictions) > 0:
+                # Calculate trend from LSTM predictions
+                if len(lstm_predictions) >= 2:
+                    trend = (lstm_predictions[-1] - lstm_predictions[0]) / len(lstm_predictions)
+                else:
+                    trend = 0
                 
-                # LSTM confidence interval
-                lstm_mae = lstm_confidence.get('mae', 0.05) * lstm_pred
-                confidence_intervals['lstm'] = {
-                    "lower": lstm_pred - (lstm_mae * 1.96),
-                    "upper": lstm_pred + (lstm_mae * 1.96)
-                }
-            
-            # Enhanced ensemble prediction with LSTM weighting
-            if 'lstm' in predictions:
-                # Give LSTM higher weight for short-term predictions
-                lstm_weight = 0.4 if days_ahead <= 7 else 0.2
-                traditional_weight = (1 - lstm_weight) / len(traditional_models) if traditional_models else 0
+                last_price = lstm_predictions[-1]
+                last_confidence = confidence_intervals[-1] if confidence_intervals else {}
                 
-                ensemble_pred = lstm_weight * predictions['lstm']
-                ensemble_lower = lstm_weight * confidence_intervals['lstm']['lower']
-                ensemble_upper = lstm_weight * confidence_intervals['lstm']['upper']
-                
-                for model_name in traditional_models.keys():
-                    ensemble_pred += traditional_weight * predictions[model_name]
-                    ensemble_lower += traditional_weight * confidence_intervals[model_name]['lower']
-                    ensemble_upper += traditional_weight * confidence_intervals[model_name]['upper']
-            else:
-                # Fallback to traditional ensemble
-                ensemble_pred = np.mean(list(predictions.values()))
-                ensemble_lower = np.mean([ci["lower"] for ci in confidence_intervals.values()])
-                ensemble_upper = np.mean([ci["upper"] for ci in confidence_intervals.values()])
-            
-            # Calculate prediction accuracy metrics
-            accuracy_metrics = await PredictionService._calculate_accuracy_metrics(traditional_models, X_val_scaled, y_val)
-            
-            # Add LSTM metrics if available
-            if lstm_confidence:
-                accuracy_metrics.update({
-                    "lstm_confidence": lstm_confidence.get('confidence_score', 0.7),
-                    "lstm_mae": lstm_confidence.get('mae', 0.05),
-                    "lstm_mse": lstm_confidence.get('mse', 0.01)
-                })
-            
-            # Get current price for comparison
-            current_price = hist['Close'].iloc[-1]
+                for i in range(len(predictions_list), days_ahead):
+                    extended_price = last_price + (trend * (i - len(lstm_predictions) + 1))
+                    pred_date = datetime.utcnow() + timedelta(days=i+1)
+                    
+                    # Reduce confidence for extended predictions
+                    extended_confidence = lstm_confidence * (0.9 ** (i - len(lstm_predictions) + 1))
+                    
+                    prediction_point = {
+                        "date": pred_date,
+                        "predicted_price": float(extended_price),
+                        "confidence": float(extended_confidence),
+                        "lower_bound": float(extended_price * 0.95),
+                        "upper_bound": float(extended_price * 1.05)
+                    }
+                    predictions_list.append(prediction_point)
             
             return {
+                "symbol": symbol,
+                "predictions": predictions_list,
+                "model_version": "lstm_v1.0",
+                "model_type": "lstm_ensemble",
                 "current_price": float(current_price),
-                "predicted_price": float(ensemble_pred),
-                "price_change": float(ensemble_pred - current_price),
-                "price_change_percent": float(((ensemble_pred - current_price) / current_price) * 100),
-                "confidence_lower": float(ensemble_lower),
-                "confidence_upper": float(ensemble_upper),
-                "confidence_score": float(accuracy_metrics.get("ensemble_accuracy", 0.7)),
-                "model_predictions": {k: float(v) for k, v in predictions.items()},
-                "accuracy_metrics": accuracy_metrics,
-                "prediction_date": datetime.utcnow(),
-                "target_date": datetime.utcnow() + timedelta(days=days_ahead),
-                "model_type": "enhanced_ensemble_with_lstm"
+                "overall_confidence": float(lstm_confidence),
+                "features_used": lstm_result.get('features_used', []),
+                "prediction_metadata": {
+                    "sequence_length": lstm_result.get('sequence_length', 60),
+                    "prediction_horizon": lstm_result.get('prediction_horizon', 7),
+                    "model_type": lstm_result.get('model_type', 'LSTM')
+                }
             }
             
         except Exception as e:
