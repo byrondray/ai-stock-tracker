@@ -24,6 +24,7 @@ from ..models import Stock, Prediction, PriceHistory
 from ..schemas import PredictionCreate, PredictionResponse
 from ..core.redis_client import redis_client
 from ..core.config import settings
+from ..ml import LSTMPredictor, TechnicalIndicators
 
 logger = logging.getLogger(__name__)
 
@@ -93,10 +94,9 @@ class PredictionService:
         except Exception as e:
             logger.error(f"Error getting prediction for {symbol}: {str(e)}")
             return None
-    
-    @staticmethod
+      @staticmethod
     async def _generate_prediction(symbol: str, days_ahead: int) -> Optional[Dict[str, Any]]:
-        """Generate stock price prediction using ensemble of ML models"""
+        """Generate stock price prediction using ensemble of ML models including LSTM"""
         try:
             # Get historical data
             ticker = yf.Ticker(symbol)
@@ -106,17 +106,44 @@ class PredictionService:
                 logger.warning(f"Insufficient data for {symbol}")
                 return None
             
-            # Prepare features and target
-            features_df = await PredictionService._prepare_features(hist)
+            # Initialize technical indicators calculator
+            tech_indicators = TechnicalIndicators()
+            hist_with_indicators = tech_indicators.calculate_all_indicators(hist)
+            
+            # Prepare features for traditional ML models
+            features_df = await PredictionService._prepare_features(hist_with_indicators)
             if features_df.empty:
                 return None
             
-            # Split data for training and validation
+            # Initialize LSTM model
+            lstm_predictor = LSTMPredictor(
+                sequence_length=60,
+                prediction_horizon=min(days_ahead, 7),  # LSTM works best for shorter horizons
+                model_name=f"lstm_{symbol.lower()}"
+            )
+            
+            # Prepare data for LSTM
+            lstm_data = hist_with_indicators[['Open', 'High', 'Low', 'Close', 'Volume']].copy()
+            
+            # Train LSTM model if needed
+            lstm_model_path = PredictionService.MODEL_DIR / f"lstm_{symbol.lower()}.h5"
+            if not lstm_model_path.exists() or datetime.fromtimestamp(lstm_model_path.stat().st_mtime) < datetime.now() - timedelta(days=7):
+                logger.info(f"Training LSTM model for {symbol}")
+                lstm_predictor.train(lstm_data)
+                lstm_predictor.save_model()
+            else:
+                lstm_predictor.load_model()
+            
+            # Generate LSTM predictions
+            lstm_predictions = lstm_predictor.predict(lstm_data)
+            lstm_confidence = lstm_predictor.get_prediction_confidence(lstm_data)
+            
+            # Split data for traditional models
             train_size = int(len(features_df) * 0.8)
             train_data = features_df.iloc[:train_size]
             val_data = features_df.iloc[train_size:]
             
-            # Prepare training data
+            # Prepare training data for traditional models
             feature_columns = [col for col in features_df.columns if col != 'target']
             X_train = train_data[feature_columns]
             y_train = train_data['target']
@@ -128,23 +155,24 @@ class PredictionService:
             X_train_scaled = scaler.fit_transform(X_train)
             X_val_scaled = scaler.transform(X_val)
             
-            # Train ensemble of models
-            models = await PredictionService._train_ensemble_models(
+            # Train ensemble of traditional models
+            traditional_models = await PredictionService._train_ensemble_models(
                 X_train_scaled, y_train, X_val_scaled, y_val
             )
             
-            # Generate predictions
+            # Generate predictions from traditional models
             latest_features = features_df.iloc[-1][feature_columns].values.reshape(1, -1)
             latest_features_scaled = scaler.transform(latest_features)
             
             predictions = {}
             confidence_intervals = {}
             
-            for model_name, model in models.items():
+            # Traditional model predictions
+            for model_name, model in traditional_models.items():
                 pred = model.predict(latest_features_scaled)[0]
                 predictions[model_name] = pred
                 
-                # Calculate confidence interval (simplified approach)
+                # Calculate confidence interval
                 val_predictions = model.predict(X_val_scaled)
                 mae = mean_absolute_error(y_val, val_predictions)
                 confidence_intervals[model_name] = {
@@ -152,13 +180,48 @@ class PredictionService:
                     "upper": pred + (mae * 1.96)
                 }
             
-            # Ensemble prediction (weighted average)
-            ensemble_pred = np.mean(list(predictions.values()))
-            ensemble_lower = np.mean([ci["lower"] for ci in confidence_intervals.values()])
-            ensemble_upper = np.mean([ci["upper"] for ci in confidence_intervals.values()])
+            # Add LSTM predictions
+            if lstm_predictions and len(lstm_predictions) > 0:
+                lstm_pred = lstm_predictions[0] if days_ahead <= 7 else predictions.get('gradient_boosting', lstm_predictions[0])
+                predictions['lstm'] = lstm_pred
+                
+                # LSTM confidence interval
+                lstm_mae = lstm_confidence.get('mae', 0.05) * lstm_pred
+                confidence_intervals['lstm'] = {
+                    "lower": lstm_pred - (lstm_mae * 1.96),
+                    "upper": lstm_pred + (lstm_mae * 1.96)
+                }
+            
+            # Enhanced ensemble prediction with LSTM weighting
+            if 'lstm' in predictions:
+                # Give LSTM higher weight for short-term predictions
+                lstm_weight = 0.4 if days_ahead <= 7 else 0.2
+                traditional_weight = (1 - lstm_weight) / len(traditional_models) if traditional_models else 0
+                
+                ensemble_pred = lstm_weight * predictions['lstm']
+                ensemble_lower = lstm_weight * confidence_intervals['lstm']['lower']
+                ensemble_upper = lstm_weight * confidence_intervals['lstm']['upper']
+                
+                for model_name in traditional_models.keys():
+                    ensemble_pred += traditional_weight * predictions[model_name]
+                    ensemble_lower += traditional_weight * confidence_intervals[model_name]['lower']
+                    ensemble_upper += traditional_weight * confidence_intervals[model_name]['upper']
+            else:
+                # Fallback to traditional ensemble
+                ensemble_pred = np.mean(list(predictions.values()))
+                ensemble_lower = np.mean([ci["lower"] for ci in confidence_intervals.values()])
+                ensemble_upper = np.mean([ci["upper"] for ci in confidence_intervals.values()])
             
             # Calculate prediction accuracy metrics
-            accuracy_metrics = await PredictionService._calculate_accuracy_metrics(models, X_val_scaled, y_val)
+            accuracy_metrics = await PredictionService._calculate_accuracy_metrics(traditional_models, X_val_scaled, y_val)
+            
+            # Add LSTM metrics if available
+            if lstm_confidence:
+                accuracy_metrics.update({
+                    "lstm_confidence": lstm_confidence.get('confidence_score', 0.7),
+                    "lstm_mae": lstm_confidence.get('mae', 0.05),
+                    "lstm_mse": lstm_confidence.get('mse', 0.01)
+                })
             
             # Get current price for comparison
             current_price = hist['Close'].iloc[-1]
@@ -174,20 +237,86 @@ class PredictionService:
                 "model_predictions": {k: float(v) for k, v in predictions.items()},
                 "accuracy_metrics": accuracy_metrics,
                 "prediction_date": datetime.utcnow(),
-                "target_date": datetime.utcnow() + timedelta(days=days_ahead)
+                "target_date": datetime.utcnow() + timedelta(days=days_ahead),
+                "model_type": "enhanced_ensemble_with_lstm"
             }
             
         except Exception as e:
             logger.error(f"Error generating prediction for {symbol}: {str(e)}")
             return None
-    
-    @staticmethod
+      @staticmethod
     async def _prepare_features(hist: pd.DataFrame) -> pd.DataFrame:
-        """Prepare features for ML models"""
+        """Prepare features for ML models using enhanced technical indicators"""
         try:
             df = hist.copy()
             
-            # Technical indicators
+            # Use our enhanced technical indicators
+            tech_indicators = TechnicalIndicators()
+            
+            # Get basic technical indicators (already calculated if passed from _generate_prediction)
+            if 'RSI' not in df.columns:
+                df = tech_indicators.calculate_all_indicators(df)
+            
+            # Select the most important features for traditional ML models
+            # (LSTM will use raw OHLCV data with full technical indicators)
+            feature_columns = [
+                # Trend indicators
+                'SMA_20', 'EMA_12', 'EMA_26', 'MACD', 'MACD_Signal',
+                
+                # Momentum indicators  
+                'RSI', 'Stochastic_K', 'Stochastic_D', 'Williams_R',
+                
+                # Volatility indicators
+                'BB_Upper', 'BB_Lower', 'BB_Width', 'ATR',
+                
+                # Volume indicators
+                'Volume_SMA', 'Volume_Ratio', 'MFI',
+                
+                # Price ratios and momentum
+                'Price_SMA20_Ratio', 'Price_EMA12_Ratio',
+                'Momentum_5', 'Momentum_10', 'Momentum_20',
+                
+                # Statistical indicators
+                'Z_Score', 'Linear_Reg_Slope'
+            ]
+            
+            # Add target variable (next day's closing price)
+            df['target'] = df['Close'].shift(-1)
+            
+            # Select available features (some might not be calculated)
+            available_features = [col for col in feature_columns if col in df.columns]
+            available_features.append('target')
+            
+            # Fallback to basic features if advanced ones aren't available
+            if len(available_features) < 10:
+                basic_features = [
+                    'MA_5', 'MA_10', 'MA_20', 'MA_50',
+                    'Price_MA5_Ratio', 'Price_MA20_Ratio',
+                    'Volatility_10', 'Volatility_20',
+                    'RSI', 'MACD', 'MACD_Signal',
+                    'BB_Position', 'Volume_Ratio',
+                    'Momentum_5', 'Momentum_10', 'Momentum_20',
+                    'HL_Ratio', 'OC_Ratio', 'target'
+                ]
+                available_features = [col for col in basic_features if col in df.columns]
+            
+            # Remove rows with NaN values
+            df_features = df[available_features].dropna()
+            
+            return df_features
+            
+        except Exception as e:
+            logger.error(f"Error preparing features: {str(e)}")
+            # Fallback to original method if enhanced features fail
+            return await PredictionService._prepare_basic_features(hist)
+    
+    @staticmethod
+    async def _prepare_basic_features(hist: pd.DataFrame) -> pd.DataFrame:
+        """Fallback method for preparing basic features"""
+        try:
+            df = hist.copy()
+            
+            # Basic technical indicators
             # Moving averages
             df['MA_5'] = df['Close'].rolling(window=5).mean()
             df['MA_10'] = df['Close'].rolling(window=10).mean()
@@ -255,9 +384,9 @@ class PredictionService:
             return df_features
             
         except Exception as e:
-            logger.error(f"Error preparing features: {str(e)}")
+            logger.error(f"Error preparing basic features: {str(e)}")
             return pd.DataFrame()
-    
+
     @staticmethod
     async def _train_ensemble_models(
         X_train: np.ndarray, 

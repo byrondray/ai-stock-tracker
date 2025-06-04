@@ -6,6 +6,7 @@ from app.core.security import get_current_user
 from app.models import User
 from app.schemas import StockPrediction, PredictionRequest
 from app.services.prediction_service import PredictionService
+from app.ml import LSTMPredictor, TechnicalIndicators
 
 router = APIRouter()
 

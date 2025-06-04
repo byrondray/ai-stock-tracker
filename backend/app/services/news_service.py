@@ -17,6 +17,7 @@ from urllib.parse import quote
 from ..schemas import NewsResponse, NewsItem
 from ..core.redis_client import redis_client
 from ..core.config import settings
+from ..ml import SentimentAnalyzer
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +28,16 @@ class NewsService:
     # News API configuration
     NEWS_API_KEY = getattr(settings, 'NEWS_API_KEY', None)
     ALPHA_VANTAGE_KEY = getattr(settings, 'ALPHA_VANTAGE_API_KEY', None)
+    
+    # Initialize sentiment analyzer
+    _sentiment_analyzer = None
+    
+    @classmethod
+    def get_sentiment_analyzer(cls):
+        """Get or create sentiment analyzer instance"""
+        if cls._sentiment_analyzer is None:
+            cls._sentiment_analyzer = SentimentAnalyzer()
+        return cls._sentiment_analyzer
     
     @staticmethod
     async def get_stock_news(
@@ -370,10 +381,35 @@ class NewsService:
         except Exception as e:
             logger.error(f"Error with fallback market news: {str(e)}")
             return []
+      @staticmethod
+    def _analyze_sentiment(text: str) -> str:
+        """Enhanced sentiment analysis using ML models"""
+        try:
+            if not text:
+                return "neutral"
+            
+            # Get sentiment analyzer
+            analyzer = NewsService.get_sentiment_analyzer()
+            
+            # Analyze sentiment using our enhanced analyzer
+            sentiment_result = analyzer.analyze_single_text(text)
+            
+            # Convert numerical sentiment to categorical
+            if sentiment_result["sentiment_score"] >= 0.1:
+                return "positive"
+            elif sentiment_result["sentiment_score"] <= -0.1:
+                return "negative"
+            else:
+                return "neutral"
+                
+        except Exception as e:
+            logger.error(f"Error analyzing sentiment with ML model: {str(e)}")
+            # Fallback to simple keyword-based analysis
+            return NewsService._analyze_sentiment_simple(text)
     
     @staticmethod
-    def _analyze_sentiment(text: str) -> str:
-        """Simple sentiment analysis"""
+    def _analyze_sentiment_simple(text: str) -> str:
+        """Fallback simple sentiment analysis"""
         try:
             if not text:
                 return "neutral"
@@ -521,3 +557,105 @@ class NewsService:
                 "date_range": {},
                 "most_recent": None
             }
+    
+    @staticmethod
+    async def get_sentiment_analysis(
+        symbol: str,
+        limit: int = 50,
+        force_refresh: bool = False
+    ) -> Dict[str, Any]:
+        """Get comprehensive sentiment analysis for a stock"""
+        try:
+            # Check cache first
+            cache_key = f"sentiment:{symbol}:{limit}"
+            if not force_refresh:
+                cached_sentiment = await redis_client.get(cache_key)
+                if cached_sentiment:
+                    import json
+                    return json.loads(cached_sentiment)
+            
+            # Get news for the symbol
+            news_items = await NewsService.get_stock_news(symbol, limit)
+            
+            if not news_items:
+                return {"error": "No news found for analysis"}
+            
+            # Get sentiment analyzer
+            analyzer = NewsService.get_sentiment_analyzer()
+            
+            # Prepare news data for batch analysis
+            news_data = []
+            for item in news_items:
+                news_data.append({
+                    "title": item.title,
+                    "content": item.summary,
+                    "date": item.published_at.isoformat(),
+                    "source": item.source,
+                    "url": item.url
+                })
+            
+            # Perform batch sentiment analysis
+            sentiment_results = analyzer.analyze_news_batch(news_data)
+            
+            # Cache the results
+            import json
+            await redis_client.setex(cache_key, 3600, json.dumps(sentiment_results))  # Cache for 1 hour
+            
+            return sentiment_results
+            
+        except Exception as e:
+            logger.error(f"Error getting sentiment analysis for {symbol}: {str(e)}")
+            return {"error": str(e)}
+    
+    @staticmethod
+    async def get_market_sentiment(
+        category: str = "general",
+        limit: int = 100,
+        force_refresh: bool = False
+    ) -> Dict[str, Any]:
+        """Get overall market sentiment analysis"""
+        try:
+            # Check cache first
+            cache_key = f"market_sentiment:{category}:{limit}"
+            if not force_refresh:
+                cached_sentiment = await redis_client.get(cache_key)
+                if cached_sentiment:
+                    import json
+                    return json.loads(cached_sentiment)
+            
+            # Get market news
+            news_items = await NewsService.get_market_news(category, limit)
+            
+            if not news_items:
+                return {"error": "No market news found for analysis"}
+            
+            # Get sentiment analyzer
+            analyzer = NewsService.get_sentiment_analyzer()
+            
+            # Prepare news data for batch analysis
+            news_data = []
+            for item in news_items:
+                news_data.append({
+                    "title": item.title,
+                    "content": item.summary,
+                    "date": item.published_at.isoformat(),
+                    "source": item.source,
+                    "url": item.url
+                })
+            
+            # Perform batch sentiment analysis
+            sentiment_results = analyzer.analyze_news_batch(news_data)
+            
+            # Add market-specific analysis
+            sentiment_results["category"] = category
+            sentiment_results["analysis_type"] = "market_sentiment"
+            
+            # Cache the results
+            import json
+            await redis_client.setex(cache_key, 3600, json.dumps(sentiment_results))
+            
+            return sentiment_results
+            
+        except Exception as e:
+            logger.error(f"Error getting market sentiment: {str(e)}")
+            return {"error": str(e)}
