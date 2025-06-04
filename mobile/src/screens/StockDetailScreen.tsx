@@ -176,7 +176,7 @@ export const StockDetailScreen: React.FC = () => {
     (item) => item.stock_symbol === symbol
   );
   const portfolioPosition = portfolioItems.find(
-    (item) => item.stock_symbol === symbol
+    (item) => item.symbol === symbol
   );
 
   const timeframes = ['1D', '1W', '1M', '3M', '6M', '1Y'];
@@ -229,10 +229,10 @@ export const StockDetailScreen: React.FC = () => {
           addToWatchlist({
             id: Date.now(),
             stock_symbol: symbol,
-            stock: displayStockData,
-            current_price: displayStockData.current_price,
-            price_change: displayStockData.change_amount,
-            price_change_percent: displayStockData.change_percent,
+            stock: displayStockData.name || '',
+            current_price: displayStockData.current_price || 0,
+            price_change: displayStockData.change_amount || 0,
+            price_change_percent: displayStockData.change_percent || 0,
             added_at: new Date().toISOString(),
           })
         );
@@ -270,11 +270,11 @@ export const StockDetailScreen: React.FC = () => {
         addPortfolioItem({
           id: Date.now(),
           symbol: symbol,
-          name: stockData.name,
+          name: displayStockData?.name || '',
           quantity: shares,
           average_cost: price,
           purchase_date: new Date().toISOString(),
-          current_price: stockData.current_price,
+          current_price: displayStockData.current_price || 0,
           value: shares * (displayStockData.current_price || 0),
           gain: shares * ((displayStockData.current_price || 0) - price),
           gainPercent:
@@ -314,6 +314,18 @@ export const StockDetailScreen: React.FC = () => {
     return rating.replace('_', ' ').toUpperCase();
   };
 
+  // Show loading state while data is being fetched
+  if (stockLoading || analysisLoading || predictionLoading) {
+    return (
+      <View style={[styles.container, styles.loadingContainer]}>
+        <ActivityIndicator size='large' color={theme.colors.primary} />
+        <Text style={[styles.loadingText, { color: theme.colors.text }]}>
+          Loading stock data...
+        </Text>
+      </View>
+    );
+  }
+
   return (
     <LinearGradient
       colors={[theme.colors.background, theme.colors.surface]}
@@ -330,7 +342,7 @@ export const StockDetailScreen: React.FC = () => {
           <View style={styles.stockHeader}>
             <View style={styles.stockInfo}>
               <Text style={[styles.stockSymbol, { color: theme.colors.text }]}>
-                {stockData.symbol}
+                {displayStockData.symbol}
               </Text>
               <Text
                 style={[
@@ -338,7 +350,7 @@ export const StockDetailScreen: React.FC = () => {
                   { color: theme.colors.textSecondary },
                 ]}
               >
-                {stockData.name}
+                {displayStockData.name}
               </Text>
               <Text
                 style={[
@@ -346,16 +358,16 @@ export const StockDetailScreen: React.FC = () => {
                   { color: theme.colors.textSecondary },
                 ]}
               >
-                {stockData.sector}
+                {displayStockData.sector}
               </Text>
             </View>
             <View style={styles.priceInfo}>
               <Text style={[styles.currentPrice, { color: theme.colors.text }]}>
-                ${stockData.current_price.toFixed(2)}
+                ${(displayStockData.current_price || 0).toFixed(2)}
               </Text>
               <ChangeIndicator
-                value={stockData.change_amount}
-                percentage={stockData.change_percent}
+                value={displayStockData.change_amount || 0}
+                percentage={displayStockData.change_percent || 0}
               />
             </View>
           </View>
@@ -403,11 +415,11 @@ export const StockDetailScreen: React.FC = () => {
                 datasets: [
                   {
                     data: [
-                      stockData.current_price - 5,
-                      stockData.current_price - 2,
-                      stockData.current_price + 1,
-                      stockData.current_price - 1,
-                      stockData.current_price,
+                      (displayStockData.current_price || 150) - 5,
+                      (displayStockData.current_price || 150) - 2,
+                      (displayStockData.current_price || 150) + 1,
+                      (displayStockData.current_price || 150) - 1,
+                      displayStockData.current_price || 150,
                     ],
                   },
                 ],
@@ -434,10 +446,10 @@ export const StockDetailScreen: React.FC = () => {
               <Text
                 style={[
                   styles.analysisValue,
-                  { color: getRatingColor(analysisData.overall_rating) },
+                  { color: getRatingColor(displayAnalysisData.overall_rating) },
                 ]}
               >
-                {formatRating(analysisData.overall_rating)}
+                {formatRating(displayAnalysisData.overall_rating)}
               </Text>
             </View>
             <View style={styles.analysisItem}>
@@ -452,7 +464,7 @@ export const StockDetailScreen: React.FC = () => {
               <Text
                 style={[styles.analysisValue, { color: theme.colors.text }]}
               >
-                {analysisData.fundamental_score}/100
+                {displayAnalysisData.fundamental_score}/100
               </Text>
             </View>
             <View style={styles.analysisItem}>
@@ -467,7 +479,7 @@ export const StockDetailScreen: React.FC = () => {
               <Text
                 style={[styles.analysisValue, { color: theme.colors.text }]}
               >
-                {analysisData.technical_score}/100
+                {displayAnalysisData.technical_score}/100
               </Text>
             </View>
             <View style={styles.analysisItem}>
@@ -482,7 +494,7 @@ export const StockDetailScreen: React.FC = () => {
               <Text
                 style={[styles.analysisValue, { color: theme.colors.text }]}
               >
-                {analysisData.sentiment_score}/100
+                {displayAnalysisData.sentiment_score}/100
               </Text>
             </View>
             <View style={styles.analysisItem}>
@@ -499,15 +511,15 @@ export const StockDetailScreen: React.FC = () => {
                   styles.analysisValue,
                   {
                     color:
-                      analysisData.risk_score > 70
+                      displayAnalysisData.risk_score > 70
                         ? theme.colors.error
-                        : analysisData.risk_score > 40
+                        : displayAnalysisData.risk_score > 40
                         ? theme.colors.warning
                         : theme.colors.success,
                   },
                 ]}
               >
-                {analysisData.risk_score}/100
+                {displayAnalysisData.risk_score}/100
               </Text>
             </View>
           </View>
@@ -524,41 +536,47 @@ export const StockDetailScreen: React.FC = () => {
               { color: theme.colors.textSecondary },
             ]}
           >
-            Model: {predictionData.model_type} v{predictionData.model_version}
+            Model: {displayPredictionData.model_type} v
+            {displayPredictionData.model_version}
           </Text>
           <View style={styles.predictionList}>
-            {predictionData.predictions.slice(0, 7).map((prediction, index) => (
-              <View key={index} style={styles.predictionItem}>
-                <Text
-                  style={[
-                    styles.predictionDate,
-                    { color: theme.colors.textSecondary },
-                  ]}
-                >
-                  {new Date(prediction.date).toLocaleDateString()}
-                </Text>
-                <Text
-                  style={[styles.predictionPrice, { color: theme.colors.text }]}
-                >
-                  ${prediction.predicted_price.toFixed(2)}
-                </Text>
-                <Text
-                  style={[
-                    styles.predictionConfidence,
-                    {
-                      color:
-                        prediction.confidence > 0.8
-                          ? theme.colors.success
-                          : prediction.confidence > 0.6
-                          ? theme.colors.warning
-                          : theme.colors.error,
-                    },
-                  ]}
-                >
-                  {(prediction.confidence * 100).toFixed(1)}%
-                </Text>
-              </View>
-            ))}
+            {displayPredictionData.predictions
+              .slice(0, 7)
+              .map((prediction, index) => (
+                <View key={index} style={styles.predictionItem}>
+                  <Text
+                    style={[
+                      styles.predictionDate,
+                      { color: theme.colors.textSecondary },
+                    ]}
+                  >
+                    {new Date(prediction.date).toLocaleDateString()}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.predictionPrice,
+                      { color: theme.colors.text },
+                    ]}
+                  >
+                    ${prediction.predicted_price.toFixed(2)}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.predictionConfidence,
+                      {
+                        color:
+                          prediction.confidence > 0.8
+                            ? theme.colors.success
+                            : prediction.confidence > 0.6
+                            ? theme.colors.warning
+                            : theme.colors.error,
+                      },
+                    ]}
+                  >
+                    {(prediction.confidence * 100).toFixed(1)}%
+                  </Text>
+                </View>
+              ))}
           </View>
         </Card>
 
@@ -578,7 +596,7 @@ export const StockDetailScreen: React.FC = () => {
                 Open
               </Text>
               <Text style={[styles.statValue, { color: theme.colors.text }]}>
-                ${stockData.open_price.toFixed(2)}
+                ${(displayStockData.open_price || 0).toFixed(2)}
               </Text>
             </View>
             <View style={styles.statItem}>
@@ -591,7 +609,7 @@ export const StockDetailScreen: React.FC = () => {
                 High
               </Text>
               <Text style={[styles.statValue, { color: theme.colors.text }]}>
-                ${stockData.high_price.toFixed(2)}
+                ${(displayStockData.high_price || 0).toFixed(2)}
               </Text>
             </View>
             <View style={styles.statItem}>
@@ -604,7 +622,7 @@ export const StockDetailScreen: React.FC = () => {
                 Low
               </Text>
               <Text style={[styles.statValue, { color: theme.colors.text }]}>
-                ${stockData.low_price.toFixed(2)}
+                ${(displayStockData.low_price || 0).toFixed(2)}
               </Text>
             </View>
             <View style={styles.statItem}>
@@ -617,7 +635,7 @@ export const StockDetailScreen: React.FC = () => {
                 Volume
               </Text>
               <Text style={[styles.statValue, { color: theme.colors.text }]}>
-                {stockData.volume.toLocaleString()}
+                {(displayStockData.volume || 0).toLocaleString()}
               </Text>
             </View>
             <View style={styles.statItem}>
@@ -630,7 +648,7 @@ export const StockDetailScreen: React.FC = () => {
                 Market Cap
               </Text>
               <Text style={[styles.statValue, { color: theme.colors.text }]}>
-                ${(stockData.market_cap / 1e9).toFixed(2)}B
+                ${((displayStockData.market_cap || 0) / 1e9).toFixed(2)}B
               </Text>
             </View>
             <View style={styles.statItem}>
@@ -643,7 +661,7 @@ export const StockDetailScreen: React.FC = () => {
                 Exchange
               </Text>
               <Text style={[styles.statValue, { color: theme.colors.text }]}>
-                {stockData.exchange}
+                {displayStockData.exchange}
               </Text>
             </View>
           </View>
@@ -830,6 +848,14 @@ export const StockDetailScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  loadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
   },
   scrollContainer: {
     flex: 1,
