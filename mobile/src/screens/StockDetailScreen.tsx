@@ -99,6 +99,13 @@ export const StockDetailScreen: React.FC = () => {
     refetch: refetchPrediction,
   } = useGetStockPredictionQuery({ symbol, days: 7 });
 
+  const {
+    data: realNewsData,
+    isLoading: newsLoading,
+    error: newsError,
+    refetch: refetchNews,
+  } = useGetStockNewsQuery({ symbol, limit: 5 });
+
   // Fallback data for when API is not available
   const fallbackStockData = {
     symbol: symbol,
@@ -147,7 +154,7 @@ export const StockDetailScreen: React.FC = () => {
   const displayAnalysisData = analysisData || fallbackAnalysisData;
   const displayPredictionData = predictionData || fallbackPredictionData;
 
-  const newsData = {
+  const fallbackNewsData = {
     news_items: [
       {
         title: `${symbol} reports strong quarterly earnings`,
@@ -165,6 +172,8 @@ export const StockDetailScreen: React.FC = () => {
       },
     ],
   };
+
+  const displayNewsData = realNewsData || fallbackNewsData;
 
   // Local state
   const watchlistItems = useAppSelector((state) => state.watchlist.items);
@@ -207,6 +216,7 @@ export const StockDetailScreen: React.FC = () => {
         refetchStock(),
         refetchAnalysis(),
         refetchPrediction(),
+        refetchNews(),
       ]);
     } catch (error) {
       console.error('Error refreshing data:', error);
@@ -672,7 +682,7 @@ export const StockDetailScreen: React.FC = () => {
           <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
             Latest News
           </Text>
-          {newsData.news_items.map((news, index) => (
+          {displayNewsData.news_items.map((news: any, index: number) => (
             <TouchableOpacity key={index} style={styles.newsItem}>
               <Text style={[styles.newsTitle, { color: theme.colors.text }]}>
                 {news.title}

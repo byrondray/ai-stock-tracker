@@ -83,7 +83,13 @@ class NewsService:
             # Cache the results
             import json
             news_data = [news.model_dump() for news in limited_news]
-            await redis_client.setex(cache_key, 1800, json.dumps(news_data))  # Cache for 30 minutes
+            # Convert datetime objects to strings for JSON serialization
+            serializable_data = []
+            for item in news_data:
+                if isinstance(item.get('published_at'), datetime):
+                    item['published_at'] = item['published_at'].isoformat()
+                serializable_data.append(item)
+            await redis_client.setex(cache_key, 1800, json.dumps(serializable_data))  # Cache for 30 minutes
             
             return limited_news
             
@@ -151,7 +157,13 @@ class NewsService:
             # Cache the results
             import json
             news_data = [news.model_dump() for news in limited_news]
-            await redis_client.setex(cache_key, 1800, json.dumps(news_data))
+            # Convert datetime objects to strings for JSON serialization
+            serializable_data = []
+            for item in news_data:
+                if isinstance(item.get('published_at'), datetime):
+                    item['published_at'] = item['published_at'].isoformat()
+                serializable_data.append(item)
+            await redis_client.setex(cache_key, 1800, json.dumps(serializable_data))
             
             return limited_news
             

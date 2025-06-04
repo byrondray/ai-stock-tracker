@@ -183,6 +183,10 @@ class SentimentAnalyzer:
             logger.error(f"Error analyzing text sentiment: {str(e)}")
             return self._default_sentiment()
     
+    async def analyze_single_text(self, text: str) -> Dict[str, Any]:
+        """Alias for analyze_text for backward compatibility"""
+        return await self.analyze_text(text, use_financial_context=True)
+    
     async def analyze_news_batch(
         self,
         news_items: List[Dict[str, Any]],

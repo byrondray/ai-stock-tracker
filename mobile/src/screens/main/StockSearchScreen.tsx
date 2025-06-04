@@ -9,6 +9,8 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import _ from 'lodash';
 import { useTheme } from '../../hooks/useTheme';
 import {
@@ -18,8 +20,15 @@ import {
   type StockSearchResult,
 } from '../../store/api/apiSlice';
 
+type RootStackParamList = {
+  StockDetail: { symbol: string };
+};
+
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+
 const StockSearchScreen: React.FC = () => {
   const { theme } = useTheme();
+  const navigation = useNavigation<NavigationProp>();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStock, setSelectedStock] = useState<string | null>(null);
 
@@ -125,7 +134,14 @@ const StockSearchScreen: React.FC = () => {
         style={[styles.detailsCard, { backgroundColor: theme.colors.surface }]}
       >
         <View style={styles.detailsHeader}>
-          <View>
+          <TouchableOpacity
+            onPress={() =>
+              navigation.navigate('StockDetail', {
+                symbol: stockDetails.symbol,
+              })
+            }
+            style={{ flex: 1 }}
+          >
             <Text style={[styles.detailsSymbol, { color: theme.colors.text }]}>
               {stockDetails.symbol}
             </Text>
@@ -137,7 +153,7 @@ const StockSearchScreen: React.FC = () => {
             >
               {stockDetails.name}
             </Text>
-          </View>
+          </TouchableOpacity>
           <TouchableOpacity
             style={[
               styles.watchlistButton,
