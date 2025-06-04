@@ -94,7 +94,7 @@ class PredictionService:
         except Exception as e:
             logger.error(f"Error getting prediction for {symbol}: {str(e)}")
             return None
-      @staticmethod
+    @staticmethod
     async def _generate_prediction(symbol: str, days_ahead: int) -> Optional[Dict[str, Any]]:
         """Generate stock price prediction using ensemble of ML models including LSTM"""
         try:
@@ -244,7 +244,7 @@ class PredictionService:
         except Exception as e:
             logger.error(f"Error generating prediction for {symbol}: {str(e)}")
             return None
-      @staticmethod
+    @staticmethod
     async def _prepare_features(hist: pd.DataFrame) -> pd.DataFrame:
         """Prepare features for ML models using enhanced technical indicators"""
         try:

@@ -37,12 +37,11 @@ class LSTMPredictor:
         self.model_dir = Path(model_dir)
         self.model_dir.mkdir(parents=True, exist_ok=True)
         
-        # Default features if none provided
+        # Default features if none provided - use names that actually exist in TechnicalIndicators
         self.features = features or [
-            'Close', 'Volume', 'MA_5', 'MA_10', 'MA_20', 'MA_50',
-            'RSI', 'MACD', 'BB_Position', 'Volatility_10', 'Volatility_20',
-            'Price_MA5_Ratio', 'Price_MA20_Ratio', 'Volume_Ratio',
-            'Momentum_5', 'Momentum_10', 'HL_Ratio', 'OC_Ratio'
+            'Close', 'Volume', 'SMA_5', 'SMA_10', 'SMA_20', 'SMA_50', 'EMA_8', 'EMA_21',
+            'RSI', 'MACD', 'BB_Upper', 'BB_Lower', 'ATR', 'Stoch_K', 'Stoch_D',
+            'Williams_R', 'CCI', 'MFI', 'ADX', 'OBV'
         ]
         
         self.model = None
@@ -119,8 +118,12 @@ class LSTMPredictor:
         try:
             # Ensure we have the required features
             available_features = [f for f in self.features if f in data.columns]
+            missing_features = [f for f in self.features if f not in data.columns]
+            
             if len(available_features) < len(self.features) * 0.7:  # At least 70% of features
                 logger.warning(f"Only {len(available_features)} of {len(self.features)} features available")
+                logger.warning(f"Available features: {available_features}")
+                logger.warning(f"Missing features: {missing_features}")
             
             # Use available features
             feature_data = data[available_features].copy()
@@ -130,6 +133,14 @@ class LSTMPredictor:
             combined_data = pd.concat([feature_data, target_data], axis=1).dropna()
             feature_data = combined_data[available_features]
             target_data = combined_data[target_column]
+            
+            # Check if any features were dropped due to NaN values
+            final_features = feature_data.columns.tolist()
+            dropped_features = [f for f in available_features if f not in final_features]
+            if dropped_features:
+                logger.warning(f"Features dropped due to NaN values: {dropped_features}")
+            
+            logger.info(f"Final features for training: {final_features}")
             
             if len(feature_data) < self.sequence_length + self.prediction_horizon:
                 raise ValueError(f"Insufficient data: need at least {self.sequence_length + self.prediction_horizon} rows")
@@ -150,8 +161,8 @@ class LSTMPredictor:
             X = np.array(X)
             y = np.array(y)
             
-            # Store feature names for later use
-            self.feature_names = available_features
+            # Store feature names for later use - use the final features after NaN removal
+            self.feature_names = final_features
             
             return X, y, scaled_features
             
@@ -266,19 +277,56 @@ class LSTMPredictor:
             
             if not self.is_trained:
                 raise ValueError("Model not trained. Please train the model first.")
+              # Ensure we have the feature names from training
+            if not hasattr(self, 'feature_names') or not self.feature_names:
+                logger.warning("No feature names found, using default features")
+                self.feature_names = self.features
             
-            # Prepare the most recent sequence for prediction
-            available_features = [f for f in self.feature_names if f in data.columns]
-            if len(available_features) != len(self.feature_names):
-                logger.warning("Some features missing for prediction")
+            # Get the most recent data for prediction - use only features that were used in training
+            recent_data = data.tail(self.sequence_length)
             
-            feature_data = data[available_features].tail(self.sequence_length)
-            
-            if len(feature_data) < self.sequence_length:
+            if len(recent_data) < self.sequence_length:
                 raise ValueError(f"Insufficient recent data: need {self.sequence_length} rows")
             
-            # Scale features
-            scaled_features = self.scaler.transform(feature_data)
+            # Use only the features that exist in both the data and were used in training
+            available_features = [f for f in self.feature_names if f in recent_data.columns]
+            missing_features = [f for f in self.feature_names if f not in recent_data.columns]
+            
+            logger.info(f"Training used {len(self.feature_names)} features: {self.feature_names}")
+            logger.info(f"Prediction has {len(available_features)} available features: {available_features}")
+            if missing_features:
+                logger.warning(f"Missing features for prediction: {missing_features}")
+            
+            if len(available_features) == 0:
+                raise ValueError("No training features found in prediction data")
+            
+            # Ensure we use exactly the same features as training, padding with zeros if needed
+            if len(available_features) != len(self.feature_names):
+                logger.warning(f"Feature mismatch: expected {len(self.feature_names)}, got {len(available_features)}")
+                
+                # For missing features, we'll create them with zero values
+                missing_features_in_pred = [f for f in self.feature_names if f not in available_features]
+                if missing_features_in_pred:
+                    logger.warning(f"Creating zero-filled columns for missing features: {missing_features_in_pred}")
+                    for missing_feature in missing_features_in_pred:
+                        recent_data[missing_feature] = 0.0
+                
+                # Now use exactly the training features in the same order
+                available_features = self.feature_names
+            
+            logger.info(f"Using {len(available_features)} features for prediction: {available_features}")
+            
+            # Use the determined features
+            feature_data = recent_data[available_features].copy()
+            
+            # Ensure no NaN values
+            feature_data = feature_data.ffill().fillna(0)
+            
+            logger.info(f"Using {len(available_features)} features for prediction: {available_features}")
+            logger.info(f"Feature data shape: {feature_data.shape}")
+            
+            # Scale features using the same scaler from training
+            scaled_features = self.scaler.transform(feature_data.values)
             
             # Reshape for prediction
             X_pred = scaled_features.reshape(1, self.sequence_length, len(available_features))
@@ -313,7 +361,8 @@ class LSTMPredictor:
                 'model_type': 'LSTM',
                 'sequence_length': self.sequence_length,
                 'prediction_horizon': self.prediction_horizon,
-                'features_used': self.feature_names
+                'features_used': available_features,
+                'features_available': available_features
             }
             
             # Add confidence intervals (simplified approach)

@@ -381,7 +381,8 @@ class NewsService:
         except Exception as e:
             logger.error(f"Error with fallback market news: {str(e)}")
             return []
-      @staticmethod
+    
+    @staticmethod
     def _analyze_sentiment(text: str) -> str:
         """Enhanced sentiment analysis using ML models"""
         try:
