@@ -11,12 +11,14 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 import _ from 'lodash';
 import { useTheme } from '../../hooks/useTheme';
+import { useAppSelector } from '../../store';
 import {
   useSearchStocksQuery,
-  useGetStockDetailsQuery,
   useAddToWatchlistMutation,
+  useGetWatchlistQuery,
   type StockSearchResult,
 } from '../../store/api/apiSlice';
 
@@ -30,7 +32,6 @@ const StockSearchScreen: React.FC = () => {
   const { theme } = useTheme();
   const navigation = useNavigation<NavigationProp>();
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedStock, setSelectedStock] = useState<string | null>(null);
 
   const {
     data: searchResults,
@@ -40,10 +41,8 @@ const StockSearchScreen: React.FC = () => {
     skip: searchQuery.length < 2,
   });
 
-  const { data: stockDetails, isLoading: detailsLoading } =
-    useGetStockDetailsQuery(selectedStock!, {
-      skip: !selectedStock,
-    });
+  // Get watchlist data to check if stocks are already added
+  const { data: watchlist } = useGetWatchlistQuery();
 
   const [addToWatchlist, { isLoading: addingToWatchlist }] =
     useAddToWatchlistMutation();
@@ -60,8 +59,9 @@ const StockSearchScreen: React.FC = () => {
   };
 
   const handleStockPress = (symbol: string) => {
-    setSelectedStock(symbol);
+    navigation.navigate('StockDetail', { symbol });
   };
+
   const handleAddToWatchlist = async (symbol: string) => {
     try {
       await addToWatchlist({ stock_symbol: symbol }).unwrap();
@@ -72,6 +72,11 @@ const StockSearchScreen: React.FC = () => {
         error?.data?.detail || 'Failed to add stock to watchlist'
       );
     }
+  };
+
+  // Check if a stock is already in the watchlist
+  const isInWatchlist = (symbol: string) => {
+    return watchlist?.some((item) => item.stock_symbol === symbol) || false;
   };
 
   const formatCurrency = (amount: number) => {
@@ -92,165 +97,64 @@ const StockSearchScreen: React.FC = () => {
     return theme.colors.textSecondary;
   };
 
-  const renderSearchResult = ({ item }: { item: StockSearchResult }) => (
-    <TouchableOpacity
-      style={[
-        styles.searchResultItem,
-        { backgroundColor: theme.colors.surface },
-      ]}
-      onPress={() => handleStockPress(item.symbol)}
-      activeOpacity={0.7}
-    >
-      <View style={styles.stockInfo}>
-        <Text style={[styles.stockSymbol, { color: theme.colors.text }]}>
-          {item.symbol}
-        </Text>
-        <Text style={[styles.stockName, { color: theme.colors.textSecondary }]}>
-          {item.name}
-        </Text>
-        <Text
-          style={[styles.stockExchange, { color: theme.colors.textSecondary }]}
-        >
-          {item.exchange}
-        </Text>
-      </View>
-      <TouchableOpacity
-        style={[styles.addButton, { backgroundColor: theme.colors.primary }]}
-        onPress={() => handleAddToWatchlist(item.symbol)}
-        disabled={addingToWatchlist}
-      >
-        <Text style={[styles.addButtonText, { color: theme.colors.surface }]}>
-          +
-        </Text>
-      </TouchableOpacity>
-    </TouchableOpacity>
-  );
-
-  const renderStockDetails = () => {
-    if (!stockDetails) return null;
+  const renderSearchResult = ({ item }: { item: StockSearchResult }) => {
+    const inWatchlist = isInWatchlist(item.symbol);
 
     return (
-      <View
-        style={[styles.detailsCard, { backgroundColor: theme.colors.surface }]}
+      <TouchableOpacity
+        style={[
+          styles.searchResultItem,
+          { backgroundColor: theme.colors.surface },
+        ]}
+        onPress={() => handleStockPress(item.symbol)}
+        activeOpacity={0.7}
       >
-        <View style={styles.detailsHeader}>
-          <TouchableOpacity
-            onPress={() =>
-              navigation.navigate('StockDetail', {
-                symbol: stockDetails.symbol,
-              })
-            }
-            style={{ flex: 1 }}
-          >
-            <Text style={[styles.detailsSymbol, { color: theme.colors.text }]}>
-              {stockDetails.symbol}
-            </Text>
-            <Text
-              style={[
-                styles.detailsName,
-                { color: theme.colors.textSecondary },
-              ]}
-            >
-              {stockDetails.name}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.watchlistButton,
-              { backgroundColor: theme.colors.primary },
-            ]}
-            onPress={() => handleAddToWatchlist(stockDetails.symbol)}
-            disabled={addingToWatchlist}
-          >
-            <Text
-              style={[
-                styles.watchlistButtonText,
-                { color: theme.colors.surface },
-              ]}
-            >
-              Add to Watchlist
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.priceSection}>
-          <Text style={[styles.currentPrice, { color: theme.colors.text }]}>
-            {formatCurrency(stockDetails.current_price || 0)}
+        <View style={styles.stockInfo}>
+          <Text style={[styles.stockSymbol, { color: theme.colors.text }]}>
+            {item.symbol}
           </Text>
-          <View style={styles.changeInfo}>
-            <Text
-              style={[
-                styles.changeAmount,
-                { color: getChangeColor(stockDetails.change_amount || 0) },
-              ]}
-            >
-              {(stockDetails.change_amount || 0) >= 0 ? '+' : ''}
-              {formatCurrency(Math.abs(stockDetails.change_amount || 0))}
-            </Text>
-            <Text
-              style={[
-                styles.changePercent,
-                { color: getChangeColor(stockDetails.change_percent || 0) },
-              ]}
-            >
-              ({formatPercentage(stockDetails.change_percent || 0)})
-            </Text>
-          </View>
+          <Text
+            style={[styles.stockName, { color: theme.colors.textSecondary }]}
+          >
+            {item.name}
+          </Text>
+          <Text
+            style={[
+              styles.stockExchange,
+              { color: theme.colors.textSecondary },
+            ]}
+          >
+            {item.exchange}
+          </Text>
         </View>
-
-        <View style={styles.statsGrid}>
-          <View style={styles.statItem}>
+        <TouchableOpacity
+          style={[
+            styles.addButton,
+            {
+              backgroundColor: inWatchlist
+                ? theme.colors.success
+                : theme.colors.primary,
+            },
+          ]}
+          onPress={(e) => {
+            e.stopPropagation();
+            if (!inWatchlist) {
+              handleAddToWatchlist(item.symbol);
+            }
+          }}
+          disabled={addingToWatchlist || inWatchlist}
+        >
+          {inWatchlist ? (
+            <Ionicons name='checkmark' size={18} color={theme.colors.surface} />
+          ) : (
             <Text
-              style={[styles.statLabel, { color: theme.colors.textSecondary }]}
+              style={[styles.addButtonText, { color: theme.colors.surface }]}
             >
-              Open
+              +
             </Text>
-            <Text style={[styles.statValue, { color: theme.colors.text }]}>
-              {formatCurrency(stockDetails.open_price || 0)}
-            </Text>
-          </View>
-          <View style={styles.statItem}>
-            <Text
-              style={[styles.statLabel, { color: theme.colors.textSecondary }]}
-            >
-              High
-            </Text>
-            <Text style={[styles.statValue, { color: theme.colors.text }]}>
-              {formatCurrency(stockDetails.high_price || 0)}
-            </Text>
-          </View>
-          <View style={styles.statItem}>
-            <Text
-              style={[styles.statLabel, { color: theme.colors.textSecondary }]}
-            >
-              Low
-            </Text>
-            <Text style={[styles.statValue, { color: theme.colors.text }]}>
-              {formatCurrency(stockDetails.low_price || 0)}
-            </Text>
-          </View>
-          <View style={styles.statItem}>
-            <Text
-              style={[styles.statLabel, { color: theme.colors.textSecondary }]}
-            >
-              Volume
-            </Text>
-            <Text style={[styles.statValue, { color: theme.colors.text }]}>
-              {stockDetails.volume?.toLocaleString() || 'N/A'}
-            </Text>
-          </View>
-        </View>
-
-        {stockDetails.market_cap && (
-          <View style={styles.additionalInfo}>
-            <Text
-              style={[styles.marketCap, { color: theme.colors.textSecondary }]}
-            >
-              Market Cap: {stockDetails.market_cap.toLocaleString()}
-            </Text>
-          </View>
-        )}
-      </View>
+          )}
+        </TouchableOpacity>
+      </TouchableOpacity>
     );
   };
 
@@ -276,20 +180,6 @@ const StockSearchScreen: React.FC = () => {
           autoCapitalize='characters'
         />
       </View>
-
-      {/* Stock Details */}
-      {detailsLoading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size='large' color={theme.colors.primary} />
-          <Text
-            style={[styles.loadingText, { color: theme.colors.textSecondary }]}
-          >
-            Loading stock details...
-          </Text>
-        </View>
-      ) : (
-        stockDetails && renderStockDetails()
-      )}
 
       {/* Search Results */}
       {searchLoading ? (

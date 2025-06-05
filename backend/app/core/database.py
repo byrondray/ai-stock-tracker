@@ -1,17 +1,18 @@
 from sqlalchemy import create_engine, MetaData
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
-from sqlalchemy.pool import StaticPool
 from typing import Generator
 
 from app.core.config import settings
 
-# Create database engine
+# Create database engine with proper PostgreSQL configuration
 engine = create_engine(
     settings.DATABASE_URL,
-    poolclass=StaticPool,
     pool_pre_ping=True,
-    echo=False  # Set to True for SQL logging in development
+    pool_recycle=300,  # Recycle connections every 5 minutes
+    pool_size=5,       # Connection pool size
+    max_overflow=10,   # Allow up to 10 additional connections
+    echo=False         # Set to True for SQL logging in development
 )
 
 # Create session factory
@@ -32,6 +33,9 @@ def get_db() -> Generator[Session, None, None]:
     db = SessionLocal()
     try:
         yield db
+    except Exception:
+        db.rollback()
+        raise
     finally:
         db.close()
 
