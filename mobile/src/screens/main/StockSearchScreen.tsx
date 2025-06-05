@@ -169,7 +169,7 @@ const StockSearchScreen: React.FC = () => {
 
   const renderSearchResultsSkeleton = () => (
     <View style={styles.resultsList}>
-      {Array.from({ length: 5 }).map((_, index) => (
+      {Array.from({ length: SKELETON_COUNT }).map((_, index) => (
         <SkeletonCard key={index} style={styles.searchResultItem} />
       ))}
     </View>
