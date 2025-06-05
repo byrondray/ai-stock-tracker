@@ -366,11 +366,25 @@ export const apiSlice = createApi({
 
     // Price history endpoint
     getStockPriceHistory: builder.query<
-      PriceHistoryResponse,
+      { symbol: string; days: number; data: any[] },
       { symbol: string; timeframe: string }
     >({
-      query: ({ symbol, timeframe }) =>
-        `/stocks/${symbol}/price-history?timeframe=${timeframe}`,
+      query: ({ symbol, timeframe }) => {
+        // Convert timeframe to days
+        const timeframeToDays = {
+          '1d': 1,
+          '1w': 7,
+          '1m': 30,
+          '3m': 90,
+          '6m': 180,
+          '1y': 365,
+        };
+        const days =
+          timeframeToDays[
+            timeframe.toLowerCase() as keyof typeof timeframeToDays
+          ] || 30;
+        return `/stocks/${symbol}/history?days=${days}`;
+      },
       providesTags: (result, error, { symbol }) => [
         { type: 'Stock', id: symbol },
       ],

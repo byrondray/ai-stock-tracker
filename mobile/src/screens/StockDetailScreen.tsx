@@ -27,6 +27,8 @@ import { useAppSelector, useAppDispatch } from '../store';
 import { useTheme } from '../hooks/useTheme';
 import {
   useGetStockQuery,
+  useGetStockPriceQuery,
+  useGetStockPriceHistoryQuery,
   useGetStockAnalysisQuery,
   useGetStockPredictionQuery,
   useGetStockNewsQuery,
@@ -42,6 +44,12 @@ import { addPortfolioItem } from '../store/slices/portfolioSlice';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { ChangeIndicator } from '../components/ui/ChangeIndicator';
+import {
+  LoadingSpinner,
+  SkeletonLoader,
+  SkeletonText,
+  SkeletonCard,
+} from '../components/ui';
 import LineChart from '../components/charts/LineChart';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -85,6 +93,25 @@ export const StockDetailScreen: React.FC = () => {
     refetch: refetchStock,
   } = useGetStockQuery(symbol);
 
+  // Fetch real-time price data separately
+  const {
+    data: priceData,
+    isLoading: priceLoading,
+    error: priceError,
+    refetch: refetchPrice,
+  } = useGetStockPriceQuery(symbol);
+
+  // Fetch historical data for charts
+  const {
+    data: historicalData,
+    isLoading: historicalLoading,
+    error: historicalError,
+    refetch: refetchHistorical,
+  } = useGetStockPriceHistoryQuery({
+    symbol,
+    timeframe: selectedTimeframe.toLowerCase(),
+  });
+
   const {
     data: analysisData,
     isLoading: analysisLoading,
@@ -106,80 +133,200 @@ export const StockDetailScreen: React.FC = () => {
     refetch: refetchNews,
   } = useGetStockNewsQuery({ symbol, limit: 5 });
 
-  // Fallback data for when API is not available
-  const fallbackStockData = {
+  const displayAnalysisData = analysisData || {
     symbol: symbol,
-    name: `${symbol} Inc.`,
-    current_price: 150.0 + Math.random() * 50,
-    change_amount: (Math.random() - 0.5) * 10,
-    change_percent: (Math.random() - 0.5) * 5,
-    open_price: 145.0,
-    high_price: 155.0,
-    low_price: 142.0,
-    volume: 1500000,
-    market_cap: 2500000000000,
-    sector: 'Technology',
-    exchange: 'NASDAQ',
-    currency: 'USD',
-    last_updated: new Date().toISOString(),
-  };
-
-  const fallbackAnalysisData = {
-    symbol: symbol,
-    overall_rating: 'buy' as const,
-    fundamental_score: 78,
-    technical_score: 82,
-    sentiment_score: 75,
-    risk_score: 45,
+    overall_rating: 'hold' as const,
+    fundamental_score: null,
+    technical_score: null,
+    sentiment_score: null,
+    risk_score: null,
     analysis_date: new Date().toISOString(),
   };
 
-  const fallbackPredictionData = {
+  const displayPredictionData = predictionData || {
     symbol: symbol,
     model_type: 'LSTM',
     model_version: '2.1',
     created_at: new Date().toISOString(),
-    predictions: Array.from({ length: 7 }, (_, i) => ({
-      date: new Date(Date.now() + i * 24 * 60 * 60 * 1000).toISOString(),
-      predicted_price:
-        (fallbackStockData.current_price || 150) + (Math.random() - 0.5) * 20,
-      confidence: 0.6 + Math.random() * 0.3,
-      lower_bound: undefined,
-      upper_bound: undefined,
-    })),
+    predictions: [],
   };
 
-  // Use real data if available, fallback to mock data
-  const displayStockData = stockData || fallbackStockData;
-  const displayAnalysisData = analysisData || fallbackAnalysisData;
-  const displayPredictionData = predictionData || fallbackPredictionData;
+  // Get real chart data from historical prices
+  const getChartData = (timeframe: string) => {
+    console.log('📊 Chart Data Debug:', {
+      timeframe,
+      historicalData: historicalData ? 'Available' : 'Not available',
+      historicalError: historicalError ? 'Error' : 'No error',
+      pricesCount: historicalData?.data?.length || 0,
+    });
 
-  const fallbackNewsData = {
-    news_items: [
-      {
-        title: `${symbol} reports strong quarterly earnings`,
-        summary:
-          'Company beats analyst expectations with record revenue growth.',
-        source: 'Financial Times',
-        published_at: new Date().toISOString(),
-      },
-      {
-        title: `${symbol} announces new product launch`,
-        summary:
-          'Revolutionary new technology expected to drive future growth.',
-        source: 'TechCrunch',
-        published_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-      },
-    ],
+    // Use real historical data if available
+    if (historicalData?.data && historicalData.data.length > 0) {
+      const prices = historicalData.data;
+      const data = prices.map((price) => price.close || price.close_price);
+
+      // Generate labels based on timeframe and data length
+      const labels = prices.map((price, index) => {
+        const date = new Date(price.date);
+        switch (timeframe) {
+          case '1D':
+            return date.toLocaleTimeString('en-US', {
+              hour: 'numeric',
+              hour12: true,
+            });
+          case '1W':
+            return date.toLocaleDateString('en-US', { weekday: 'short' });
+          case '1M':
+          case '3M':
+          case '6M':
+            return date.toLocaleDateString('en-US', {
+              month: 'short',
+              day: 'numeric',
+            });
+          case '1Y':
+            return date.toLocaleDateString('en-US', {
+              month: 'short',
+            });
+          default:
+            return date.toLocaleDateString('en-US', {
+              month: 'short',
+              day: 'numeric',
+            });
+        }
+      });
+
+      // Limit labels to prevent overlap (show every nth label)
+      const maxLabels = 6;
+      const step = Math.max(1, Math.floor(labels.length / maxLabels));
+      const filteredLabels = labels.filter((_, index) => index % step === 0);
+
+      console.log('✅ Using real historical data:', {
+        dataPoints: data.length,
+        priceRange: `${Math.min(...data).toFixed(2)} - ${Math.max(
+          ...data
+        ).toFixed(2)}`,
+        firstPrice: data[0],
+        lastPrice: data[data.length - 1],
+      });
+
+      return {
+        labels: filteredLabels,
+        datasets: [{ data }],
+      };
+    }
+
+    // No historical data available and no stock data - return empty chart
+    console.log('❌ No historical data available for chart');
+    return {
+      labels: ['No Data'],
+      datasets: [{ data: [0] }],
+    };
   };
 
-  const displayNewsData = realNewsData || fallbackNewsData;
+  // Only use real news data, no fallbacks
+  const displayNewsData = realNewsData;
 
   // Local state
   const watchlistItems = useAppSelector((state) => state.watchlist.items);
   const portfolioItems = useAppSelector(
     (state) => state.portfolio.portfolio?.items || []
   );
+
+  // Use real data when available, with better fallback using watchlist data
+  const watchlistItem = watchlistItems.find(
+    (item) => item.stock_symbol === symbol
+  );
+
+  const displayStockData = React.useMemo(() => {
+    console.log('🔍 StockDetailScreen Debug:', {
+      symbol,
+      stockData: stockData ? 'Available' : 'Not available',
+      priceData: priceData ? 'Available' : 'Not available',
+      stockDataPrice: stockData?.current_price,
+      priceDataPrice: priceData?.price,
+      watchlistItem: watchlistItem
+        ? {
+            symbol: watchlistItem.stock_symbol,
+            current_price: watchlistItem.current_price,
+            stock_name: (watchlistItem.stock as any)?.name,
+            raw_item: watchlistItem,
+          }
+        : 'Not found',
+    });
+
+    // Priority 1: Combine stock data with separate price data (REAL DATA!)
+    if (stockData && priceData && priceData.price > 0) {
+      console.log('✅ Using combined stock + price data:', priceData.price);
+      return {
+        ...stockData,
+        current_price: priceData.price,
+        change_amount: priceData.change,
+        change_percent: priceData.change_percent,
+        volume: priceData.volume,
+        last_updated: priceData.last_updated,
+      };
+    }
+
+    // Priority 2: Use API stock data if it has valid price
+    if (stockData && stockData.current_price && stockData.current_price > 0) {
+      console.log('✅ Using API stock data:', stockData.current_price);
+      return stockData;
+    }
+
+    // Priority 3: Use just price data with basic stock info
+    if (priceData && priceData.price > 0) {
+      console.log(
+        '✅ Using price data with basic stock info:',
+        priceData.price
+      );
+      return {
+        symbol: symbol,
+        name: stockData?.name || `${symbol} Inc.`,
+        current_price: priceData.price,
+        change_amount: priceData.change,
+        change_percent: priceData.change_percent,
+        open_price: null,
+        high_price: null,
+        low_price: null,
+        volume: priceData.volume,
+        market_cap: stockData?.market_cap || null,
+        sector: stockData?.sector || 'Technology',
+        exchange: stockData?.exchange || 'NASDAQ',
+        currency: 'USD',
+        last_updated: priceData.last_updated,
+      };
+    }
+
+    // Priority 4: Use watchlist data if available and valid
+    if (
+      watchlistItem &&
+      watchlistItem.current_price &&
+      watchlistItem.current_price > 0
+    ) {
+      const result = {
+        symbol: symbol,
+        name: (watchlistItem.stock as any)?.name || `${symbol} Inc.`,
+        current_price: watchlistItem.current_price,
+        change_amount: watchlistItem.price_change || 0,
+        change_percent: watchlistItem.price_change_percent || 0,
+        open_price: null,
+        high_price: null,
+        low_price: null,
+        volume: null,
+        market_cap: (watchlistItem.stock as any)?.market_cap || null,
+        sector: (watchlistItem.stock as any)?.sector || null,
+        exchange: (watchlistItem.stock as any)?.exchange || null,
+        currency: 'USD',
+        last_updated: new Date().toISOString(),
+      };
+      console.log('✅ Using watchlist data:', result);
+      return result;
+    }
+
+    // No fallback data - return null if no real data available
+    console.log('❌ No real data available for:', symbol);
+    return null;
+  }, [stockData, priceData, watchlistItem, symbol]);
 
   const isInWatchlist = watchlistItems.some(
     (item) => item.stock_symbol === symbol
@@ -211,9 +358,11 @@ export const StockDetailScreen: React.FC = () => {
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
-      // Refetch all data
+      // Refetch all data including price and historical data
       await Promise.all([
         refetchStock(),
+        refetchPrice(),
+        refetchHistorical(),
         refetchAnalysis(),
         refetchPrediction(),
         refetchNews(),
@@ -239,10 +388,10 @@ export const StockDetailScreen: React.FC = () => {
           addToWatchlist({
             id: Date.now(),
             stock_symbol: symbol,
-            stock: displayStockData.name || '',
-            current_price: displayStockData.current_price || 0,
-            price_change: displayStockData.change_amount || 0,
-            price_change_percent: displayStockData.change_percent || 0,
+            stock: safeStock.name || '',
+            current_price: safeStock.current_price || 0,
+            price_change: safeStock.change_amount || 0,
+            price_change_percent: safeStock.change_percent || 0,
             added_at: new Date().toISOString(),
           })
         );
@@ -256,7 +405,7 @@ export const StockDetailScreen: React.FC = () => {
   const handleAddToPortfolio = () => {
     setPortfolioModalData({
       shares: '',
-      price: (displayStockData.current_price || 0).toString(),
+      price: (displayStockData?.current_price || 0).toString(),
     });
     setAddToPortfolioModalVisible(true);
   };
@@ -284,11 +433,11 @@ export const StockDetailScreen: React.FC = () => {
           quantity: shares,
           average_cost: price,
           purchase_date: new Date().toISOString(),
-          current_price: displayStockData.current_price || 0,
-          value: shares * (displayStockData.current_price || 0),
-          gain: shares * ((displayStockData.current_price || 0) - price),
+          current_price: displayStockData?.current_price || 0,
+          value: shares * (displayStockData?.current_price || 0),
+          gain: shares * ((displayStockData?.current_price || 0) - price),
           gainPercent:
-            (((displayStockData.current_price || 0) - price) / price) * 100,
+            (((displayStockData?.current_price || 0) - price) / price) * 100,
         })
       );
 
@@ -324,17 +473,234 @@ export const StockDetailScreen: React.FC = () => {
     return rating.replace('_', ' ').toUpperCase();
   };
 
-  // Show loading state while data is being fetched
-  if (stockLoading || analysisLoading || predictionLoading) {
+  // Render loading skeleton while data is being fetched
+  const renderLoadingSkeleton = () => (
+    <LinearGradient
+      colors={[theme.colors.background, theme.colors.surface]}
+      style={styles.container}
+    >
+      <ScrollView style={styles.scrollContainer}>
+        {/* Stock Header Skeleton */}
+        <Card style={styles.headerCard}>
+          <View style={styles.stockHeader}>
+            <View style={styles.stockInfo}>
+              <SkeletonLoader
+                width={120}
+                height={32}
+                style={{ marginBottom: 8 }}
+              />
+              <SkeletonLoader
+                width={200}
+                height={18}
+                style={{ marginBottom: 4 }}
+              />
+              <SkeletonLoader width={100} height={14} />
+            </View>
+            <View style={styles.priceInfo}>
+              <SkeletonLoader
+                width={140}
+                height={32}
+                style={{ marginBottom: 8 }}
+              />
+              <SkeletonLoader width={80} height={16} />
+            </View>
+          </View>
+        </Card>
+
+        {/* Chart Section Skeleton */}
+        <Card style={styles.chartCard}>
+          <View style={styles.chartHeader}>
+            <SkeletonLoader width={100} height={20} />
+            <View style={styles.timeframeSelector}>
+              {timeframes.map((timeframe, index) => (
+                <SkeletonLoader
+                  key={index}
+                  width={32}
+                  height={24}
+                  style={{ borderRadius: 8, marginHorizontal: 2 }}
+                />
+              ))}
+            </View>
+          </View>
+          <View style={styles.chartContainer}>
+            <View style={{ flex: 1, justifyContent: 'center' }}>
+              <LoadingSpinner
+                variant='gradient'
+                size='large'
+                text='Loading chart data...'
+              />
+            </View>
+          </View>
+        </Card>
+
+        {/* AI Analysis Skeleton */}
+        <Card style={styles.analysisCard}>
+          <SkeletonLoader
+            width={120}
+            height={20}
+            style={{ marginBottom: 16 }}
+          />
+          <View style={styles.analysisGrid}>
+            {Array.from({ length: 5 }).map((_, index) => (
+              <View key={index} style={styles.analysisItem}>
+                <SkeletonLoader
+                  width={80}
+                  height={12}
+                  style={{ marginBottom: 4 }}
+                />
+                <SkeletonLoader width={60} height={16} />
+              </View>
+            ))}
+          </View>
+        </Card>
+
+        {/* Predictions Skeleton */}
+        <Card style={styles.predictionCard}>
+          <SkeletonLoader width={150} height={20} style={{ marginBottom: 4 }} />
+          <SkeletonLoader
+            width={120}
+            height={12}
+            style={{ marginBottom: 16 }}
+          />
+          <View style={styles.predictionList}>
+            {Array.from({ length: 5 }).map((_, index) => (
+              <View key={index} style={styles.predictionItem}>
+                <SkeletonLoader width={60} height={12} />
+                <SkeletonLoader width={80} height={14} />
+                <SkeletonLoader width={40} height={12} />
+              </View>
+            ))}
+          </View>
+        </Card>
+
+        {/* Statistics Skeleton */}
+        <Card style={styles.statsCard}>
+          <SkeletonLoader
+            width={130}
+            height={20}
+            style={{ marginBottom: 16 }}
+          />
+          <View style={styles.statsGrid}>
+            {Array.from({ length: 6 }).map((_, index) => (
+              <View key={index} style={styles.statItem}>
+                <SkeletonLoader
+                  width={60}
+                  height={12}
+                  style={{ marginBottom: 4 }}
+                />
+                <SkeletonLoader width={80} height={14} />
+              </View>
+            ))}
+          </View>
+        </Card>
+
+        {/* News Skeleton */}
+        <Card style={styles.newsCard}>
+          <SkeletonLoader
+            width={100}
+            height={20}
+            style={{ marginBottom: 16 }}
+          />
+          {Array.from({ length: 3 }).map((_, index) => (
+            <View key={index} style={styles.newsItem}>
+              <SkeletonText lines={2} style={{ marginBottom: 4 }} />
+              <SkeletonLoader
+                width={120}
+                height={12}
+                style={{ marginBottom: 4 }}
+              />
+              <SkeletonText lines={1} />
+            </View>
+          ))}
+        </Card>
+
+        {/* Actions Skeleton */}
+        <Card style={styles.actionsCard}>
+          <SkeletonLoader width={80} height={20} style={{ marginBottom: 16 }} />
+          <View style={styles.actionButtons}>
+            <SkeletonLoader
+              width='48%'
+              height={48}
+              style={{ borderRadius: 8 }}
+            />
+            <SkeletonLoader
+              width='48%'
+              height={48}
+              style={{ borderRadius: 8 }}
+            />
+          </View>
+        </Card>
+      </ScrollView>
+    </LinearGradient>
+  );
+
+  // Show loading skeleton while initial data is being fetched
+  if ((stockLoading && !stockData) || (priceLoading && !priceData)) {
+    return renderLoadingSkeleton();
+  }
+
+  // Show error state if no real data is available
+  if (!displayStockData) {
     return (
-      <View style={[styles.container, styles.loadingContainer]}>
-        <ActivityIndicator size='large' color={theme.colors.primary} />
-        <Text style={[styles.loadingText, { color: theme.colors.text }]}>
-          Loading stock data...
-        </Text>
-      </View>
+      <LinearGradient
+        colors={[theme.colors.background, theme.colors.surface]}
+        style={styles.container}
+      >
+        <ScrollView
+          style={styles.scrollContainer}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+          }
+        >
+          <Card style={styles.errorCard}>
+            <View style={styles.errorContainer}>
+              <Ionicons
+                name='alert-circle-outline'
+                size={64}
+                color={theme.colors.error}
+              />
+              <Text style={[styles.errorTitle, { color: theme.colors.text }]}>
+                No Data Available
+              </Text>
+              <Text
+                style={[
+                  styles.errorMessage,
+                  { color: theme.colors.textSecondary },
+                ]}
+              >
+                Unable to load stock data for {symbol}.
+              </Text>
+              {stockError && (
+                <Text
+                  style={[styles.errorDetails, { color: theme.colors.error }]}
+                >
+                  Stock API Error: {JSON.stringify(stockError)}
+                </Text>
+              )}
+              {priceError && (
+                <Text
+                  style={[styles.errorDetails, { color: theme.colors.error }]}
+                >
+                  Price API Error: {JSON.stringify(priceError)}
+                </Text>
+              )}
+              <Button
+                title='Retry'
+                onPress={handleRefresh}
+                style={[
+                  styles.retryButton,
+                  { backgroundColor: theme.colors.primary },
+                ]}
+              />
+            </View>
+          </Card>
+        </ScrollView>
+      </LinearGradient>
     );
   }
+
+  // TypeScript assertion: displayStockData is guaranteed to be non-null here
+  const safeStock = displayStockData;
 
   return (
     <LinearGradient
@@ -373,7 +739,7 @@ export const StockDetailScreen: React.FC = () => {
             </View>
             <View style={styles.priceInfo}>
               <Text style={[styles.currentPrice, { color: theme.colors.text }]}>
-                ${(displayStockData.current_price || 0).toFixed(2)}
+                ${displayStockData.current_price?.toFixed(2) || '150.00'}
               </Text>
               <ChangeIndicator
                 value={displayStockData.change_amount || 0}
@@ -419,22 +785,7 @@ export const StockDetailScreen: React.FC = () => {
             </View>
           </View>
           <View style={styles.chartContainer}>
-            <LineChart
-              data={{
-                labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
-                datasets: [
-                  {
-                    data: [
-                      (displayStockData.current_price || 150) - 5,
-                      (displayStockData.current_price || 150) - 2,
-                      (displayStockData.current_price || 150) + 1,
-                      (displayStockData.current_price || 150) - 1,
-                      displayStockData.current_price || 150,
-                    ],
-                  },
-                ],
-              }}
-            />
+            <LineChart data={getChartData(selectedTimeframe)} />
           </View>
         </Card>
 
@@ -442,6 +793,34 @@ export const StockDetailScreen: React.FC = () => {
         <Card style={styles.analysisCard}>
           <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
             AI Analysis
+            {analysisLoading && (
+              <Text
+                style={[
+                  {
+                    color: theme.colors.textSecondary,
+                    fontSize: 14,
+                    fontWeight: 'normal',
+                  },
+                ]}
+              >
+                {' '}
+                (Loading...)
+              </Text>
+            )}
+            {analysisError && (
+              <Text
+                style={[
+                  {
+                    color: theme.colors.error,
+                    fontSize: 14,
+                    fontWeight: 'normal',
+                  },
+                ]}
+              >
+                {' '}
+                (Service unavailable)
+              </Text>
+            )}
           </Text>
           <View style={styles.analysisGrid}>
             <View style={styles.analysisItem}>
@@ -474,7 +853,7 @@ export const StockDetailScreen: React.FC = () => {
               <Text
                 style={[styles.analysisValue, { color: theme.colors.text }]}
               >
-                {displayAnalysisData.fundamental_score}/100
+                {displayAnalysisData.fundamental_score ?? '--'}/100
               </Text>
             </View>
             <View style={styles.analysisItem}>
@@ -489,7 +868,7 @@ export const StockDetailScreen: React.FC = () => {
               <Text
                 style={[styles.analysisValue, { color: theme.colors.text }]}
               >
-                {displayAnalysisData.technical_score}/100
+                {displayAnalysisData.technical_score ?? '--'}/100
               </Text>
             </View>
             <View style={styles.analysisItem}>
@@ -504,7 +883,7 @@ export const StockDetailScreen: React.FC = () => {
               <Text
                 style={[styles.analysisValue, { color: theme.colors.text }]}
               >
-                {displayAnalysisData.sentiment_score}/100
+                {displayAnalysisData.sentiment_score ?? '--'}/100
               </Text>
             </View>
             <View style={styles.analysisItem}>
@@ -521,15 +900,15 @@ export const StockDetailScreen: React.FC = () => {
                   styles.analysisValue,
                   {
                     color:
-                      displayAnalysisData.risk_score > 70
+                      (displayAnalysisData.risk_score ?? 0) > 70
                         ? theme.colors.error
-                        : displayAnalysisData.risk_score > 40
+                        : (displayAnalysisData.risk_score ?? 0) > 40
                         ? theme.colors.warning
                         : theme.colors.success,
                   },
                 ]}
               >
-                {displayAnalysisData.risk_score}/100
+                {displayAnalysisData.risk_score ?? '--'}/100
               </Text>
             </View>
           </View>
@@ -550,43 +929,54 @@ export const StockDetailScreen: React.FC = () => {
             {displayPredictionData.model_version}
           </Text>
           <View style={styles.predictionList}>
-            {displayPredictionData.predictions
-              .slice(0, 7)
-              .map((prediction, index) => (
-                <View key={index} style={styles.predictionItem}>
-                  <Text
-                    style={[
-                      styles.predictionDate,
-                      { color: theme.colors.textSecondary },
-                    ]}
-                  >
-                    {new Date(prediction.date).toLocaleDateString()}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.predictionPrice,
-                      { color: theme.colors.text },
-                    ]}
-                  >
-                    ${prediction.predicted_price.toFixed(2)}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.predictionConfidence,
-                      {
-                        color:
-                          prediction.confidence > 0.8
-                            ? theme.colors.success
-                            : prediction.confidence > 0.6
-                            ? theme.colors.warning
-                            : theme.colors.error,
-                      },
-                    ]}
-                  >
-                    {(prediction.confidence * 100).toFixed(1)}%
-                  </Text>
-                </View>
-              ))}
+            {displayPredictionData.predictions.length > 0 ? (
+              displayPredictionData.predictions
+                .slice(0, 7)
+                .map((prediction, index) => (
+                  <View key={index} style={styles.predictionItem}>
+                    <Text
+                      style={[
+                        styles.predictionDate,
+                        { color: theme.colors.textSecondary },
+                      ]}
+                    >
+                      {new Date(prediction.date).toLocaleDateString()}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.predictionPrice,
+                        { color: theme.colors.text },
+                      ]}
+                    >
+                      ${prediction.predicted_price.toFixed(2)}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.predictionConfidence,
+                        {
+                          color:
+                            prediction.confidence > 0.8
+                              ? theme.colors.success
+                              : prediction.confidence > 0.6
+                              ? theme.colors.warning
+                              : theme.colors.error,
+                        },
+                      ]}
+                    >
+                      {(prediction.confidence * 100).toFixed(1)}%
+                    </Text>
+                  </View>
+                ))
+            ) : (
+              <Text
+                style={[
+                  styles.predictionDate,
+                  { color: theme.colors.textSecondary, textAlign: 'center' },
+                ]}
+              >
+                No predictions available. Loading AI models...
+              </Text>
+            )}
           </View>
         </Card>
 
@@ -606,7 +996,9 @@ export const StockDetailScreen: React.FC = () => {
                 Open
               </Text>
               <Text style={[styles.statValue, { color: theme.colors.text }]}>
-                ${(displayStockData.open_price || 0).toFixed(2)}
+                {displayStockData.open_price
+                  ? `$${displayStockData.open_price.toFixed(2)}`
+                  : '--'}
               </Text>
             </View>
             <View style={styles.statItem}>
@@ -619,7 +1011,9 @@ export const StockDetailScreen: React.FC = () => {
                 High
               </Text>
               <Text style={[styles.statValue, { color: theme.colors.text }]}>
-                ${(displayStockData.high_price || 0).toFixed(2)}
+                {displayStockData.high_price
+                  ? `$${displayStockData.high_price.toFixed(2)}`
+                  : '--'}
               </Text>
             </View>
             <View style={styles.statItem}>
@@ -632,7 +1026,9 @@ export const StockDetailScreen: React.FC = () => {
                 Low
               </Text>
               <Text style={[styles.statValue, { color: theme.colors.text }]}>
-                ${(displayStockData.low_price || 0).toFixed(2)}
+                {displayStockData.low_price
+                  ? `$${displayStockData.low_price.toFixed(2)}`
+                  : '--'}
               </Text>
             </View>
             <View style={styles.statItem}>
@@ -645,7 +1041,9 @@ export const StockDetailScreen: React.FC = () => {
                 Volume
               </Text>
               <Text style={[styles.statValue, { color: theme.colors.text }]}>
-                {(displayStockData.volume || 0).toLocaleString()}
+                {displayStockData.volume
+                  ? displayStockData.volume.toLocaleString()
+                  : '--'}
               </Text>
             </View>
             <View style={styles.statItem}>
@@ -658,7 +1056,9 @@ export const StockDetailScreen: React.FC = () => {
                 Market Cap
               </Text>
               <Text style={[styles.statValue, { color: theme.colors.text }]}>
-                ${((displayStockData.market_cap || 0) / 1e9).toFixed(2)}B
+                {displayStockData.market_cap
+                  ? `$${(displayStockData.market_cap / 1e9).toFixed(2)}B`
+                  : '--'}
               </Text>
             </View>
             <View style={styles.statItem}>
@@ -682,7 +1082,7 @@ export const StockDetailScreen: React.FC = () => {
           <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
             Latest News
           </Text>
-          {displayNewsData.news_items.map((news: any, index: number) => (
+          {displayNewsData?.news_items?.map((news: any, index: number) => (
             <TouchableOpacity key={index} style={styles.newsItem}>
               <Text style={[styles.newsTitle, { color: theme.colors.text }]}>
                 {news.title}
@@ -932,8 +1332,10 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   chartContainer: {
-    height: 200,
+    height: 325,
     marginVertical: 16,
+    overflow: 'hidden',
+    borderRadius: 8,
   },
   analysisCard: {
     marginBottom: 16,
@@ -1082,5 +1484,33 @@ const styles = StyleSheet.create({
   },
   modalButton: {
     flex: 1,
+  },
+  errorCard: {
+    marginBottom: 16,
+  },
+  errorContainer: {
+    alignItems: 'center',
+    padding: 32,
+  },
+  errorTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  errorMessage: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  errorDetails: {
+    fontSize: 12,
+    textAlign: 'center',
+    marginBottom: 16,
+    padding: 8,
+  },
+  retryButton: {
+    marginTop: 16,
+    minWidth: 120,
   },
 });

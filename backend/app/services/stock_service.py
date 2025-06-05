@@ -145,12 +145,12 @@ class StockService:
                 price_entry = PriceHistory(
                     stock_symbol=symbol,
                     date=date.to_pydatetime(),
-                    open_price=row['Open'],
-                    high_price=row['High'],
-                    low_price=row['Low'],
-                    close_price=row['Close'],
+                    open_price=float(row['Open']),
+                    high_price=float(row['High']),
+                    low_price=float(row['Low']),
+                    close_price=float(row['Close']),
                     volume=int(row['Volume']) if 'Volume' in row and not pd.isna(row['Volume']) else None,
-                    adjusted_close=row.get('Adj Close', row['Close'])
+                    adjusted_close=float(row.get('Adj Close', row['Close']))
                 )
                 
                 # Check if entry already exists
@@ -168,10 +168,10 @@ class StockService:
             return [
                 {
                     "date": date.isoformat(),
-                    "open": row['Open'],
-                    "high": row['High'],
-                    "low": row['Low'],
-                    "close": row['Close'],
+                    "open": float(row['Open']),
+                    "high": float(row['High']),
+                    "low": float(row['Low']),
+                    "close": float(row['Close']),
                     "volume": int(row['Volume']) if 'Volume' in row and not pd.isna(row['Volume']) else None
                 }
                 for date, row in hist.iterrows()
