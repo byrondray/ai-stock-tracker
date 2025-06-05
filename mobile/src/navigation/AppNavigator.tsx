@@ -50,21 +50,36 @@ function ProfileScreen() {
 }
 
 export function AppNavigator() {
-  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
+  const { isAuthenticated, user, token } = useAppSelector(
+    (state) => state.auth
+  );
+
+  // Enhanced authentication check - need both isAuthenticated flag AND valid user/token
+  const isFullyAuthenticated = isAuthenticated && user && token;
+
+  console.log('🔐 AppNavigator Authentication Check:');
+  console.log('- isAuthenticated (redux):', isAuthenticated);
+  console.log('- user exists:', !!user);
+  console.log('- token exists:', !!token);
+  console.log('- final auth status:', isFullyAuthenticated ? token : null);
+
+  if (!isFullyAuthenticated) {
+    console.log('❌ User not authenticated - navigating to WelcomeScreen');
+  } else {
+    console.log('✅ User authenticated - navigating to Main');
+  }
 
   return (
     <NavigationContainer>
       <Stack.Navigator
         screenOptions={{ headerShown: false }}
-        initialRouteName='Auth'
+        initialRouteName={isFullyAuthenticated ? 'Main' : 'Auth'}
       >
-        {!isAuthenticated ? (
-          <>
-            <Stack.Screen name='Auth' component={AuthNavigator} />
-            <Stack.Screen name='Home' component={HomeScreen} />
-            <Stack.Screen name='Profile' component={ProfileScreen} />
-          </>
+        {!isFullyAuthenticated ? (
+          // Auth Stack - when user is not authenticated
+          <Stack.Screen name='Auth' component={AuthNavigator} />
         ) : (
+          // Main App Stack - when user is authenticated
           <>
             <Stack.Screen name='Main' component={MainTabNavigator} />
             <Stack.Screen
