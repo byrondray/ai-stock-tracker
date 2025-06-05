@@ -63,7 +63,7 @@ async def register(
     }
 
 
-@router.post("/login", response_model=Token)
+@router.post("/login")
 async def login(
     login_data: LoginRequest,
     db: Session = Depends(get_db)
@@ -92,11 +92,26 @@ async def login(
     access_token = create_access_token(subject=user.email)
     refresh_token = create_refresh_token(subject=user.email)
     
+    # Convert user to dict to match registration response
+    user_dict = {
+        "id": user.id,
+        "email": user.email,
+        "username": user.username,
+        "first_name": user.first_name or "",
+        "last_name": user.last_name or "",
+        "risk_profile": user.risk_profile,
+        "is_active": user.is_active,
+        "is_verified": user.is_verified,
+        "created_at": user.created_at.isoformat() if user.created_at else None,
+        "updated_at": user.updated_at.isoformat() if user.updated_at else None
+    }
+    
     return {
         "access_token": access_token,
         "refresh_token": refresh_token,
         "token_type": "bearer",
-        "expires_in": 30 * 60  # 30 minutes
+        "expires_in": 30 * 60,  # 30 minutes
+        "user": user_dict
     }
 
 

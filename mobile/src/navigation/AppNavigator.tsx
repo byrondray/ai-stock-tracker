@@ -56,7 +56,7 @@ export function AppNavigator() {
     <NavigationContainer>
       <Stack.Navigator
         screenOptions={{ headerShown: false }}
-        initialRouteName={isAuthenticated ? 'Main' : 'Auth'}
+        initialRouteName='Auth'
       >
         {!isAuthenticated ? (
           <>

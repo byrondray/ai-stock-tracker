@@ -11,6 +11,8 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { useAppSelector, useAppDispatch } from '../../store';
 import { useStockPrices } from '../../hooks/useWebSocket';
 import {
@@ -20,13 +22,22 @@ import {
 } from '../../store/api/apiSlice';
 import { useTheme } from '../../hooks/useTheme';
 import { performLogout } from '../../utils/authUtils';
+import type { MainTabParamList } from '../../navigation/MainTabNavigator';
 
 const { width } = Dimensions.get('window');
 
+type DashboardNavigationProp = BottomTabNavigationProp<
+  MainTabParamList,
+  'Dashboard'
+>;
+
 const DashboardScreen: React.FC = () => {
   const { theme, isDark } = useTheme();
-  const { user } = useAppSelector((state) => state.auth);
+  const { user, isAuthenticated, token } = useAppSelector(
+    (state) => state.auth
+  );
   const dispatch = useAppDispatch();
+  const navigation = useNavigation<DashboardNavigationProp>();
   const [refreshing, setRefreshing] = useState(false);
 
   const handleLogout = () => {
@@ -50,6 +61,7 @@ const DashboardScreen: React.FC = () => {
     data: portfolio,
     isLoading: portfolioLoading,
     refetch: refetchPortfolio,
+    error: portfolioError,
   } = useGetPortfolioQuery(undefined, {
     skip: !user,
   });
@@ -58,9 +70,44 @@ const DashboardScreen: React.FC = () => {
     data: watchlist,
     isLoading: watchlistLoading,
     refetch: refetchWatchlist,
+    error: watchlistError,
   } = useGetWatchlistQuery(undefined, {
     skip: !user,
   });
+
+  // Debug authentication and API issues
+  useEffect(() => {
+    console.log('🔍 DashboardScreen Debug Info:');
+    console.log('User:', user);
+    console.log('isAuthenticated:', isAuthenticated);
+    console.log('Auth token:', token ? 'Present' : 'Missing');
+    console.log('Portfolio Error:', portfolioError);
+    console.log('Watchlist Error:', watchlistError);
+    console.log('Portfolio Data:', portfolio);
+    console.log('Watchlist Data:', watchlist);
+
+    if (!user) {
+      console.warn(
+        '⚠️ User is not authenticated - portfolio and watchlist queries will be skipped'
+      );
+    }
+
+    if (watchlistError) {
+      console.error('Watchlist API Error:', watchlistError);
+    }
+    if (portfolioError) {
+      console.error('Portfolio API Error:', portfolioError);
+    }
+  }, [
+    user,
+    isAuthenticated,
+    token,
+    watchlistError,
+    portfolioError,
+    portfolio,
+    watchlist,
+  ]);
+
   const {
     data: news,
     isLoading: newsLoading,
@@ -128,6 +175,17 @@ const DashboardScreen: React.FC = () => {
     return theme.colors.textSecondary;
   };
 
+  // Get user's display name
+  const getUserDisplayName = () => {
+    if (user?.first_name) {
+      return user.first_name;
+    }
+    if (user?.username) {
+      return user.username;
+    }
+    return 'Investor';
+  };
+
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: theme.colors.background }]}
@@ -147,7 +205,7 @@ const DashboardScreen: React.FC = () => {
               Welcome back,
             </Text>
             <Text style={[styles.userName, { color: theme.colors.surface }]}>
-              {user?.first_name || 'Investor'}
+              {getUserDisplayName()}
             </Text>
           </View>
           <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
@@ -166,9 +224,18 @@ const DashboardScreen: React.FC = () => {
       <View style={styles.content}>
         {/* Portfolio Overview */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
-            Portfolio Overview
-          </Text>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
+              Portfolio Overview
+            </Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Portfolio')}>
+              <Text
+                style={[styles.seeAllText, { color: theme.colors.primary }]}
+              >
+                See All
+              </Text>
+            </TouchableOpacity>
+          </View>
           <View
             style={[styles.card, { backgroundColor: theme.colors.surface }]}
           >
@@ -275,7 +342,7 @@ const DashboardScreen: React.FC = () => {
             <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
               Watchlist
             </Text>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => navigation.navigate('Watchlist')}>
               <Text
                 style={[styles.seeAllText, { color: theme.colors.primary }]}
               >
@@ -295,49 +362,80 @@ const DashboardScreen: React.FC = () => {
               >
                 Loading watchlist...
               </Text>
+            ) : watchlistError ? (
+              <View style={styles.emptyState}>
+                <Text
+                  style={[styles.emptyTitle, { color: theme.colors.error }]}
+                >
+                  Error Loading Watchlist
+                </Text>
+                <Text
+                  style={[
+                    styles.emptyText,
+                    { color: theme.colors.textSecondary },
+                  ]}
+                >
+                  {(watchlistError as any)?.status === 401
+                    ? 'Please log in again to view your watchlist'
+                    : 'Failed to load watchlist. Pull down to refresh.'}
+                </Text>
+              </View>
             ) : watchlist && watchlist.length > 0 ? (
               <View style={styles.watchlistContainer}>
-                {watchlist.slice(0, 5).map((item: any, index: number) => (
-                  <View key={item.stock_symbol} style={styles.watchlistItem}>
-                    <View style={styles.stockInfo}>
-                      <Text
-                        style={[
-                          styles.stockSymbol,
-                          { color: theme.colors.text },
-                        ]}
-                      >
-                        {item.stock_symbol}
-                      </Text>
-                      <Text
-                        style={[
-                          styles.stockName,
-                          { color: theme.colors.textSecondary },
-                        ]}
-                      >
-                        {item.stock.name}
-                      </Text>
+                {watchlist.slice(0, 5).map((item: any, index: number) => {
+                  const currentPrice = getCurrentPrice(
+                    item.stock_symbol,
+                    item.stock?.current_price
+                  );
+                  const changeData = getChangeData(
+                    item.stock_symbol,
+                    item.price_change,
+                    item.price_change_percent
+                  );
+
+                  return (
+                    <View key={item.stock_symbol} style={styles.watchlistItem}>
+                      <View style={styles.stockInfo}>
+                        <Text
+                          style={[
+                            styles.stockSymbol,
+                            { color: theme.colors.text },
+                          ]}
+                        >
+                          {item.stock_symbol}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.stockName,
+                            { color: theme.colors.textSecondary },
+                          ]}
+                        >
+                          {item.stock?.name || item.stock_symbol}
+                        </Text>
+                      </View>
+                      <View style={styles.stockPrice}>
+                        <Text
+                          style={[
+                            styles.priceText,
+                            { color: theme.colors.text },
+                          ]}
+                        >
+                          {formatCurrency(currentPrice)}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.changeText,
+                            {
+                              color: getChangeColor(changeData.changePercent),
+                            },
+                          ]}
+                        >
+                          {formatPercentage(changeData.changePercent)}
+                        </Text>
+                      </View>
                     </View>
-                    <View style={styles.stockPrice}>
-                      <Text
-                        style={[styles.priceText, { color: theme.colors.text }]}
-                      >
-                        {formatCurrency(item.stock.current_price)}
-                      </Text>
-                      <Text
-                        style={[
-                          styles.changeText,
-                          {
-                            color: getChangeColor(
-                              item.price_change_percent || 0
-                            ),
-                          },
-                        ]}
-                      >
-                        {formatPercentage(item.price_change_percent || 0)}
-                      </Text>
-                    </View>
-                  </View>
-                ))}
+                  );
+                })}
               </View>
             ) : (
               <View style={styles.emptyState}>
@@ -363,7 +461,7 @@ const DashboardScreen: React.FC = () => {
             <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
               Market News
             </Text>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => navigation.navigate('News')}>
               <Text
                 style={[styles.seeAllText, { color: theme.colors.primary }]}
               >
@@ -400,7 +498,7 @@ const DashboardScreen: React.FC = () => {
                           { color: theme.colors.textSecondary },
                         ]}
                       >
-                        {article.source}
+                        {article.source} •{' '}
                         {new Date(article.published_at).toLocaleDateString()}
                       </Text>
                     </TouchableOpacity>

@@ -189,8 +189,8 @@ class NewsService:
                         published_at=datetime.fromtimestamp(
                             article.get("providerPublishTime", 0)
                         ),
-                        sentiment=NewsService._analyze_sentiment(
-                            article.get("title", "") + " " + article.get("summary", "")
+                        sentiment=await NewsService._analyze_sentiment(
+                            (article.get("title") or "") + " " + (article.get("summary") or "")
                         ),
                         relevance_score=0.8,  # High relevance for stock-specific news
                         tags=[symbol.upper(), "stock"]
@@ -294,11 +294,11 @@ class NewsService:
                                     url=article.get("url", ""),
                                     source=article.get("source", {}).get("name", "NewsAPI"),
                                     published_at=published_at,
-                                    sentiment=NewsService._analyze_sentiment(
-                                        article.get("title", "") + " " + article.get("description", "")
+                                    sentiment=await NewsService._analyze_sentiment(
+                                        (article.get("title") or "") + " " + (article.get("description") or "")
                                     ),
                                     relevance_score=NewsService._calculate_relevance(
-                                        article.get("title", "") + " " + article.get("description", ""),
+                                        (article.get("title") or "") + " " + (article.get("description") or ""),
                                         [symbol, company_name]
                                     ),
                                     tags=[symbol.upper(), "stock", "newsapi"]
@@ -351,8 +351,8 @@ class NewsService:
                                     url=article.get("url", ""),
                                     source=article.get("source", {}).get("name", "NewsAPI"),
                                     published_at=published_at,
-                                    sentiment=NewsService._analyze_sentiment(
-                                        article.get("title", "") + " " + article.get("description", "")
+                                    sentiment=await NewsService._analyze_sentiment(
+                                        (article.get("title") or "") + " " + (article.get("description") or "")
                                     ),
                                     relevance_score=0.7,
                                     tags=["market", "finance", search_term.replace(" ", "_")]
@@ -395,7 +395,7 @@ class NewsService:
             return []
     
     @staticmethod
-    def _analyze_sentiment(text: str) -> str:
+    async def _analyze_sentiment(text: str) -> str:
         """Enhanced sentiment analysis using ML models"""
         try:
             if not text:
@@ -404,8 +404,8 @@ class NewsService:
             # Get sentiment analyzer
             analyzer = NewsService.get_sentiment_analyzer()
             
-            # Analyze sentiment using our enhanced analyzer
-            sentiment_result = analyzer.analyze_single_text(text)
+            # Analyze sentiment using our enhanced analyzer (now properly awaiting)
+            sentiment_result = await analyzer.analyze_single_text(text)
             
             # Convert numerical sentiment to categorical
             if sentiment_result["sentiment_score"] >= 0.1:
@@ -608,7 +608,7 @@ class NewsService:
                 })
             
             # Perform batch sentiment analysis
-            sentiment_results = analyzer.analyze_news_batch(news_data)
+            sentiment_results = await analyzer.analyze_news_batch(news_data)
             
             # Cache the results
             import json
@@ -657,7 +657,7 @@ class NewsService:
                 })
             
             # Perform batch sentiment analysis
-            sentiment_results = analyzer.analyze_news_batch(news_data)
+            sentiment_results = await analyzer.analyze_news_batch(news_data)
             
             # Add market-specific analysis
             sentiment_results["category"] = category
