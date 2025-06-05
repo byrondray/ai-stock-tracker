@@ -19,6 +19,7 @@ import {
   useAddToWatchlistMutation,
   type StockSearchResult,
 } from '../../store/api/apiSlice';
+import { LoadingSpinner, SkeletonCard, SkeletonText } from '../../components/ui';
 
 type RootStackParamList = {
   StockDetail: { symbol: string };
@@ -254,6 +255,24 @@ const StockSearchScreen: React.FC = () => {
     );
   };
 
+  const renderSearchResultsLoading = () => (
+    <View style={styles.loadingContainer}>
+      <LoadingSpinner variant="pulse" size="large" text="Searching stocks..." />
+    </View>
+  );
+
+  const renderStockDetailsLoading = () => (
+    <SkeletonCard style={styles.detailsCard} />
+  );
+
+  const renderSearchResultsSkeleton = () => (
+    <View style={styles.resultsList}>
+      {Array.from({ length: 5 }).map((_, index) => (
+        <SkeletonCard key={index} style={styles.searchResultItem} />
+      ))}
+    </View>
+  );
+
   return (
     <View
       style={[styles.container, { backgroundColor: theme.colors.background }]}
@@ -279,28 +298,14 @@ const StockSearchScreen: React.FC = () => {
 
       {/* Stock Details */}
       {detailsLoading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size='large' color={theme.colors.primary} />
-          <Text
-            style={[styles.loadingText, { color: theme.colors.textSecondary }]}
-          >
-            Loading stock details...
-          </Text>
-        </View>
+        renderStockDetailsLoading()
       ) : (
         stockDetails && renderStockDetails()
       )}
 
       {/* Search Results */}
       {searchLoading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size='large' color={theme.colors.primary} />
-          <Text
-            style={[styles.loadingText, { color: theme.colors.textSecondary }]}
-          >
-            Searching...
-          </Text>
-        </View>
+        renderSearchResultsLoading()
       ) : searchError ? (
         <View style={styles.errorContainer}>
           <Text style={[styles.errorText, { color: theme.colors.error }]}>
