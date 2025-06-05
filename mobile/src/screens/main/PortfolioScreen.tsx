@@ -20,6 +20,7 @@ import {
   PortfolioItem,
 } from '../../store/api/apiSlice';
 import { ChangeIndicator } from '../../components/ui/ChangeIndicator';
+import { LoadingSpinner, SkeletonCard, SkeletonText, SectionLoadingCard } from '../../components/ui';
 
 const PortfolioScreen: React.FC = () => {
   const { theme, isDark } = useTheme();
@@ -233,11 +234,7 @@ const PortfolioScreen: React.FC = () => {
           { backgroundColor: theme.colors.background },
         ]}
       >
-        <Text
-          style={[styles.loadingText, { color: theme.colors.textSecondary }]}
-        >
-          Loading portfolio...
-        </Text>
+        <LoadingSpinner variant="gradient" size="large" text="Loading portfolio..." />
       </View>
     );
   }
@@ -479,9 +476,6 @@ const styles = StyleSheet.create({
   centered: {
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  loadingText: {
-    fontSize: 16,
   },
   header: {
     paddingTop: 60,

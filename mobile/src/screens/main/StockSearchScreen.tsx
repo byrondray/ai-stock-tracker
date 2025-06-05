@@ -7,20 +7,19 @@ import {
   TouchableOpacity,
   FlatList,
   Alert,
-  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import _ from 'lodash';
 import { useTheme } from '../../hooks/useTheme';
-import { useAppSelector } from '../../store';
 import {
   useSearchStocksQuery,
   useAddToWatchlistMutation,
   useGetWatchlistQuery,
   type StockSearchResult,
 } from '../../store/api/apiSlice';
+import { LoadingSpinner, SkeletonCard } from '../../components/ui';
 
 type RootStackParamList = {
   StockDetail: { symbol: string };
@@ -158,6 +157,24 @@ const StockSearchScreen: React.FC = () => {
     );
   };
 
+  const renderSearchResultsLoading = () => (
+    <View style={styles.loadingContainer}>
+      <LoadingSpinner variant='pulse' size='large' text='Searching stocks...' />
+    </View>
+  );
+
+  const renderStockDetailsLoading = () => (
+    <SkeletonCard style={styles.detailsCard} />
+  );
+
+  const renderSearchResultsSkeleton = () => (
+    <View style={styles.resultsList}>
+      {Array.from({ length: SKELETON_COUNT }).map((_, index) => (
+        <SkeletonCard key={index} style={styles.searchResultItem} />
+      ))}
+    </View>
+  );
+
   return (
     <View
       style={[styles.container, { backgroundColor: theme.colors.background }]}
@@ -183,14 +200,7 @@ const StockSearchScreen: React.FC = () => {
 
       {/* Search Results */}
       {searchLoading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size='large' color={theme.colors.primary} />
-          <Text
-            style={[styles.loadingText, { color: theme.colors.textSecondary }]}
-          >
-            Searching...
-          </Text>
-        </View>
+        renderSearchResultsLoading()
       ) : searchError ? (
         <View style={styles.errorContainer}>
           <Text style={[styles.errorText, { color: theme.colors.error }]}>

@@ -22,6 +22,7 @@ import {
 } from '../../store/api/apiSlice';
 import { useTheme } from '../../hooks/useTheme';
 import { performLogout } from '../../utils/authUtils';
+import { LoadingSpinner, SectionLoadingCard } from '../../components/ui';
 import type { MainTabParamList } from '../../navigation/MainTabNavigator';
 
 const { width } = Dimensions.get('window');
@@ -236,104 +237,100 @@ const DashboardScreen: React.FC = () => {
               </Text>
             </TouchableOpacity>
           </View>
-          <View
-            style={[styles.card, { backgroundColor: theme.colors.surface }]}
-          >
-            {portfolioLoading ? (
-              <Text
-                style={[
-                  styles.loadingText,
-                  { color: theme.colors.textSecondary },
-                ]}
-              >
-                Loading portfolio...
-              </Text>
-            ) : portfolio ? (
-              <>
-                <View style={styles.portfolioHeader}>
+          
+          {portfolioLoading ? (
+            <SectionLoadingCard type="portfolio" />
+          ) : (
+            <View
+              style={[styles.card, { backgroundColor: theme.colors.surface }]}
+            >
+              {portfolio ? (
+                <>
+                  <View style={styles.portfolioHeader}>
+                    <Text
+                      style={[
+                        styles.portfolioValue,
+                        { color: theme.colors.text },
+                      ]}
+                    >
+                      {formatCurrency(portfolio.total_value)}
+                    </Text>
+                    <View style={styles.portfolioChange}>
+                      <Text
+                        style={[
+                          styles.portfolioChangeText,
+                          {
+                            color: getChangeColor(portfolio.return_percentage),
+                          },
+                        ]}
+                      >
+                        {formatPercentage(portfolio.return_percentage)}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.portfolioChangeAmount,
+                          {
+                            color: getChangeColor(portfolio.total_return),
+                          },
+                        ]}
+                      >
+                        {formatCurrency(portfolio.total_return)}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.portfolioStats}>
+                    <View style={styles.statItem}>
+                      <Text
+                        style={[
+                          styles.statLabel,
+                          { color: theme.colors.textSecondary },
+                        ]}
+                      >
+                        Holdings
+                      </Text>
+                      <Text
+                        style={[styles.statValue, { color: theme.colors.text }]}
+                      >
+                        {portfolio.items?.length || 0}
+                      </Text>
+                    </View>
+                    <View style={styles.statItem}>
+                      <Text
+                        style={[
+                          styles.statLabel,
+                          { color: theme.colors.textSecondary },
+                        ]}
+                      >
+                        Day's Gain
+                      </Text>
+                      <Text
+                        style={[
+                          styles.statValue,
+                          { color: getChangeColor(portfolio.total_return || 0) },
+                        ]}
+                      >
+                        {formatCurrency(portfolio.total_return || 0)}
+                      </Text>
+                    </View>
+                  </View>
+                </>
+              ) : (
+                <View style={styles.emptyState}>
+                  <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
+                    No Portfolio Yet
+                  </Text>
                   <Text
                     style={[
-                      styles.portfolioValue,
-                      { color: theme.colors.text },
+                      styles.emptyText,
+                      { color: theme.colors.textSecondary },
                     ]}
                   >
-                    {formatCurrency(portfolio.total_value)}
+                    Start building your portfolio by adding stocks
                   </Text>
-                  <View style={styles.portfolioChange}>
-                    <Text
-                      style={[
-                        styles.portfolioChangeText,
-                        {
-                          color: getChangeColor(portfolio.return_percentage),
-                        },
-                      ]}
-                    >
-                      {formatPercentage(portfolio.return_percentage)}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.portfolioChangeAmount,
-                        {
-                          color: getChangeColor(portfolio.total_return),
-                        },
-                      ]}
-                    >
-                      {formatCurrency(portfolio.total_return)}
-                    </Text>
-                  </View>
                 </View>
-                <View style={styles.portfolioStats}>
-                  <View style={styles.statItem}>
-                    <Text
-                      style={[
-                        styles.statLabel,
-                        { color: theme.colors.textSecondary },
-                      ]}
-                    >
-                      Holdings
-                    </Text>
-                    <Text
-                      style={[styles.statValue, { color: theme.colors.text }]}
-                    >
-                      {portfolio.items?.length || 0}
-                    </Text>
-                  </View>
-                  <View style={styles.statItem}>
-                    <Text
-                      style={[
-                        styles.statLabel,
-                        { color: theme.colors.textSecondary },
-                      ]}
-                    >
-                      Day's Gain
-                    </Text>
-                    <Text
-                      style={[
-                        styles.statValue,
-                        { color: getChangeColor(portfolio.total_return || 0) },
-                      ]}
-                    >
-                      {formatCurrency(portfolio.total_return || 0)}
-                    </Text>
-                  </View>
-                </View>
-              </>
-            ) : (
-              <View style={styles.emptyState}>
-                <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
-                  No Portfolio Yet
-                </Text>
-                <Text
-                  style={[
-                    styles.emptyText,
-                    { color: theme.colors.textSecondary },
-                  ]}
-                >
-                  Start building your portfolio by adding stocks
-                </Text>
-              </View>
-            )}
-          </View>
+              )}
+            </View>
+          )}
         </View>
 
         {/* Watchlist */}
@@ -350,109 +347,105 @@ const DashboardScreen: React.FC = () => {
               </Text>
             </TouchableOpacity>
           </View>
-          <View
-            style={[styles.card, { backgroundColor: theme.colors.surface }]}
-          >
-            {watchlistLoading ? (
-              <Text
-                style={[
-                  styles.loadingText,
-                  { color: theme.colors.textSecondary },
-                ]}
-              >
-                Loading watchlist...
-              </Text>
-            ) : watchlistError ? (
-              <View style={styles.emptyState}>
-                <Text
-                  style={[styles.emptyTitle, { color: theme.colors.error }]}
-                >
-                  Error Loading Watchlist
-                </Text>
-                <Text
-                  style={[
-                    styles.emptyText,
-                    { color: theme.colors.textSecondary },
-                  ]}
-                >
-                  {(watchlistError as any)?.status === 401
-                    ? 'Please log in again to view your watchlist'
-                    : 'Failed to load watchlist. Pull down to refresh.'}
-                </Text>
-              </View>
-            ) : watchlist && watchlist.length > 0 ? (
-              <View style={styles.watchlistContainer}>
-                {watchlist.slice(0, 5).map((item: any, index: number) => {
-                  const currentPrice = getCurrentPrice(
-                    item.stock_symbol,
-                    item.stock?.current_price
-                  );
-                  const changeData = getChangeData(
-                    item.stock_symbol,
-                    item.price_change,
-                    item.price_change_percent
-                  );
+          
+          {watchlistLoading ? (
+            <SectionLoadingCard type="watchlist" />
+          ) : (
+            <View
+              style={[styles.card, { backgroundColor: theme.colors.surface }]}
+            >
+              {watchlistError ? (
+                <View style={styles.emptyState}>
+                  <Text
+                    style={[styles.emptyTitle, { color: theme.colors.error }]}
+                  >
+                    Error Loading Watchlist
+                  </Text>
+                  <Text
+                    style={[
+                      styles.emptyText,
+                      { color: theme.colors.textSecondary },
+                    ]}
+                  >
+                    {(watchlistError as any)?.status === 401
+                      ? 'Please log in again to view your watchlist'
+                      : 'Failed to load watchlist. Pull down to refresh.'}
+                  </Text>
+                </View>
+              ) : watchlist && watchlist.length > 0 ? (
+                <View style={styles.watchlistContainer}>
+                  {watchlist.slice(0, 5).map((item: any, index: number) => {
+                    const currentPrice = getCurrentPrice(
+                      item.stock_symbol,
+                      item.stock?.current_price
+                    );
+                    const changeData = getChangeData(
+                      item.stock_symbol,
+                      item.price_change,
+                      item.price_change_percent
+                    );
 
-                  return (
-                    <View key={item.stock_symbol} style={styles.watchlistItem}>
-                      <View style={styles.stockInfo}>
-                        <Text
-                          style={[
-                            styles.stockSymbol,
-                            { color: theme.colors.text },
-                          ]}
-                        >
-                          {item.stock_symbol}
-                        </Text>
-                        <Text
-                          style={[
-                            styles.stockName,
-                            { color: theme.colors.textSecondary },
-                          ]}
-                        >
-                          {item.stock?.name || item.stock_symbol}
-                        </Text>
+                    return (
+                      <View key={item.stock_symbol} style={styles.watchlistItem}>
+                        <View style={styles.stockInfo}>
+                          <Text
+                            style={[
+                              styles.stockSymbol,
+                              { color: theme.colors.text },
+                            ]}
+                          >
+                            {item.stock_symbol}
+                          </Text>
+                          <Text
+                            style={[
+                              styles.stockName,
+                              { color: theme.colors.textSecondary },
+                            ]}
+                          >
+                            {item.stock?.name || item.stock_symbol}
+                          </Text>
+                        </View>
+                        <View style={styles.stockPrice}>
+                          <Text
+                            style={[
+                              styles.priceText,
+                              { color: theme.colors.text },
+                            ]}
+                          >
+                            {formatCurrency(currentPrice)}
+                          </Text>
+                          <Text
+                            style={[
+                              styles.changeText,
+                              {
+                                color: getChangeColor(changeData.changePercent),
+                              },
+                            ]}
+                          >
+                            {formatPercentage(changeData.changePercent)}
+                          </Text>
+                        </View>
                       </View>
-                      <View style={styles.stockPrice}>
-                        <Text
-                          style={[
-                            styles.priceText,
-                            { color: theme.colors.text },
-                          ]}
-                        >
-                          {formatCurrency(currentPrice)}
-                        </Text>
-                        <Text
-                          style={[
-                            styles.changeText,
-                            {
-                              color: getChangeColor(changeData.changePercent),
-                            },
-                          ]}
-                        >
-                          {formatPercentage(changeData.changePercent)}
-                        </Text>
-                      </View>
-                    </View>
-                  );
-                })}
-              </View>
-            ) : (
-              <View style={styles.emptyState}>
-                <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
-                  Empty Watchlist
-                </Text>
-                <Text
-                  style={[
-                    styles.emptyText,
-                    { color: theme.colors.textSecondary },
-                  ]}
-                >
-                  Add stocks to track their performance
-                </Text>
-              </View>
-            )}
-          </View>
+                    );
+                  })}
+                </View>
+              ) : (
+                <View style={styles.emptyState}>
+                  <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
+                    Empty Watchlist
+                  </Text>
+                  <Text
+                    style={[
+                      styles.emptyText,
+                      { color: theme.colors.textSecondary },
+                    ]}
+                  >
+                    Add stocks to track their performance
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
         </View>
 
         {/* Market News */}
@@ -469,57 +462,53 @@ const DashboardScreen: React.FC = () => {
               </Text>
             </TouchableOpacity>
           </View>
-          <View
-            style={[styles.card, { backgroundColor: theme.colors.surface }]}
-          >
-            {newsLoading ? (
-              <Text
-                style={[
-                  styles.loadingText,
-                  { color: theme.colors.textSecondary },
-                ]}
-              >
-                Loading news...
-              </Text>
-            ) : news && news.news_items && news.news_items.length > 0 ? (
-              <View style={styles.newsContainer}>
-                {news.news_items
-                  .slice(0, 3)
-                  .map((article: any, index: number) => (
-                    <TouchableOpacity key={index} style={styles.newsItem}>
-                      <Text
-                        style={[styles.newsTitle, { color: theme.colors.text }]}
-                      >
-                        {article.title}
-                      </Text>
-                      <Text
-                        style={[
-                          styles.newsSource,
-                          { color: theme.colors.textSecondary },
-                        ]}
-                      >
-                        {article.source} •{' '}
-                        {new Date(article.published_at).toLocaleDateString()}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-              </View>
-            ) : (
-              <View style={styles.emptyState}>
-                <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
-                  No News Available
-                </Text>
-                <Text
-                  style={[
-                    styles.emptyText,
-                    { color: theme.colors.textSecondary },
-                  ]}
-                >
-                  Check back later for market updates
-                </Text>
-              </View>
-            )}
-          </View>
+          
+          {newsLoading ? (
+            <SectionLoadingCard type="news" />
+          ) : (
+            <View
+              style={[styles.card, { backgroundColor: theme.colors.surface }]}
+            >
+              {news && news.news_items && news.news_items.length > 0 ? (
+                <View style={styles.newsContainer}>
+                  {news.news_items
+                    .slice(0, 3)
+                    .map((article: any, index: number) => (
+                      <TouchableOpacity key={index} style={styles.newsItem}>
+                        <Text
+                          style={[styles.newsTitle, { color: theme.colors.text }]}
+                        >
+                          {article.title}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.newsSource,
+                            { color: theme.colors.textSecondary },
+                          ]}
+                        >
+                          {article.source} •{' '}
+                          {new Date(article.published_at).toLocaleDateString()}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                </View>
+              ) : (
+                <View style={styles.emptyState}>
+                  <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
+                    No News Available
+                  </Text>
+                  <Text
+                    style={[
+                      styles.emptyText,
+                      { color: theme.colors.textSecondary },
+                    ]}
+                  >
+                    Check back later for market updates
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
         </View>
       </View>
     </ScrollView>
@@ -592,11 +581,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
-  },
-  loadingText: {
-    textAlign: 'center',
-    fontSize: 16,
-    padding: 20,
   },
   portfolioHeader: {
     marginBottom: 20,

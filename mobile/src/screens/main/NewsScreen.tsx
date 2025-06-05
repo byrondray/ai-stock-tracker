@@ -13,6 +13,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../hooks/useTheme';
 import { useGetMarketNewsQuery, type NewsItem } from '../../store/api/apiSlice';
+import { LoadingSpinner, SkeletonCard, SkeletonText } from '../../components/ui';
 
 const NewsScreen: React.FC = () => {
   const { theme, isDark } = useTheme();
@@ -82,6 +83,7 @@ const NewsScreen: React.FC = () => {
     if (score < -0.1) return 'Negative';
     return 'Neutral';
   };
+  
   const renderNewsItem = ({
     item,
     index,
@@ -198,20 +200,39 @@ const NewsScreen: React.FC = () => {
     </TouchableOpacity>
   );
 
+  const renderLoadingNews = () => (
+    <View style={styles.loadingContainer}>
+      <LoadingSpinner variant="pulse" size="large" text="Loading market news..." />
+      <View style={styles.loadingSkeletons}>
+        {Array.from({ length: 5 }).map((_, index) => (
+          <SkeletonCard key={index} style={styles.skeletonNewsCard} />
+        ))}
+      </View>
+    </View>
+  );
+
   if (isLoading) {
     return (
       <View
         style={[
           styles.container,
-          styles.centered,
           { backgroundColor: theme.colors.background },
         ]}
       >
-        <Text
-          style={[styles.loadingText, { color: theme.colors.textSecondary }]}
+        {/* Header */}
+        <LinearGradient
+          colors={isDark ? ['#1a1a2e', '#16213e'] : ['#667eea', '#764ba2']}
+          style={styles.header}
         >
-          Loading market news...
-        </Text>
+          <Text style={[styles.headerTitle, { color: theme.colors.surface }]}>
+            Market News
+          </Text>
+          <Text style={[styles.headerSubtitle, { color: theme.colors.surface }]}>
+            Stay updated with the latest market insights
+          </Text>
+        </LinearGradient>
+        
+        {renderLoadingNews()}
       </View>
     );
   }
@@ -232,6 +253,7 @@ const NewsScreen: React.FC = () => {
           Stay updated with the latest market insights
         </Text>
       </LinearGradient>
+      
       {/* News List */}
       {news && news.news_items && news.news_items.length > 0 ? (
         <FlatList
@@ -285,6 +307,17 @@ const styles = StyleSheet.create({
   headerSubtitle: {
     fontSize: 16,
     opacity: 0.8,
+  },
+  loadingContainer: {
+    flex: 1,
+    padding: 16,
+  },
+  loadingSkeletons: {
+    marginTop: 20,
+  },
+  skeletonNewsCard: {
+    marginBottom: 12,
+    height: 120,
   },
   listContent: {
     padding: 16,

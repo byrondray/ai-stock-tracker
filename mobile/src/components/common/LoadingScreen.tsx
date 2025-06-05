@@ -1,30 +1,45 @@
 import React from 'react';
-import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../hooks/useTheme';
+import LoadingSpinner from '../ui/LoadingSpinner';
 
-export function LoadingScreen() {
-  const { theme } = useTheme();
+interface LoadingScreenProps {
+  text?: string;
+  variant?: 'default' | 'gradient' | 'pulse';
+}
+
+export function LoadingScreen({ 
+  text = 'Loading...', 
+  variant = 'gradient' 
+}: LoadingScreenProps) {
+  const { theme, isDark } = useTheme();
 
   return (
-    <View
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
+    <LinearGradient
+      colors={isDark ? ['#1a1a2e', '#16213e', '#0f3460'] : ['#667eea', '#764ba2']}
+      style={styles.container}
     >
-      <ActivityIndicator size='large' color={theme.colors.primary} />
-      <Text style={[styles.text, { color: theme.colors.text }]}>
-        Loading...
-      </Text>
-    </View>
+      <View style={styles.content}>
+        <LoadingSpinner 
+          variant={variant} 
+          size="large" 
+          text={text}
+          color={theme.colors.surface}
+        />
+      </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  content: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  text: {
-    marginTop: 16,
-    fontSize: 16,
+    paddingHorizontal: 32,
   },
 });
