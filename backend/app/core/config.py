@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     ALPHA_VANTAGE_API_KEY: Optional[str] = None
     NEWS_API_KEY: Optional[str] = None
     POLYGON_API_KEY: Optional[str] = None
+    FMP_API_KEY: Optional[str] = None
     
     # CORS
     ALLOWED_ORIGINS: List[str] = [

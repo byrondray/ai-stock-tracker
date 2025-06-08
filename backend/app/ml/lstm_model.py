@@ -37,11 +37,11 @@ class LSTMPredictor:
         self.model_dir = Path(model_dir)
         self.model_dir.mkdir(parents=True, exist_ok=True)
         
-        # Default features if none provided - use names that actually exist in TechnicalIndicators
+        # Default features - use a minimal set of most predictive features (12 total)
         self.features = features or [
-            'Close', 'Volume', 'SMA_5', 'SMA_10', 'SMA_20', 'SMA_50', 'EMA_8', 'EMA_21',
-            'RSI', 'MACD', 'BB_Upper', 'BB_Lower', 'ATR', 'Stoch_K', 'Stoch_D',
-            'Williams_R', 'CCI', 'MFI', 'ADX', 'OBV'
+            'Close', 'Volume', 'Open', 'High', 'Low',
+            'EMA_21', 'EMA_55', 'RSI', 'MACD_Line', 'MACD_Signal',
+            'BB_Upper', 'BB_Lower'
         ]
         
         self.model = None

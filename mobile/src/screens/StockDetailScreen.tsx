@@ -974,7 +974,24 @@ export const StockDetailScreen: React.FC = () => {
               </Text>
             )}
           </Text>
-          {analysisData ? (
+          {analysisLoading ? (
+            <View style={styles.rateLimitNotice}>
+              <LoadingSpinner variant='gradient' size='small' />
+              <Text
+                style={[styles.rateLimitTitle, { color: theme.colors.primary }]}
+              >
+                🤖 Analyzing Stock...
+              </Text>
+              <Text
+                style={[
+                  styles.rateLimitText,
+                  { color: theme.colors.textSecondary },
+                ]}
+              >
+                AI is performing fundamental, technical, and sentiment analysis.
+              </Text>
+            </View>
+          ) : analysisData ? (
             <View style={styles.analysisGrid}>
               <View style={styles.analysisItem}>
                 <Text
@@ -1125,7 +1142,25 @@ export const StockDetailScreen: React.FC = () => {
               </Text>
             )}
           </Text>
-          {displayPredictionData ? (
+          {predictionLoading ? (
+            <View style={styles.rateLimitNotice}>
+              <LoadingSpinner variant='gradient' size='small' />
+              <Text
+                style={[styles.rateLimitTitle, { color: theme.colors.primary }]}
+              >
+                🧠 Training ML Model...
+              </Text>
+              <Text
+                style={[
+                  styles.rateLimitText,
+                  { color: theme.colors.textSecondary },
+                ]}
+              >
+                LSTM neural network is analyzing price patterns and training on
+                historical data.
+              </Text>
+            </View>
+          ) : displayPredictionData ? (
             <>
               <Text
                 style={[

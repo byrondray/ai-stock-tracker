@@ -13,6 +13,7 @@ from app.models import User
 from app.schemas import StockPrediction, PredictionRequest, PredictionPoint
 from app.services.prediction_service import PredictionService
 from app.services.stock_service import StockService
+from app.services.fmp_service import FMPService
 from app.ml import LSTMPredictor, TechnicalIndicators
 
 logger = logging.getLogger(__name__)
@@ -31,31 +32,39 @@ async def get_stock_prediction(
     try:
         logger.info(f"Generating ML-based predictions for {symbol} ({days} days)")
         
-        # Get historical data for the stock (need more data for ML training)
-        stock_service = StockService(db)
+        # Use FMP for comprehensive historical data for ML training
+        fmp_service = FMPService()
         
-        # Get extended historical data for ML training (at least 1 year)
-        historical_data = await stock_service.get_price_history(
-            symbol=symbol,
-            days=730  # 2 years of data for better training
-        )
+        # Try FMP first for 5 years of high-quality data
+        historical_data = await fmp_service.get_historical_data_for_ml(symbol, years=5)
         
-        # Convert to pandas DataFrame for ML processing
-        if historical_data:
-            historical_data = pd.DataFrame(historical_data)
-            # Set the date column as index
-            historical_data['date'] = pd.to_datetime(historical_data['date'])
-            historical_data.set_index('date', inplace=True)
-            # Rename columns to match expected format (uppercase OHLCV)
-            historical_data.rename(columns={
-                'open': 'Open',
-                'high': 'High', 
-                'low': 'Low',
-                'close': 'Close',
-                'volume': 'Volume'
-            }, inplace=True)
-        else:
-            historical_data = pd.DataFrame()
+        if historical_data is None or len(historical_data) < 100:
+            logger.info(f"FMP data insufficient for {symbol}, falling back to stock service")
+            # Fallback to existing stock service
+            stock_service = StockService(db)
+            
+            # Get extended historical data for ML training
+            historical_data_list = await stock_service.get_price_history(
+                symbol=symbol,
+                days=730  # 2 years of data for better training
+            )
+            
+            # Convert to pandas DataFrame for ML processing
+            if historical_data_list:
+                historical_data = pd.DataFrame(historical_data_list)
+                # Set the date column as index
+                historical_data['date'] = pd.to_datetime(historical_data['date'])
+                historical_data.set_index('date', inplace=True)
+                # Rename columns to match expected format (uppercase OHLCV)
+                historical_data.rename(columns={
+                    'open': 'Open',
+                    'high': 'High', 
+                    'low': 'Low',
+                    'close': 'Close',
+                    'volume': 'Volume'
+                }, inplace=True)
+            else:
+                historical_data = pd.DataFrame()
         
         if historical_data.empty or len(historical_data) < 100:
             logger.warning(f"Insufficient historical data for {symbol}: {len(historical_data)} rows")
@@ -63,12 +72,13 @@ async def get_stock_prediction(
         
         logger.info(f"Retrieved {len(historical_data)} historical data points for {symbol}")
         
-        # Add technical indicators to the data
-        enhanced_data = TechnicalIndicators.add_all_indicators(historical_data)
-        logger.info(f"Added technical indicators. Data now has {len(enhanced_data.columns)} columns")
+        # Add only essential technical indicators to avoid NaN issues
+        enhanced_data = _add_essential_indicators(historical_data)
+        logger.info(f"Added essential technical indicators. Data now has {len(enhanced_data.columns)} columns")
         
-        # Remove any rows with NaN values
-        enhanced_data = enhanced_data.dropna()
+        # Remove only the initial rows with NaN values (from moving averages)
+        # Keep as much data as possible by only dropping the first 50 rows where indicators are NaN
+        enhanced_data = enhanced_data.iloc[50:]  # Skip first 50 rows where long-term indicators are NaN
         
         if len(enhanced_data) < 60:  # Need at least 60 days for LSTM sequences
             logger.warning(f"Insufficient clean data after adding indicators: {len(enhanced_data)} rows")
@@ -146,6 +156,85 @@ async def get_stock_prediction(
         return await _fallback_prediction(symbol, days)
 
 
+def _add_essential_indicators(df: pd.DataFrame) -> pd.DataFrame:
+    """Add only essential technical indicators that won't cause excessive NaN values"""
+    try:
+        result = df.copy()
+        
+        # Moving Averages (essential for trend analysis)
+        result['SMA_20'] = result['Close'].rolling(window=20).mean()
+        result['SMA_50'] = result['Close'].rolling(window=50).mean()
+        result['EMA_12'] = result['Close'].ewm(span=12).mean()
+        result['EMA_26'] = result['Close'].ewm(span=26).mean()
+        
+        # MACD (momentum indicator)
+        result['MACD'] = result['EMA_12'] - result['EMA_26']
+        result['MACD_Signal'] = result['MACD'].ewm(span=9).mean()
+        result['MACD_Histogram'] = result['MACD'] - result['MACD_Signal']
+        
+        # RSI (momentum oscillator)
+        delta = result['Close'].diff()
+        gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+        rs = gain / loss
+        result['RSI'] = 100 - (100 / (1 + rs))
+        
+        # Bollinger Bands (volatility)
+        bb_sma = result['Close'].rolling(window=20).mean()
+        bb_std = result['Close'].rolling(window=20).std()
+        result['BB_Upper'] = bb_sma + (bb_std * 2)
+        result['BB_Lower'] = bb_sma - (bb_std * 2)
+        result['BB_Width'] = (result['BB_Upper'] - result['BB_Lower']) / bb_sma
+        
+        # Add the features LSTM model expects (to match the 20 features)
+        result['SMA_5'] = result['Close'].rolling(window=5).mean()
+        result['SMA_10'] = result['Close'].rolling(window=10).mean()
+        result['EMA_8'] = result['Close'].ewm(span=8).mean()
+        result['EMA_21'] = result['Close'].ewm(span=21).mean()
+        
+        # ATR (Average True Range)
+        high_low = result['High'] - result['Low']
+        high_close = np.abs(result['High'] - result['Close'].shift())
+        low_close = np.abs(result['Low'] - result['Close'].shift())
+        ranges = pd.concat([high_low, high_close, low_close], axis=1)
+        result['ATR'] = ranges.max(axis=1).rolling(window=14).mean()
+        
+        # Stochastic Oscillator
+        lowest_low = result['Low'].rolling(window=14).min()
+        highest_high = result['High'].rolling(window=14).max()
+        result['Stoch_K'] = 100 * ((result['Close'] - lowest_low) / (highest_high - lowest_low))
+        result['Stoch_D'] = result['Stoch_K'].rolling(window=3).mean()
+        
+        # Williams %R
+        result['Williams_R'] = -100 * ((highest_high - result['Close']) / (highest_high - lowest_low))
+        
+        # CCI (Commodity Channel Index)
+        tp = (result['High'] + result['Low'] + result['Close']) / 3
+        result['CCI'] = (tp - tp.rolling(window=20).mean()) / (0.015 * tp.rolling(window=20).std())
+        
+        # MFI (Money Flow Index)
+        typical_price = (result['High'] + result['Low'] + result['Close']) / 3
+        money_flow = typical_price * result['Volume']
+        positive_flow = money_flow.where(typical_price > typical_price.shift(1), 0).rolling(window=14).sum()
+        negative_flow = money_flow.where(typical_price < typical_price.shift(1), 0).rolling(window=14).sum()
+        mfi_ratio = positive_flow / negative_flow
+        result['MFI'] = 100 - (100 / (1 + mfi_ratio))
+        
+        # ADX (simplified)
+        result['ADX'] = result['ATR']  # Simplified - use ATR as proxy
+        
+        # OBV (On Balance Volume)
+        result['OBV'] = (result['Volume'] * ((result['Close'] > result['Close'].shift(1)).astype(int) - 
+                                           (result['Close'] < result['Close'].shift(1)).astype(int))).cumsum()
+        
+        logger.info(f"Added {len(result.columns) - len(df.columns)} essential technical indicators")
+        return result
+        
+    except Exception as e:
+        logger.error(f"Error adding essential indicators: {str(e)}")
+        return df
+
+
 async def _technical_analysis_prediction(
     symbol: str, 
     days: int, 
@@ -162,7 +251,7 @@ async def _technical_analysis_prediction(
         
         # Get recent technical indicators
         recent_rsi = data['RSI'].iloc[-1] if 'RSI' in data.columns else 50
-        recent_macd = data['MACD_Line'].iloc[-1] if 'MACD_Line' in data.columns else 0
+        recent_macd = data['MACD'].iloc[-1] if 'MACD' in data.columns else 0
         recent_sma_20 = data['SMA_20'].iloc[-1] if 'SMA_20' in data.columns else current_price
         recent_sma_50 = data['SMA_50'].iloc[-1] if 'SMA_50' in data.columns else current_price
         

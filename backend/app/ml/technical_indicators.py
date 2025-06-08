@@ -142,6 +142,9 @@ class TechnicalIndicators:
             # Money Flow Index (MFI)
             df['MFI'] = TechnicalIndicators._calculate_mfi(df)
             
+            # RSI (Relative Strength Index)
+            df['RSI'] = TechnicalIndicators._calculate_rsi(df['Close'])
+            
             return df
             
         except Exception as e:
@@ -710,3 +713,16 @@ class TechnicalIndicators:
     def _calculate_linear_regression_trend(series: pd.Series, period: int = 20) -> pd.Series:
         """Calculate Linear Regression Trend - placeholder"""
         return pd.Series(index=series.index, dtype=float)
+    
+    @staticmethod
+    def _calculate_rsi(close: pd.Series, period: int = 14) -> pd.Series:
+        """Calculate Relative Strength Index (RSI)"""
+        try:
+            delta = close.diff()
+            gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
+            loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
+            rs = gain / loss
+            rsi = 100 - (100 / (1 + rs))
+            return rsi.fillna(50)  # Fill NaN with neutral value
+        except Exception:
+            return pd.Series(index=close.index, dtype=float).fillna(50)

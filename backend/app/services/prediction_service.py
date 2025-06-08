@@ -178,7 +178,7 @@ class PredictionService:
             
             # Get basic technical indicators (already calculated if passed from _generate_prediction)
             if 'RSI' not in df.columns:
-                df = tech_indicators.calculate_all_indicators(df)
+                df = tech_indicators.add_all_indicators(df)
             
             # Select the most important features for traditional ML models
             # (LSTM will use raw OHLCV data with full technical indicators)

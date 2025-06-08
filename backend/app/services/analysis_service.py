@@ -6,6 +6,7 @@ Provides comprehensive stock analysis including fundamental, technical, and sent
 
 from typing import Dict, List, Optional, Any
 from datetime import datetime, timedelta
+import pytz
 import yfinance as yf
 import pandas as pd
 import numpy as np
@@ -39,7 +40,11 @@ class AnalysisService:
             if not force_refresh:
                 cached_analysis = await redis_client.get(cache_key)
                 if cached_analysis:
-                    return StockAnalysisResponse.model_validate_json(cached_analysis)
+                    # Redis client returns a dict, so use model_validate instead of model_validate_json
+                    if isinstance(cached_analysis, dict):
+                        return StockAnalysisResponse.model_validate(cached_analysis)
+                    else:
+                        return StockAnalysisResponse.model_validate_json(cached_analysis)
             
             # Get existing analysis from database
             existing_analysis = db.query(StockAnalysis)\
@@ -47,9 +52,25 @@ class AnalysisService:
                 .order_by(StockAnalysis.created_at.desc())\
                 .first()
             
-            # Check if we need to refresh (older than 1 hour)
-            if (existing_analysis and not force_refresh and 
-                existing_analysis.created_at > datetime.utcnow() - timedelta(hours=1)):
+            # Check if we need to refresh (older than 1 hour) 
+            # Handle timezone-aware datetime comparison
+            cutoff_time = datetime.utcnow()
+            if existing_analysis and existing_analysis.created_at:
+                # Ensure both datetimes are timezone-aware for comparison
+                existing_time = existing_analysis.created_at
+                if existing_time.tzinfo is None:
+                    existing_time = pytz.UTC.localize(existing_time)
+                
+                current_time = cutoff_time
+                if current_time.tzinfo is None:
+                    current_time = pytz.UTC.localize(current_time)
+                
+                time_diff = current_time - existing_time
+                is_recent = time_diff < timedelta(hours=1)
+            else:
+                is_recent = False
+            
+            if (existing_analysis and not force_refresh and is_recent):
                 analysis_response = StockAnalysisResponse(
                     symbol=existing_analysis.stock_symbol,
                     fundamental_score=existing_analysis.fundamental_score,
@@ -146,24 +167,51 @@ class AnalysisService:
     
     @staticmethod
     async def _fundamental_analysis(ticker) -> Dict[str, Any]:
-        """Perform fundamental analysis"""
+        """Perform fundamental analysis using FMP for comprehensive data"""
         try:
-            info = ticker.info
-            financials = ticker.financials
-            balance_sheet = ticker.balance_sheet
+            # Get symbol from ticker
+            symbol = ticker.ticker
             
-            analysis = {
-                "pe_ratio": info.get("trailingPE", 0),
-                "pb_ratio": info.get("priceToBook", 0),
-                "debt_to_equity": info.get("debtToEquity", 0),
-                "roe": info.get("returnOnEquity", 0),
-                "profit_margin": info.get("profitMargins", 0),
-                "revenue_growth": info.get("revenueGrowth", 0),
-                "eps_growth": info.get("earningsGrowth", 0),
-                "dividend_yield": info.get("dividendYield", 0),
-                "market_cap": info.get("marketCap", 0),
-                "enterprise_value": info.get("enterpriseValue", 0)
-            }
+            # Initialize FMP service
+            fmp_service = FMPService()
+            
+            # Try to get comprehensive fundamentals from FMP first
+            fmp_fundamentals = await fmp_service.get_company_fundamentals(symbol)
+            
+            if fmp_fundamentals:
+                logger.info(f"✅ Using FMP fundamentals for {symbol}")
+                analysis = {
+                    "pe_ratio": fmp_fundamentals.get("pe_ratio", 0) or 0,
+                    "pb_ratio": fmp_fundamentals.get("price_to_book", 0) or 0,
+                    "roe": fmp_fundamentals.get("roe", 0) or 0,
+                    "debt_to_equity": fmp_fundamentals.get("debt_to_equity", 0) or 0,
+                    "current_ratio": fmp_fundamentals.get("current_ratio", 0) or 0,
+                    "revenue_growth": fmp_fundamentals.get("revenue_growth", 0) or 0,
+                    "profit_margin": fmp_fundamentals.get("profit_margin", 0) or 0,
+                    "market_cap": fmp_fundamentals.get("market_cap", 0) or 0,
+                    "beta": fmp_fundamentals.get("beta", 1.0) or 1.0,
+                    "dividend_yield": fmp_fundamentals.get("dividend_yield", 0) or 0,
+                    "sector": fmp_fundamentals.get("sector", ""),
+                    "industry": fmp_fundamentals.get("industry", ""),
+                }
+            else:
+                # Fallback to yfinance if FMP unavailable
+                logger.info(f"Falling back to yfinance fundamentals for {symbol}")
+                info = ticker.info
+                
+                analysis = {
+                    "pe_ratio": info.get("trailingPE", 0) or 0,
+                    "pb_ratio": info.get("priceToBook", 0) or 0,
+                    "roe": info.get("returnOnEquity", 0) or 0,
+                    "debt_to_equity": info.get("debtToEquity", 0) or 0,
+                    "current_ratio": info.get("currentRatio", 0) or 0,
+                    "revenue_growth": info.get("revenueGrowth", 0) or 0,
+                    "profit_margin": info.get("profitMargins", 0) or 0,
+                    "eps_growth": info.get("earningsGrowth", 0) or 0,
+                    "dividend_yield": info.get("dividendYield", 0) or 0,
+                    "market_cap": info.get("marketCap", 0) or 0,
+                    "enterprise_value": info.get("enterpriseValue", 0) or 0,
+                }
             
             # Calculate fundamental score (0-100)
             score = AnalysisService._calculate_fundamental_score(analysis)

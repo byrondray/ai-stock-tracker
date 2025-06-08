@@ -13,17 +13,19 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
 import logging
 
+from app.core.config import settings
+
 logger = logging.getLogger(__name__)
 
 class FMPService:
     """Service for Financial Modeling Prep API - optimized for ML data collection"""
     
     def __init__(self):
-        self.api_key = os.getenv('FMP_API_KEY')
+        self.api_key = settings.FMP_API_KEY
         self.base_url = 'https://financialmodelingprep.com/api/v3'
         
         if not self.api_key:
-            logger.warning("FMP_API_KEY not found in environment. ML services may be limited.")
+            logger.warning("FMP_API_KEY not found in settings. ML services may be limited.")
     
     async def get_historical_data_for_ml(
         self, 
