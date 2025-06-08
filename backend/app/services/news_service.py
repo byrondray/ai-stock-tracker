@@ -75,21 +75,44 @@ class NewsService:
             
             # Remove duplicates and sort by date
             unique_news = NewsService._deduplicate_news(all_news)
-            sorted_news = sorted(unique_news, key=lambda x: x.published_at, reverse=True)
+            
+            # Normalize datetime objects for sorting (handle timezone awareness)
+            def get_sortable_datetime(news_item):
+                try:
+                    dt = news_item.published_at
+                    if dt.tzinfo is None:
+                        import pytz
+                        dt = pytz.UTC.localize(dt)
+                    return dt
+                except Exception:
+                    # Fallback to current time if there's an issue
+                    import pytz
+                    return pytz.UTC.localize(datetime.utcnow())
+            
+            sorted_news = sorted(unique_news, key=get_sortable_datetime, reverse=True)
             
             # Limit results
             limited_news = sorted_news[:limit]
             
             # Cache the results
-            import json
-            news_data = [news.model_dump() for news in limited_news]
-            # Convert datetime objects to strings for JSON serialization
-            serializable_data = []
-            for item in news_data:
-                if isinstance(item.get('published_at'), datetime):
-                    item['published_at'] = item['published_at'].isoformat()
-                serializable_data.append(item)
-            await redis_client.setex(cache_key, 1800, json.dumps(serializable_data))  # Cache for 30 minutes
+            if limited_news:
+                import json
+                news_data = []
+                for news in limited_news:
+                    try:
+                        item_dict = news.model_dump()
+                        # Convert datetime objects to strings for JSON serialization
+                        if isinstance(item_dict.get('published_at'), datetime):
+                            item_dict['published_at'] = item_dict['published_at'].isoformat()
+                        elif hasattr(item_dict.get('published_at'), 'isoformat'):
+                            item_dict['published_at'] = item_dict['published_at'].isoformat()
+                        news_data.append(item_dict)
+                    except Exception as e:
+                        logger.error(f"Error serializing news item: {e}")
+                        continue
+                
+                if news_data:
+                    await redis_client.setex(cache_key, 1800, json.dumps(news_data))  # Cache for 30 minutes
             
             return limited_news
             
@@ -149,21 +172,44 @@ class NewsService:
             
             # Remove duplicates and sort
             unique_news = NewsService._deduplicate_news(all_news)
-            sorted_news = sorted(unique_news, key=lambda x: x.published_at, reverse=True)
+            
+            # Normalize datetime objects for sorting (handle timezone awareness)
+            def get_sortable_datetime(news_item):
+                try:
+                    dt = news_item.published_at
+                    if dt.tzinfo is None:
+                        import pytz
+                        dt = pytz.UTC.localize(dt)
+                    return dt
+                except Exception:
+                    # Fallback to current time if there's an issue
+                    import pytz
+                    return pytz.UTC.localize(datetime.utcnow())
+            
+            sorted_news = sorted(unique_news, key=get_sortable_datetime, reverse=True)
             
             # Limit results
             limited_news = sorted_news[:limit]
             
             # Cache the results
-            import json
-            news_data = [news.model_dump() for news in limited_news]
-            # Convert datetime objects to strings for JSON serialization
-            serializable_data = []
-            for item in news_data:
-                if isinstance(item.get('published_at'), datetime):
-                    item['published_at'] = item['published_at'].isoformat()
-                serializable_data.append(item)
-            await redis_client.setex(cache_key, 1800, json.dumps(serializable_data))
+            if limited_news:
+                import json
+                news_data = []
+                for news in limited_news:
+                    try:
+                        item_dict = news.model_dump()
+                        # Convert datetime objects to strings for JSON serialization
+                        if isinstance(item_dict.get('published_at'), datetime):
+                            item_dict['published_at'] = item_dict['published_at'].isoformat()
+                        elif hasattr(item_dict.get('published_at'), 'isoformat'):
+                            item_dict['published_at'] = item_dict['published_at'].isoformat()
+                        news_data.append(item_dict)
+                    except Exception as e:
+                        logger.error(f"Error serializing news item: {e}")
+                        continue
+                
+                if news_data:
+                    await redis_client.setex(cache_key, 1800, json.dumps(news_data))
             
             return limited_news
             
@@ -181,6 +227,10 @@ class NewsService:
             news_items = []
             for article in news:
                 try:
+                    # Get both sentiment label and score
+                    text_for_sentiment = (article.get("title") or "") + " " + (article.get("summary") or "")
+                    sentiment_label, sentiment_score = await NewsService._analyze_sentiment_with_score(text_for_sentiment)
+                    
                     news_item = NewsItem(
                         title=article.get("title", ""),
                         summary=article.get("summary", ""),
@@ -188,10 +238,9 @@ class NewsService:
                         source="Yahoo Finance",
                         published_at=datetime.fromtimestamp(
                             article.get("providerPublishTime", 0)
-                        ),
-                        sentiment=await NewsService._analyze_sentiment(
-                            (article.get("title") or "") + " " + (article.get("summary") or "")
-                        ),
+                        ).replace(tzinfo=None),  # Ensure timezone-naive for consistency
+                        sentiment=sentiment_label,
+                        sentiment_score=sentiment_score,
                         relevance_score=0.8,  # High relevance for stock-specific news
                         tags=[symbol.upper(), "stock"]
                     )
@@ -229,6 +278,18 @@ class NewsService:
                         news_items = []
                         for article in data.get("feed", []):
                             try:
+                                # Parse Alpha Vantage sentiment or use ML analysis
+                                av_sentiment = NewsService._parse_alpha_vantage_sentiment(article)
+                                if av_sentiment == "neutral":
+                                    # Use ML analysis for better sentiment
+                                    text_for_sentiment = (article.get("title") or "") + " " + (article.get("summary") or "")
+                                    sentiment_label, sentiment_score = await NewsService._analyze_sentiment_with_score(text_for_sentiment)
+                                else:
+                                    sentiment_label = av_sentiment
+                                    # Convert to score
+                                    score_map = {"positive": 0.5, "negative": -0.5, "neutral": 0.0}
+                                    sentiment_score = score_map.get(av_sentiment, 0.0)
+                                
                                 news_item = NewsItem(
                                     title=article.get("title", ""),
                                     summary=article.get("summary", ""),
@@ -238,7 +299,8 @@ class NewsService:
                                         article.get("time_published", ""), 
                                         "%Y%m%dT%H%M%S"
                                     ),
-                                    sentiment=NewsService._parse_alpha_vantage_sentiment(article),
+                                    sentiment=sentiment_label,
+                                    sentiment_score=sentiment_score,
                                     relevance_score=float(article.get("relevance_score", 0.5)),
                                     tags=[symbol.upper(), "stock", "alpha_vantage"]
                                 )
@@ -288,17 +350,20 @@ class NewsService:
                                     article.get("publishedAt", "").replace("Z", "+00:00")
                                 )
                                 
+                                # Get both sentiment label and score
+                                text_for_sentiment = (article.get("title") or "") + " " + (article.get("description") or "")
+                                sentiment_label, sentiment_score = await NewsService._analyze_sentiment_with_score(text_for_sentiment)
+                                
                                 news_item = NewsItem(
                                     title=article.get("title", ""),
                                     summary=article.get("description", ""),
                                     url=article.get("url", ""),
                                     source=article.get("source", {}).get("name", "NewsAPI"),
                                     published_at=published_at,
-                                    sentiment=await NewsService._analyze_sentiment(
-                                        (article.get("title") or "") + " " + (article.get("description") or "")
-                                    ),
+                                    sentiment=sentiment_label,
+                                    sentiment_score=sentiment_score,
                                     relevance_score=NewsService._calculate_relevance(
-                                        (article.get("title") or "") + " " + (article.get("description") or ""),
+                                        text_for_sentiment,
                                         [symbol, company_name]
                                     ),
                                     tags=[symbol.upper(), "stock", "newsapi"]
@@ -345,15 +410,18 @@ class NewsService:
                                     article.get("publishedAt", "").replace("Z", "+00:00")
                                 )
                                 
+                                # Get both sentiment label and score
+                                text_for_sentiment = (article.get("title") or "") + " " + (article.get("description") or "")
+                                sentiment_label, sentiment_score = await NewsService._analyze_sentiment_with_score(text_for_sentiment)
+                                
                                 news_item = NewsItem(
                                     title=article.get("title", ""),
                                     summary=article.get("description", ""),
                                     url=article.get("url", ""),
                                     source=article.get("source", {}).get("name", "NewsAPI"),
                                     published_at=published_at,
-                                    sentiment=await NewsService._analyze_sentiment(
-                                        (article.get("title") or "") + " " + (article.get("description") or "")
-                                    ),
+                                    sentiment=sentiment_label,
+                                    sentiment_score=sentiment_score,
                                     relevance_score=0.7,
                                     tags=["market", "finance", search_term.replace(" ", "_")]
                                 )
@@ -384,6 +452,7 @@ class NewsService:
                     source="AI Stock Analyzer",
                     published_at=datetime.utcnow(),
                     sentiment="neutral",
+                    sentiment_score=0.0,
                     relevance_score=0.5,
                     tags=["market", "system"]
                 )
@@ -420,6 +489,33 @@ class NewsService:
             logger.error(f"Error analyzing sentiment with ML model: {str(e)}")
             # Fallback to simple keyword-based analysis
             return NewsService._analyze_sentiment_simple(text)
+    
+    @staticmethod
+    async def _analyze_sentiment_with_score(text: str) -> tuple[str, float]:
+        """Enhanced sentiment analysis returning both label and score"""
+        try:
+            if not text:
+                return "neutral", 0.0
+            
+            # Get sentiment analyzer
+            analyzer = NewsService.get_sentiment_analyzer()
+            
+            # Analyze sentiment using our enhanced analyzer
+            sentiment_result = await analyzer.analyze_single_text(text)
+            
+            # Extract both label and score
+            sentiment_score = sentiment_result.get("sentiment_score", 0.0)
+            sentiment_label = sentiment_result.get("sentiment_label", "neutral")
+            
+            return sentiment_label, float(sentiment_score)
+                
+        except Exception as e:
+            logger.error(f"Error analyzing sentiment with ML model: {str(e)}")
+            # Fallback to simple keyword-based analysis
+            sentiment_label = NewsService._analyze_sentiment_simple(text)
+            # Convert label to approximate score
+            score_map = {"positive": 0.5, "negative": -0.5, "neutral": 0.0}
+            return sentiment_label, score_map.get(sentiment_label, 0.0)
     
     @staticmethod
     def _analyze_sentiment_simple(text: str) -> str:
@@ -537,7 +633,23 @@ class NewsService:
             
             # Filter by date
             cutoff_date = datetime.utcnow() - timedelta(days=days_back)
-            recent_news = [n for n in news if n.published_at >= cutoff_date]
+            # Make cutoff_date timezone-aware to match news timestamps
+            if cutoff_date.tzinfo is None:
+                import pytz
+                cutoff_date = pytz.UTC.localize(cutoff_date)
+            
+            recent_news = []
+            for n in news:
+                try:
+                    news_date = n.published_at
+                    if news_date.tzinfo is None:
+                        import pytz
+                        news_date = pytz.UTC.localize(news_date)
+                    if news_date >= cutoff_date:
+                        recent_news.append(n)
+                except Exception as e:
+                    logger.error(f"Error comparing dates: {e}")
+                    recent_news.append(n)  # Include if we can't compare
             
             # Calculate sentiment distribution
             sentiment_counts = {"positive": 0, "negative": 0, "neutral": 0}

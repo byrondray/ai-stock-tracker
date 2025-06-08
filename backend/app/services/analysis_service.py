@@ -9,10 +9,12 @@ from datetime import datetime, timedelta
 import yfinance as yf
 import pandas as pd
 import numpy as np
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
 from sqlalchemy import select
 import asyncio
 import logging
+import json
+from .fmp_service import FMPService
 
 from ..models import Stock, StockAnalysis
 from ..schemas import StockAnalysisCreate, StockAnalysisResponse
@@ -26,7 +28,7 @@ class AnalysisService:
     
     @staticmethod
     async def get_stock_analysis(
-        db: AsyncSession,
+        db: Session,
         symbol: str,
         force_refresh: bool = False
     ) -> Optional[StockAnalysisResponse]:
@@ -40,17 +42,24 @@ class AnalysisService:
                     return StockAnalysisResponse.model_validate_json(cached_analysis)
             
             # Get existing analysis from database
-            result = await db.execute(
-                select(StockAnalysis)
-                .where(StockAnalysis.symbol == symbol)
-                .order_by(StockAnalysis.created_at.desc())
-            )
-            existing_analysis = result.scalars().first()
+            existing_analysis = db.query(StockAnalysis)\
+                .filter(StockAnalysis.stock_symbol == symbol)\
+                .order_by(StockAnalysis.created_at.desc())\
+                .first()
             
             # Check if we need to refresh (older than 1 hour)
             if (existing_analysis and not force_refresh and 
                 existing_analysis.created_at > datetime.utcnow() - timedelta(hours=1)):
-                analysis_response = StockAnalysisResponse.model_validate(existing_analysis)
+                analysis_response = StockAnalysisResponse(
+                    symbol=existing_analysis.stock_symbol,
+                    fundamental_score=existing_analysis.fundamental_score,
+                    technical_score=existing_analysis.technical_score,
+                    sentiment_score=existing_analysis.sentiment_score,
+                    overall_rating=existing_analysis.overall_rating,
+                    risk_score=existing_analysis.risk_score or 50,
+                    analysis_date=existing_analysis.analysis_date,
+                    analyst_consensus=existing_analysis.analyst_consensus
+                )
                 await redis_client.setex(cache_key, 3600, analysis_response.model_dump_json())
                 return analysis_response
             
@@ -61,15 +70,24 @@ class AnalysisService:
             
             # Save to database
             analysis = StockAnalysis(
-                symbol=symbol,
+                stock_symbol=symbol,
                 **analysis_data
             )
             db.add(analysis)
-            await db.commit()
-            await db.refresh(analysis)
+            db.commit()
+            db.refresh(analysis)
             
             # Cache the result
-            analysis_response = StockAnalysisResponse.model_validate(analysis)
+            analysis_response = StockAnalysisResponse(
+                symbol=analysis.stock_symbol,
+                fundamental_score=analysis.fundamental_score,
+                technical_score=analysis.technical_score,
+                sentiment_score=analysis.sentiment_score,
+                overall_rating=analysis.overall_rating,
+                risk_score=analysis.risk_score or 50,
+                analysis_date=analysis.analysis_date,
+                analyst_consensus=analysis.analyst_consensus
+            )
             await redis_client.setex(cache_key, 3600, analysis_response.model_dump_json())
             
             return analysis_response
@@ -116,11 +134,9 @@ class AnalysisService:
                 "fundamental_score": fundamental.get("score", 0),
                 "technical_score": technical.get("score", 0),
                 "sentiment_score": (sentiment.get("score", 50) - 50) / 50,  # Convert 0-100 to -1 to 1
-                "overall_score": overall_score,
-                "recommendation": recommendation,
-                "fundamental_data": fundamental,
-                "technical_data": technical,
-                "sentiment_data": sentiment,
+                "overall_rating": recommendation,
+                "risk_score": max(0, 100 - overall_score),  # Convert overall score to risk score (inverse)
+                "key_metrics": json.dumps({"fundamental": fundamental, "technical": technical, "sentiment": sentiment}),
                 "analysis_date": datetime.utcnow()
             }
             
@@ -366,12 +382,12 @@ class AnalysisService:
     def _get_recommendation(score: float) -> str:
         """Get recommendation based on overall score"""
         if score >= 75:
-            return "STRONG_BUY"
+            return "strong_buy"
         elif score >= 60:
-            return "BUY"
+            return "buy"
         elif score >= 40:
-            return "HOLD"
+            return "hold"
         elif score >= 25:
-            return "SELL"
+            return "sell"
         else:
-            return "STRONG_SELL"
+            return "strong_sell"

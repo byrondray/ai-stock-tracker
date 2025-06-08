@@ -135,15 +135,11 @@ async def get_stock_analysis(
         return analysis
     except Exception as e:
         logger.error(f"Analysis error for {symbol}: {str(e)}")
-        # Return default analysis on any error instead of 500
-        return StockAnalysisResponse(
-            symbol=symbol.upper(),
-            fundamental_score=0.45,  # Slightly lower due to error
-            technical_score=0.5,
-            sentiment_score=0.5,
-            overall_rating="hold",
-            risk_score=0.55,  # Slightly higher risk due to uncertainty
-            analysis_date=datetime.utcnow().isoformat()
+        # Return cached or partial analysis on error
+        logger.warning(f"Returning minimal analysis for {symbol} due to error")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Analysis service temporarily unavailable for {symbol}"
         )
 
 

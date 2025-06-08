@@ -11,13 +11,14 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
+
 @router.get("/")
 async def get_general_news(
     limit: int = Query(default=50, le=100, description="Number of news items"),
 ):
     """Get general market news."""
     try:
-        news_items = await NewsService.get_market_news(limit=limit)
+        news_items = await NewsService.get_market_news(limit=limit, force_refresh=True)
         return {
             "news_items": [item.model_dump() for item in news_items],
             "total_count": len(news_items),
@@ -25,23 +26,12 @@ async def get_general_news(
         }
     except Exception as e:
         logger.error(f"Error fetching general news: {str(e)}")
-        # Return fallback news
+        # Return empty news instead of fake content
         return {
-            "news_items": [
-                {
-                    "title": "Market Analysis Available",
-                    "summary": "Get the latest market insights and stock analysis.",
-                    "url": "",
-                    "source": "AI Stock Analyzer",
-                    "published_at": datetime.utcnow().isoformat(),
-                    "sentiment": "neutral",
-                    "sentiment_score": 0.0,
-                    "relevance_score": 0.5,
-                    "tags": ["market", "analysis"]
-                }
-            ],
-            "total_count": 1,
-            "overall_sentiment": 0.0
+            "news_items": [],
+            "total_count": 0,
+            "overall_sentiment": 0.0,
+            "error": "News service temporarily unavailable"
         }
 
 
@@ -61,35 +51,13 @@ async def get_stock_news(
         }
     except Exception as e:
         logger.error(f"Error fetching stock news for {symbol}: {str(e)}")
-        # Return fallback news for this stock
+        # Return empty news instead of fake content
         return {
             "symbol": symbol.upper(),
-            "news_items": [
-                {
-                    "title": f"{symbol.upper()} Stock Analysis",
-                    "summary": f"Latest analysis and insights for {symbol.upper()} stock performance.",
-                    "url": "",
-                    "source": "AI Stock Analyzer",
-                    "published_at": datetime.utcnow().isoformat(),
-                    "sentiment": "neutral",
-                    "sentiment_score": 0.0,
-                    "relevance_score": 0.8,
-                    "tags": [symbol.upper(), "stock", "analysis"]
-                },
-                {
-                    "title": f"{symbol.upper()} Market Update",
-                    "summary": f"Recent market movements and trading activity for {symbol.upper()}.",
-                    "url": "",
-                    "source": "Market Data",
-                    "published_at": (datetime.utcnow() - timedelta(hours=2)).isoformat(),
-                    "sentiment": "positive",
-                    "sentiment_score": 0.3,
-                    "relevance_score": 0.7,
-                    "tags": [symbol.upper(), "market", "trading"]
-                }
-            ],
-            "total_count": 2,
-            "overall_sentiment": 0.15
+            "news_items": [],
+            "total_count": 0,
+            "overall_sentiment": 0.0,
+            "error": "News service temporarily unavailable"
         }
 
 

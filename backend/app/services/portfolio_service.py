@@ -1,10 +1,14 @@
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
+import numpy as np
+import logging
 
 from app.models import Portfolio as PortfolioModel, Stock
 from app.schemas import Portfolio, PortfolioItem, PortfolioItemCreate, PortfolioItemUpdate
 from app.services.stock_service import StockService
+
+logger = logging.getLogger(__name__)
 
 
 class PortfolioService:
@@ -198,9 +202,76 @@ class PortfolioService:
         if len(sectors) < 3:
             recommendations.append("Consider diversifying across more sectors")
         
+        # Calculate proper risk score based on portfolio metrics
+        risk_score = await self._calculate_portfolio_risk(portfolio, sector_allocation)
+        
         return {
             "current_allocation": sector_allocation,
-            "risk_score": min(100, max(0, 50 + (len(sectors) - 5) * 10)),  # Simple risk calculation
+            "risk_score": risk_score,
             "recommendations": recommendations,
             "rebalancing_suggestions": []  # Would contain specific buy/sell suggestions
         }
+    
+    async def _calculate_portfolio_risk(self, portfolio: Portfolio, sector_allocation: dict) -> float:
+        """Calculate portfolio risk score based on real metrics"""
+        try:
+            risk_factors = []
+            
+            # Diversification risk (0-40 points)
+            num_sectors = len(sector_allocation)
+            if num_sectors <= 1:
+                diversification_risk = 40
+            elif num_sectors == 2:
+                diversification_risk = 30
+            elif num_sectors == 3:
+                diversification_risk = 20
+            elif num_sectors == 4:
+                diversification_risk = 10
+            else:
+                diversification_risk = 0
+            risk_factors.append(diversification_risk)
+            
+            # Concentration risk (0-30 points)
+            max_sector_exposure = max(sector_allocation.values()) if sector_allocation else 100
+            if max_sector_exposure > 50:
+                concentration_risk = 30
+            elif max_sector_exposure > 40:
+                concentration_risk = 20
+            elif max_sector_exposure > 30:
+                concentration_risk = 10
+            else:
+                concentration_risk = 0
+            risk_factors.append(concentration_risk)
+            
+            # Portfolio size risk (0-20 points)
+            num_holdings = len(portfolio.items)
+            if num_holdings <= 2:
+                size_risk = 20
+            elif num_holdings <= 5:
+                size_risk = 15
+            elif num_holdings <= 10:
+                size_risk = 5
+            else:
+                size_risk = 0
+            risk_factors.append(size_risk)
+            
+            # Volatility risk (0-10 points) - based on return percentage spread
+            if portfolio.items:
+                returns = [item.return_percentage for item in portfolio.items]
+                volatility = np.std(returns) if len(returns) > 1 else 0
+                if volatility > 50:
+                    volatility_risk = 10
+                elif volatility > 30:
+                    volatility_risk = 7
+                elif volatility > 15:
+                    volatility_risk = 3
+                else:
+                    volatility_risk = 0
+                risk_factors.append(volatility_risk)
+            
+            total_risk = sum(risk_factors)
+            return min(100, max(0, total_risk))
+            
+        except Exception as e:
+            logger.error(f"Error calculating portfolio risk: {str(e)}")
+            return 50  # Default moderate risk

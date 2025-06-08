@@ -147,23 +147,9 @@ export const StockDetailScreen: React.FC = () => {
   const [addToPortfolioMutation, { isLoading: addingToPortfolio }] =
     useAddToPortfolioMutation();
 
-  const displayAnalysisData = analysisData || {
-    symbol: symbol,
-    overall_rating: 'hold' as const,
-    fundamental_score: null,
-    technical_score: null,
-    sentiment_score: null,
-    risk_score: null,
-    analysis_date: new Date().toISOString(),
-  };
-
-  const displayPredictionData = predictionData || {
-    symbol: symbol,
-    model_type: 'LSTM',
-    model_version: '2.1',
-    created_at: new Date().toISOString(),
-    predictions: [],
-  };
+  // Use real data when available, show nothing when unavailable
+  const displayAnalysisData = analysisData;
+  const displayPredictionData = predictionData;
 
   // Get real chart data from historical prices
   const getChartData = (timeframe: string) => {
@@ -984,103 +970,126 @@ export const StockDetailScreen: React.FC = () => {
                 ]}
               >
                 {' '}
-                (Rate limited - showing default analysis)
+                (API service unavailable)
               </Text>
             )}
           </Text>
-          <View style={styles.analysisGrid}>
-            <View style={styles.analysisItem}>
+          {analysisData ? (
+            <View style={styles.analysisGrid}>
+              <View style={styles.analysisItem}>
+                <Text
+                  style={[
+                    styles.analysisLabel,
+                    { color: theme.colors.textSecondary },
+                  ]}
+                >
+                  Overall Rating
+                </Text>
+                <Text
+                  style={[
+                    styles.analysisValue,
+                    {
+                      color: getRatingColor(
+                        displayAnalysisData?.overall_rating || 'hold'
+                      ),
+                    },
+                  ]}
+                >
+                  {formatRating(displayAnalysisData?.overall_rating || 'hold')}
+                </Text>
+              </View>
+              <View style={styles.analysisItem}>
+                <Text
+                  style={[
+                    styles.analysisLabel,
+                    { color: theme.colors.textSecondary },
+                  ]}
+                >
+                  Fundamental
+                </Text>
+                <Text
+                  style={[styles.analysisValue, { color: theme.colors.text }]}
+                >
+                  {displayAnalysisData?.fundamental_score ?? '--'}/100
+                </Text>
+              </View>
+              <View style={styles.analysisItem}>
+                <Text
+                  style={[
+                    styles.analysisLabel,
+                    { color: theme.colors.textSecondary },
+                  ]}
+                >
+                  Technical
+                </Text>
+                <Text
+                  style={[styles.analysisValue, { color: theme.colors.text }]}
+                >
+                  {displayAnalysisData?.technical_score ?? '--'}/100
+                </Text>
+              </View>
+              <View style={styles.analysisItem}>
+                <Text
+                  style={[
+                    styles.analysisLabel,
+                    { color: theme.colors.textSecondary },
+                  ]}
+                >
+                  Sentiment
+                </Text>
+                <Text
+                  style={[styles.analysisValue, { color: theme.colors.text }]}
+                >
+                  {displayAnalysisData?.sentiment_score
+                    ? Math.round(displayAnalysisData.sentiment_score * 100)
+                    : '--'}
+                  /100
+                </Text>
+              </View>
+              <View style={styles.analysisItem}>
+                <Text
+                  style={[
+                    styles.analysisLabel,
+                    { color: theme.colors.textSecondary },
+                  ]}
+                >
+                  Risk Score
+                </Text>
+                <Text
+                  style={[
+                    styles.analysisValue,
+                    {
+                      color:
+                        (displayAnalysisData?.risk_score ?? 0) > 70
+                          ? theme.colors.error
+                          : (displayAnalysisData?.risk_score ?? 0) > 40
+                          ? theme.colors.warning
+                          : theme.colors.success,
+                    },
+                  ]}
+                >
+                  {displayAnalysisData?.risk_score ?? '--'}/100
+                </Text>
+              </View>
+            </View>
+          ) : (
+            <View style={styles.rateLimitNotice}>
+              <Text
+                style={[styles.rateLimitTitle, { color: theme.colors.warning }]}
+              >
+                📊 Analysis Unavailable
+              </Text>
               <Text
                 style={[
-                  styles.analysisLabel,
+                  styles.rateLimitText,
                   { color: theme.colors.textSecondary },
                 ]}
               >
-                Overall Rating
-              </Text>
-              <Text
-                style={[
-                  styles.analysisValue,
-                  { color: getRatingColor(displayAnalysisData.overall_rating) },
-                ]}
-              >
-                {formatRating(displayAnalysisData.overall_rating)}
+                AI analysis service is temporarily unavailable. Stock price data
+                and charts are still working.
               </Text>
             </View>
-            <View style={styles.analysisItem}>
-              <Text
-                style={[
-                  styles.analysisLabel,
-                  { color: theme.colors.textSecondary },
-                ]}
-              >
-                Fundamental
-              </Text>
-              <Text
-                style={[styles.analysisValue, { color: theme.colors.text }]}
-              >
-                {displayAnalysisData.fundamental_score ?? '--'}/100
-              </Text>
-            </View>
-            <View style={styles.analysisItem}>
-              <Text
-                style={[
-                  styles.analysisLabel,
-                  { color: theme.colors.textSecondary },
-                ]}
-              >
-                Technical
-              </Text>
-              <Text
-                style={[styles.analysisValue, { color: theme.colors.text }]}
-              >
-                {displayAnalysisData.technical_score ?? '--'}/100
-              </Text>
-            </View>
-            <View style={styles.analysisItem}>
-              <Text
-                style={[
-                  styles.analysisLabel,
-                  { color: theme.colors.textSecondary },
-                ]}
-              >
-                Sentiment
-              </Text>
-              <Text
-                style={[styles.analysisValue, { color: theme.colors.text }]}
-              >
-                {displayAnalysisData.sentiment_score
-                  ? Math.round(displayAnalysisData.sentiment_score * 100)
-                  : '--'}
-                /100
-              </Text>
-            </View>
-            <View style={styles.analysisItem}>
-              <Text
-                style={[
-                  styles.analysisLabel,
-                  { color: theme.colors.textSecondary },
-                ]}
-              >
-                Risk Score
-              </Text>
-              <Text
-                style={[
-                  styles.analysisValue,
-                  {
-                    color:
-                      (displayAnalysisData.risk_score ?? 0) > 70
-                        ? theme.colors.error
-                        : (displayAnalysisData.risk_score ?? 0) > 40
-                        ? theme.colors.warning
-                        : theme.colors.success,
-                  },
-                ]}
-              >
-                {displayAnalysisData.risk_score ?? '--'}/100
-              </Text>
-            </View>
-          </View>
+          )}
         </Card>
 
         {/* AI Predictions */}
@@ -1112,88 +1121,100 @@ export const StockDetailScreen: React.FC = () => {
                 ]}
               >
                 {' '}
-                (Rate limited - basic analysis shown)
+                (API service unavailable)
               </Text>
             )}
           </Text>
-          <Text
-            style={[
-              styles.predictionSubtitle,
-              { color: theme.colors.textSecondary },
-            ]}
-          >
-            Model: {displayPredictionData.model_type} v
-            {displayPredictionData.model_version}
-          </Text>
-          <View style={styles.predictionList}>
-            {displayPredictionData.predictions.length > 0 ? (
-              displayPredictionData.predictions
-                .slice(0, 7)
-                .map((prediction, index) => (
-                  <View key={index} style={styles.predictionItem}>
+          {displayPredictionData ? (
+            <>
+              <Text
+                style={[
+                  styles.predictionSubtitle,
+                  { color: theme.colors.textSecondary },
+                ]}
+              >
+                Model: {displayPredictionData.model_type} v
+                {displayPredictionData.model_version}
+              </Text>
+              <View style={styles.predictionList}>
+                {displayPredictionData.predictions.length > 0 ? (
+                  displayPredictionData.predictions
+                    .slice(0, 7)
+                    .map((prediction, index) => (
+                      <View key={index} style={styles.predictionItem}>
+                        <Text
+                          style={[
+                            styles.predictionDate,
+                            { color: theme.colors.textSecondary },
+                          ]}
+                        >
+                          {new Date(prediction.date).toLocaleDateString()}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.predictionPrice,
+                            { color: theme.colors.text },
+                          ]}
+                        >
+                          ${prediction.predicted_price.toFixed(2)}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.predictionConfidence,
+                            {
+                              color:
+                                prediction.confidence > 0.8
+                                  ? theme.colors.success
+                                  : prediction.confidence > 0.6
+                                  ? theme.colors.warning
+                                  : theme.colors.error,
+                            },
+                          ]}
+                        >
+                          {(prediction.confidence * 100).toFixed(1)}%
+                        </Text>
+                      </View>
+                    ))
+                ) : (
+                  <View style={styles.rateLimitNotice}>
                     <Text
                       style={[
-                        styles.predictionDate,
+                        styles.rateLimitTitle,
+                        { color: theme.colors.warning },
+                      ]}
+                    >
+                      📊 No Predictions Available
+                    </Text>
+                    <Text
+                      style={[
+                        styles.rateLimitText,
                         { color: theme.colors.textSecondary },
                       ]}
                     >
-                      {new Date(prediction.date).toLocaleDateString()}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.predictionPrice,
-                        { color: theme.colors.text },
-                      ]}
-                    >
-                      ${prediction.predicted_price.toFixed(2)}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.predictionConfidence,
-                        {
-                          color:
-                            prediction.confidence > 0.8
-                              ? theme.colors.success
-                              : prediction.confidence > 0.6
-                              ? theme.colors.warning
-                              : theme.colors.error,
-                        },
-                      ]}
-                    >
-                      {(prediction.confidence * 100).toFixed(1)}%
+                      ML prediction service returned no data for this stock.
                     </Text>
                   </View>
-                ))
-            ) : (
-              <View style={styles.rateLimitNotice}>
-                <Text
-                  style={[
-                    styles.rateLimitTitle,
-                    { color: theme.colors.warning },
-                  ]}
-                >
-                  🔄 Rate Limited
-                </Text>
-                <Text
-                  style={[
-                    styles.rateLimitText,
-                    { color: theme.colors.textSecondary },
-                  ]}
-                >
-                  Free API tier reached its limit. Upgrade to premium for
-                  unlimited predictions, or try again later.
-                </Text>
-                <Text
-                  style={[
-                    styles.rateLimitHint,
-                    { color: theme.colors.textSecondary },
-                  ]}
-                >
-                  Basic analysis and real-time prices are still available.
-                </Text>
+                )}
               </View>
-            )}
-          </View>
+            </>
+          ) : (
+            <View style={styles.rateLimitNotice}>
+              <Text
+                style={[styles.rateLimitTitle, { color: theme.colors.warning }]}
+              >
+                🤖 Predictions Unavailable
+              </Text>
+              <Text
+                style={[
+                  styles.rateLimitText,
+                  { color: theme.colors.textSecondary },
+                ]}
+              >
+                AI prediction service is temporarily unavailable. Stock price
+                data and charts are still working.
+              </Text>
+            </View>
+          )}
         </Card>
 
         {/* Stock Stats */}

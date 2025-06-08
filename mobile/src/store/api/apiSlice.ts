@@ -217,10 +217,11 @@ export interface NewsItem {
 }
 
 export interface NewsResponse {
-  symbol: string;
+  symbol?: string;
   news_items: NewsItem[];
   overall_sentiment?: number;
   total_count: number;
+  error?: string;
 }
 
 export interface PredictionPoint {
@@ -463,7 +464,7 @@ export const apiSlice = createApi({
       ],
     }),
     getGeneralNews: builder.query<NewsResponse, { limit?: number }>({
-      query: ({ limit = 20 }) => `/news?limit=${limit}`,
+      query: ({ limit = 20 }) => `/news/?limit=${limit}`,
       providesTags: ['News'],
     }),
 
