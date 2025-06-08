@@ -21,9 +21,10 @@ import {
   useGetPortfolioQuery,
   useGetWatchlistQuery,
   useGetGeneralNewsQuery,
+  useGetNotificationsQuery,
 } from '../../store/api/apiSlice';
 import { useTheme } from '../../hooks/useTheme';
-import { performLogout } from '../../utils/authUtils';
+
 import { LoadingSpinner, SectionLoadingCard } from '../../components/ui';
 import type { MainTabParamList } from '../../navigation/MainTabNavigator';
 import type { RootStackParamList } from '../../navigation/AppNavigator';
@@ -43,23 +44,6 @@ const DashboardScreen: React.FC = () => {
   const dispatch = useAppDispatch();
   const navigation = useNavigation<DashboardNavigationProp>();
   const [refreshing, setRefreshing] = useState(false);
-
-  const handleLogout = () => {
-    Alert.alert(
-      'Logout',
-      'This will clear all stored data and log you out. Continue?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Logout',
-          style: 'destructive',
-          onPress: async () => {
-            await performLogout(dispatch);
-          },
-        },
-      ]
-    );
-  };
 
   const {
     data: portfolio,
@@ -120,6 +104,13 @@ const DashboardScreen: React.FC = () => {
     limit: 5,
   });
 
+  // Get notifications count for bell icon badge
+  const { data: notifications = [] } = useGetNotificationsQuery(undefined, {
+    skip: !user,
+  });
+
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
+
   // Get all unique symbols from portfolio and watchlist for real-time updates
   const portfolioSymbols =
     portfolio?.items?.map((item) => item.stock_symbol) || [];
@@ -151,11 +142,14 @@ const DashboardScreen: React.FC = () => {
   const onRefresh = async () => {
     setRefreshing(true);
     try {
+      // Refetch all data to ensure latest information
       await Promise.all([
         refetchPortfolio(),
         refetchWatchlist(),
         refetchNews(),
       ]);
+    } catch (error) {
+      console.error('Error refreshing dashboard data:', error);
     } finally {
       setRefreshing(false);
     }
@@ -240,15 +234,33 @@ const DashboardScreen: React.FC = () => {
               {getUserDisplayName()}
             </Text>
           </View>
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-            <Ionicons
-              name='log-out-outline'
-              size={24}
-              color={theme.colors.surface}
-            />
-            <Text style={[styles.logoutText, { color: theme.colors.surface }]}>
-              Logout
-            </Text>
+
+          {/* Notifications Bell Icon */}
+          <TouchableOpacity
+            style={styles.notificationButton}
+            onPress={() => navigation.navigate('Notifications')}
+          >
+            <View style={styles.bellIconContainer}>
+              <Ionicons
+                name='notifications-outline'
+                size={24}
+                color={theme.colors.surface}
+              />
+              {unreadCount > 0 && (
+                <View
+                  style={[
+                    styles.notificationBadge,
+                    { backgroundColor: theme.colors.error },
+                  ]}
+                >
+                  <Text
+                    style={[styles.badgeText, { color: theme.colors.surface }]}
+                  >
+                    {unreadCount > 99 ? '99+' : unreadCount.toString()}
+                  </Text>
+                </View>
+              )}
+            </View>
           </TouchableOpacity>
         </View>
       </LinearGradient>
@@ -580,18 +592,30 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  logoutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  notificationButton: {
     padding: 8,
     borderRadius: 8,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
   },
-  logoutText: {
-    marginLeft: 6,
-    fontSize: 14,
-    fontWeight: '600',
+  bellIconContainer: {
+    position: 'relative',
   },
+  notificationBadge: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  badgeText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+
   greeting: {
     fontSize: 16,
     opacity: 0.8,

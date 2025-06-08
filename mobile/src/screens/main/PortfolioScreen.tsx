@@ -9,6 +9,8 @@ import {
   Alert,
   Modal,
   TextInput,
+  FlatList,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../hooks/useTheme';
@@ -17,7 +19,10 @@ import {
   useAddToPortfolioMutation,
   useUpdatePortfolioHoldingMutation,
   useRemoveFromPortfolioMutation,
+  useSearchStocksQuery,
+  useGetStockQuery,
   PortfolioItem,
+  Stock,
 } from '../../store/api/apiSlice';
 import { ChangeIndicator } from '../../components/ui/ChangeIndicator';
 import {
@@ -26,6 +31,7 @@ import {
   SkeletonText,
   SectionLoadingCard,
 } from '../../components/ui';
+import { configService } from '../../services/config';
 
 const PortfolioScreen: React.FC = () => {
   const { theme, isDark } = useTheme();
@@ -39,6 +45,10 @@ const PortfolioScreen: React.FC = () => {
     quantity: '',
     price: '',
   });
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedStock, setSelectedStock] = useState<Stock | null>(null);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const [isValidatingStock, setIsValidatingStock] = useState(false);
 
   const { data: portfolio, isLoading, refetch } = useGetPortfolioQuery();
 
@@ -47,6 +57,22 @@ const PortfolioScreen: React.FC = () => {
     useUpdatePortfolioHoldingMutation();
   const [removeFromPortfolio, { isLoading: removing }] =
     useRemoveFromPortfolioMutation();
+
+  // Stock search query - only search when query has 2+ characters
+  const { data: searchResults, isLoading: searching } = useSearchStocksQuery(
+    searchQuery,
+    {
+      skip: searchQuery.length < 2 || !showSearchResults,
+    }
+  );
+
+  // Stock validation query - only validate when a symbol is selected
+  const { data: stockValidation, isLoading: validating } = useGetStockQuery(
+    selectedStock?.symbol || '',
+    {
+      skip: !selectedStock?.symbol,
+    }
+  );
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -60,6 +86,9 @@ const PortfolioScreen: React.FC = () => {
   const handleAddStock = () => {
     setEditingHolding(null);
     setFormData({ symbol: '', quantity: '', price: '' });
+    setSearchQuery('');
+    setSelectedStock(null);
+    setShowSearchResults(false);
     setModalVisible(true);
   };
   const handleEditHolding = (holding: PortfolioItem) => {
@@ -69,14 +98,101 @@ const PortfolioScreen: React.FC = () => {
       quantity: holding.quantity.toString(),
       price: holding.average_cost.toString(),
     });
+    // For editing, set the selected stock from the holding
+    setSelectedStock({
+      symbol: holding.stock_symbol,
+      name: holding.stock?.name || holding.stock_symbol,
+      current_price: holding.stock?.current_price,
+      currency: 'USD',
+      last_updated: new Date().toISOString(),
+    } as Stock);
+    setSearchQuery('');
+    setShowSearchResults(false);
     setModalVisible(true);
   };
 
-  const handleSubmit = async () => {
-    const { symbol, quantity, price } = formData;
+  const handleStockSelect = (stock: any) => {
+    const selectedStockData: Stock = {
+      symbol: stock.symbol,
+      name: stock.name,
+      current_price: undefined,
+      currency: stock.currency || 'USD',
+      last_updated: new Date().toISOString(),
+    };
 
-    if (!symbol.trim() || !quantity || !price) {
-      Alert.alert('Error', 'Please fill in all fields');
+    setSelectedStock(selectedStockData);
+    setFormData((prev) => ({ ...prev, symbol: stock.symbol }));
+    setSearchQuery(stock.symbol);
+    setShowSearchResults(false);
+  };
+
+  const handleSearchChange = (text: string) => {
+    setSearchQuery(text);
+    setFormData((prev) => ({ ...prev, symbol: text }));
+    setShowSearchResults(text.length >= 2);
+
+    // Clear selected stock if user is typing a new search
+    if (text.toUpperCase() !== selectedStock?.symbol) {
+      setSelectedStock(null);
+    }
+  };
+
+  const validateStock = async () => {
+    if (!formData.symbol.trim()) {
+      Alert.alert('Error', 'Please select a stock');
+      return false;
+    }
+
+    // If we already have a selected and validated stock, we're good
+    if (
+      selectedStock &&
+      selectedStock.symbol.toUpperCase() === formData.symbol.toUpperCase()
+    ) {
+      return true;
+    }
+
+    setIsValidatingStock(true);
+    try {
+      // Try to fetch the stock to validate it exists
+      const url = configService.buildApiUrl(
+        `stocks/${formData.symbol.toUpperCase()}`
+      );
+      const response = await fetch(url);
+
+      if (response.ok) {
+        const stockData = await response.json();
+        setSelectedStock(stockData);
+        return true;
+      } else {
+        Alert.alert(
+          'Invalid Stock',
+          `Stock symbol "${formData.symbol.toUpperCase()}" was not found. Please select a valid stock from the search results.`
+        );
+        return false;
+      }
+    } catch (error) {
+      console.error('Stock validation error:', error);
+      Alert.alert(
+        'Error',
+        'Failed to validate stock. Please check your connection and try again.'
+      );
+      return false;
+    } finally {
+      setIsValidatingStock(false);
+    }
+  };
+
+  const handleSubmit = async () => {
+    const { quantity, price } = formData;
+
+    // Validate stock selection (not needed for editing existing holdings)
+    if (!editingHolding) {
+      const isStockValid = await validateStock();
+      if (!isStockValid) return;
+    }
+
+    if (!quantity || !price) {
+      Alert.alert('Error', 'Please fill in quantity and price');
       return;
     }
 
@@ -89,9 +205,13 @@ const PortfolioScreen: React.FC = () => {
       quantityNum <= 0 ||
       priceNum <= 0
     ) {
-      Alert.alert('Error', 'Please enter valid numbers');
+      Alert.alert(
+        'Error',
+        'Please enter valid positive numbers for quantity and price'
+      );
       return;
     }
+
     try {
       if (editingHolding) {
         await updateHolding({
@@ -103,16 +223,30 @@ const PortfolioScreen: React.FC = () => {
         }).unwrap();
       } else {
         await addToPortfolio({
-          stock_symbol: symbol.toUpperCase(),
+          stock_symbol: selectedStock!.symbol.toUpperCase(),
           quantity: quantityNum,
           average_cost: priceNum,
           purchase_date: new Date().toISOString(),
+          notes: `Added ${quantityNum} shares of ${selectedStock!.symbol}`,
         }).unwrap();
       }
+
+      // Reset form and close modal
       setModalVisible(false);
       setFormData({ symbol: '', quantity: '', price: '' });
+      setSelectedStock(null);
+      setSearchQuery('');
+      setShowSearchResults(false);
     } catch (error: any) {
-      Alert.alert('Error', error?.data?.detail || 'Failed to update portfolio');
+      console.error('Portfolio operation error:', error);
+      Alert.alert(
+        'Error',
+        error?.data?.detail ||
+          error?.message ||
+          `Failed to ${
+            editingHolding ? 'update' : 'add'
+          } portfolio item. Please try again.`
+      );
     }
   };
 
@@ -388,12 +522,24 @@ const PortfolioScreen: React.FC = () => {
             </Text>
             <TouchableOpacity
               onPress={handleSubmit}
-              disabled={adding || updating}
+              disabled={adding || updating || isValidatingStock}
             >
               <Text
-                style={[styles.modalSaveText, { color: theme.colors.primary }]}
+                style={[
+                  styles.modalSaveText,
+                  {
+                    color:
+                      adding || updating || isValidatingStock
+                        ? theme.colors.textSecondary
+                        : theme.colors.primary,
+                  },
+                ]}
               >
-                {adding || updating ? 'Saving...' : 'Save'}
+                {adding || updating
+                  ? 'Saving...'
+                  : isValidatingStock
+                  ? 'Validating...'
+                  : 'Save'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -401,26 +547,164 @@ const PortfolioScreen: React.FC = () => {
           <View style={styles.modalContent}>
             <View style={styles.inputGroup}>
               <Text style={[styles.inputLabel, { color: theme.colors.text }]}>
-                Symbol
+                {editingHolding ? 'Symbol' : 'Search & Select Stock'}
               </Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  {
-                    backgroundColor: theme.colors.surface,
-                    color: theme.colors.text,
-                    borderColor: theme.colors.border,
-                  },
-                ]}
-                value={formData.symbol}
-                onChangeText={(text) =>
-                  setFormData((prev) => ({ ...prev, symbol: text }))
-                }
-                placeholder='AAPL'
-                placeholderTextColor={theme.colors.textSecondary}
-                autoCapitalize='characters'
-                editable={!editingHolding}
-              />
+
+              {editingHolding ? (
+                // For editing, show the symbol as read-only
+                <View
+                  style={[
+                    styles.input,
+                    styles.readOnlyInput,
+                    {
+                      backgroundColor: theme.colors.background,
+                      borderColor: theme.colors.border,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[styles.readOnlyText, { color: theme.colors.text }]}
+                  >
+                    {formData.symbol}
+                  </Text>
+                </View>
+              ) : (
+                <>
+                  <View style={styles.searchInputContainer}>
+                    <TextInput
+                      style={[
+                        styles.input,
+                        {
+                          backgroundColor: theme.colors.surface,
+                          color: theme.colors.text,
+                          borderColor: selectedStock
+                            ? theme.colors.success
+                            : theme.colors.border,
+                        },
+                      ]}
+                      value={searchQuery}
+                      onChangeText={handleSearchChange}
+                      onFocus={() =>
+                        setShowSearchResults(searchQuery.length >= 2)
+                      }
+                      placeholder='Type stock symbol or name (e.g., AAPL, Apple)'
+                      placeholderTextColor={theme.colors.textSecondary}
+                      autoCapitalize='characters'
+                    />
+                    {searching && (
+                      <ActivityIndicator
+                        size='small'
+                        color={theme.colors.primary}
+                        style={styles.searchLoader}
+                      />
+                    )}
+                  </View>
+
+                  {selectedStock && (
+                    <View
+                      style={[
+                        styles.selectedStockInfo,
+                        { backgroundColor: theme.colors.success + '20' },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.selectedStockText,
+                          { color: theme.colors.success },
+                        ]}
+                      >
+                        ✓ Selected: {selectedStock.symbol} -{' '}
+                        {selectedStock.name}
+                      </Text>
+                    </View>
+                  )}
+
+                  {showSearchResults &&
+                    searchResults &&
+                    searchResults.results.length > 0 && (
+                      <View
+                        style={[
+                          styles.searchResults,
+                          { backgroundColor: theme.colors.surface },
+                        ]}
+                      >
+                        <FlatList
+                          data={searchResults.results}
+                          keyExtractor={(item) => item.symbol}
+                          style={styles.resultsList}
+                          keyboardShouldPersistTaps='handled'
+                          renderItem={({ item }) => (
+                            <TouchableOpacity
+                              style={[
+                                styles.searchResultItem,
+                                { borderBottomColor: theme.colors.border },
+                              ]}
+                              onPress={() => handleStockSelect(item)}
+                            >
+                              <View>
+                                <Text
+                                  style={[
+                                    styles.resultSymbol,
+                                    { color: theme.colors.text },
+                                  ]}
+                                >
+                                  {item.symbol}
+                                </Text>
+                                <Text
+                                  style={[
+                                    styles.resultName,
+                                    { color: theme.colors.textSecondary },
+                                  ]}
+                                >
+                                  {item.name}
+                                </Text>
+                                {item.exchange && (
+                                  <Text
+                                    style={[
+                                      styles.resultExchange,
+                                      { color: theme.colors.textSecondary },
+                                    ]}
+                                  >
+                                    {item.exchange}
+                                  </Text>
+                                )}
+                              </View>
+                            </TouchableOpacity>
+                          )}
+                        />
+                      </View>
+                    )}
+
+                  {showSearchResults &&
+                    searchQuery.length >= 2 &&
+                    !searching &&
+                    (!searchResults || searchResults.results.length === 0) && (
+                      <View
+                        style={[
+                          styles.noResults,
+                          { backgroundColor: theme.colors.surface },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.noResultsText,
+                            { color: theme.colors.textSecondary },
+                          ]}
+                        >
+                          No stocks found for "{searchQuery}"
+                        </Text>
+                        <Text
+                          style={[
+                            styles.noResultsSubtext,
+                            { color: theme.colors.textSecondary },
+                          ]}
+                        >
+                          Try a different symbol or company name
+                        </Text>
+                      </View>
+                    )}
+                </>
+              )}
             </View>
 
             <View style={styles.inputGroup}>
@@ -661,6 +945,69 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     fontSize: 16,
     borderWidth: 1,
+  },
+  searchInputContainer: {
+    position: 'relative',
+  },
+  searchLoader: {
+    position: 'absolute',
+    right: 12,
+    top: 12,
+  },
+  readOnlyInput: {
+    justifyContent: 'center',
+  },
+  readOnlyText: {
+    fontSize: 16,
+  },
+  selectedStockInfo: {
+    marginTop: 8,
+    padding: 12,
+    borderRadius: 8,
+  },
+  selectedStockText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  searchResults: {
+    marginTop: 8,
+    borderRadius: 12,
+    maxHeight: 200,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  resultsList: {
+    maxHeight: 180,
+  },
+  searchResultItem: {
+    padding: 12,
+    borderBottomWidth: 1,
+  },
+  resultSymbol: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  resultName: {
+    fontSize: 14,
+    marginBottom: 2,
+  },
+  resultExchange: {
+    fontSize: 12,
+  },
+  noResults: {
+    marginTop: 8,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  noResultsText: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  noResultsSubtext: {
+    fontSize: 12,
   },
 });
 

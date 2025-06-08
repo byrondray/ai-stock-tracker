@@ -15,6 +15,7 @@ import {
   WatchlistScreen,
   NewsScreen,
 } from '../screens/main';
+import { SettingsScreen } from '../screens/SettingsScreen';
 import { useTheme } from '../hooks/useTheme';
 
 export type MainTabParamList = {
@@ -23,6 +24,7 @@ export type MainTabParamList = {
   Portfolio: undefined;
   Watchlist: undefined;
   News: undefined;
+  Settings: undefined;
 };
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -51,6 +53,9 @@ export function MainTabNavigator() {
               break;
             case 'News':
               iconName = focused ? 'newspaper' : 'newspaper-outline';
+              break;
+            case 'Settings':
+              iconName = focused ? 'settings' : 'settings-outline';
               break;
             default:
               iconName = 'ellipse-outline';
@@ -98,6 +103,11 @@ export function MainTabNavigator() {
         name='News'
         component={NewsScreen}
         options={{ title: 'News' }}
+      />
+      <Tab.Screen
+        name='Settings'
+        component={SettingsScreen}
+        options={{ title: 'Settings' }}
       />
     </Tab.Navigator>
   );

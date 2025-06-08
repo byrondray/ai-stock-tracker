@@ -19,7 +19,7 @@ import {
   useAddToPortfolioMutation,
 } from '../store/api/apiSlice';
 import { removeItem } from '../store/slices/watchlistSlice';
-import { addPortfolioItem } from '../store/slices/portfolioSlice';
+
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { ChangeIndicator } from '../components/ui/ChangeIndicator';
@@ -80,10 +80,13 @@ export const WatchlistDetailScreen: React.FC = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              await deleteWatchlistItemMutation(
-                parseInt(watchlistId, 10)
-              ).unwrap();
-              dispatch(removeItem(parseInt(watchlistId, 10)));
+              // Use symbol to remove from watchlist (API expects symbol, not ID)
+              if (watchlistItem) {
+                await deleteWatchlistItemMutation(
+                  watchlistItem.stock_symbol
+                ).unwrap();
+                dispatch(removeItem(parseInt(watchlistId, 10)));
+              }
               // Navigate back
             } catch (error) {
               console.error('Error removing from watchlist:', error);
@@ -99,7 +102,7 @@ export const WatchlistDetailScreen: React.FC = () => {
   };
 
   const handleAddToPortfolio = () => {
-    if (!watchlistItem) return;
+    if (!watchlistItem || addingToPortfolio) return;
 
     Alert.prompt(
       'Add to Portfolio',
@@ -108,25 +111,27 @@ export const WatchlistDetailScreen: React.FC = () => {
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Add',
-          onPress: (shares) => {
+          onPress: async (shares) => {
             const numShares = parseInt(shares || '0', 10);
             if (numShares > 0) {
-              // ... rest of imports
-
-              dispatch(
-                addPortfolioItem({
-                  id: Date.now(),
-                  symbol: watchlistItem.stock_symbol,
-                  name: watchlistItem.stock || watchlistItem.stock_symbol,
+              try {
+                // Use API to add to portfolio
+                await addToPortfolioMutation({
+                  stock_symbol: watchlistItem.stock_symbol,
                   quantity: numShares,
                   average_cost: watchlistItem.current_price || 0,
                   purchase_date: new Date().toISOString(),
-                  current_price: watchlistItem.current_price || 0,
-                  value: numShares * (watchlistItem.current_price || 0),
-                  gain: 0,
-                  gainPercent: 0,
-                })
-              );
+                  notes: `Added ${numShares} shares from watchlist`,
+                }).unwrap();
+
+                // Portfolio will be automatically updated via RTK Query cache invalidation
+              } catch (error) {
+                console.error('Error adding to portfolio:', error);
+                Alert.alert(
+                  'Error',
+                  'Failed to add to portfolio. Please try again.'
+                );
+              }
             }
           },
         },

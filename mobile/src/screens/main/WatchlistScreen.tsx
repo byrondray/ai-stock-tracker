@@ -63,13 +63,8 @@ const WatchlistScreen: React.FC = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              // Find the watchlist item to get its ID
-              const watchlistItem = watchlist?.find(
-                (item) => item.stock_symbol === symbol
-              );
-              if (watchlistItem) {
-                await removeFromWatchlist(watchlistItem.id).unwrap();
-              }
+              // Use symbol to remove from watchlist (API expects symbol, not ID)
+              await removeFromWatchlist(symbol).unwrap();
             } catch (error: any) {
               Alert.alert(
                 'Error',

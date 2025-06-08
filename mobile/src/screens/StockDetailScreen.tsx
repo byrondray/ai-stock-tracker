@@ -41,7 +41,7 @@ import {
   addItem as addToWatchlistLocal,
   removeItem as removeFromWatchlistLocal,
 } from '../store/slices/watchlistSlice';
-import { addPortfolioItem } from '../store/slices/portfolioSlice';
+
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { ChangeIndicator } from '../components/ui/ChangeIndicator';
@@ -547,22 +547,7 @@ export const StockDetailScreen: React.FC = () => {
         notes: `Added ${shares} shares of ${symbol}`,
       }).unwrap();
 
-      // Also update local state for immediate UI feedback
-      dispatch(
-        addPortfolioItem({
-          id: Date.now(),
-          symbol: symbol,
-          name: displayStockData?.name || '',
-          quantity: shares,
-          average_cost: price,
-          purchase_date: new Date().toISOString(),
-          current_price: displayStockData?.current_price || 0,
-          value: shares * (displayStockData?.current_price || 0),
-          gain: shares * ((displayStockData?.current_price || 0) - price),
-          gainPercent:
-            (((displayStockData?.current_price || 0) - price) / price) * 100,
-        })
-      );
+      // Portfolio will be automatically updated via RTK Query cache invalidation
 
       setAddToPortfolioModalVisible(false);
     } catch (error) {
