@@ -16,6 +16,7 @@ import { useTheme } from '../hooks/useTheme';
 import {
   useGetWatchlistQuery,
   useDeleteWatchlistItemMutation,
+  useAddToPortfolioMutation,
 } from '../store/api/apiSlice';
 import { removeItem } from '../store/slices/watchlistSlice';
 import { addPortfolioItem } from '../store/slices/portfolioSlice';
@@ -54,6 +55,8 @@ export const WatchlistDetailScreen: React.FC = () => {
   } = useGetWatchlistQuery();
 
   const [deleteWatchlistItemMutation] = useDeleteWatchlistItemMutation();
+  const [addToPortfolioMutation, { isLoading: addingToPortfolio }] =
+    useAddToPortfolioMutation();
 
   const handleRefresh = async () => {
     setRefreshing(true);

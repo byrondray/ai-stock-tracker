@@ -20,7 +20,12 @@ import {
   PortfolioItem,
 } from '../../store/api/apiSlice';
 import { ChangeIndicator } from '../../components/ui/ChangeIndicator';
-import { LoadingSpinner, SkeletonCard, SkeletonText, SectionLoadingCard } from '../../components/ui';
+import {
+  LoadingSpinner,
+  SkeletonCard,
+  SkeletonText,
+  SectionLoadingCard,
+} from '../../components/ui';
 
 const PortfolioScreen: React.FC = () => {
   const { theme, isDark } = useTheme();
@@ -96,7 +101,6 @@ const PortfolioScreen: React.FC = () => {
             average_cost: priceNum,
           },
         }).unwrap();
-        Alert.alert('Success', 'Holding updated successfully');
       } else {
         await addToPortfolio({
           stock_symbol: symbol.toUpperCase(),
@@ -104,7 +108,6 @@ const PortfolioScreen: React.FC = () => {
           average_cost: priceNum,
           purchase_date: new Date().toISOString(),
         }).unwrap();
-        Alert.alert('Success', 'Stock added to portfolio');
       }
       setModalVisible(false);
       setFormData({ symbol: '', quantity: '', price: '' });
@@ -130,7 +133,6 @@ const PortfolioScreen: React.FC = () => {
               );
               if (holdingToRemove) {
                 await removeFromPortfolio(holdingToRemove.id).unwrap();
-                Alert.alert('Success', 'Stock removed from portfolio');
               }
             } catch (error: any) {
               Alert.alert(
@@ -234,7 +236,11 @@ const PortfolioScreen: React.FC = () => {
           { backgroundColor: theme.colors.background },
         ]}
       >
-        <LoadingSpinner variant="gradient" size="large" text="Loading portfolio..." />
+        <LoadingSpinner
+          variant='gradient'
+          size='large'
+          text='Loading portfolio...'
+        />
       </View>
     );
   }

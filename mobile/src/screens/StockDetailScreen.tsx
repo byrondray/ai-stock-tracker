@@ -35,10 +35,11 @@ import {
   useAddToWatchlistMutation,
   useRemoveFromWatchlistMutation,
   useAddToPortfolioMutation,
+  useGetWatchlistQuery,
 } from '../store/api/apiSlice';
 import {
-  addItem as addToWatchlist,
-  removeItem as removeFromWatchlist,
+  addItem as addToWatchlistLocal,
+  removeItem as removeFromWatchlistLocal,
 } from '../store/slices/watchlistSlice';
 import { addPortfolioItem } from '../store/slices/portfolioSlice';
 import { Card } from '../components/ui/Card';
@@ -133,6 +134,19 @@ export const StockDetailScreen: React.FC = () => {
     refetch: refetchNews,
   } = useGetStockNewsQuery({ symbol, limit: 5 });
 
+  // Watchlist API calls
+  const { data: watchlistData, refetch: refetchWatchlist } =
+    useGetWatchlistQuery();
+
+  const [addToWatchlistMutation, { isLoading: addingToWatchlist }] =
+    useAddToWatchlistMutation();
+
+  const [removeFromWatchlistMutation, { isLoading: removingFromWatchlist }] =
+    useRemoveFromWatchlistMutation();
+
+  const [addToPortfolioMutation, { isLoading: addingToPortfolio }] =
+    useAddToPortfolioMutation();
+
   const displayAnalysisData = analysisData || {
     symbol: symbol,
     overall_rating: 'hold' as const,
@@ -163,20 +177,46 @@ export const StockDetailScreen: React.FC = () => {
     // Use real historical data if available
     if (historicalData?.data && historicalData.data.length > 0) {
       const prices = historicalData.data;
-      const data = prices.map((price) => price.close || price.close_price);
+
+      // Extract price data - handle both 'close' and 'close_price' fields
+      const data = prices.map((price) => {
+        const closePrice = price.close || price.close_price || price.Close || 0;
+        return closePrice;
+      });
 
       // Generate labels based on timeframe and data length
       const labels = prices.map((price, index) => {
         const date = new Date(price.date);
+
+        // Adjust label format based on timeframe
         switch (timeframe) {
           case '1D':
-            return date.toLocaleTimeString('en-US', {
-              hour: 'numeric',
-              hour12: true,
-            });
+            // For intraday data, show time
+            if (prices.length > 50) {
+              // Intraday data - show hours
+              return date.toLocaleTimeString('en-US', {
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true,
+              });
+            } else {
+              // Daily close data
+              return date.toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+              });
+            }
           case '1W':
-            return date.toLocaleDateString('en-US', { weekday: 'short' });
+            return date.toLocaleDateString('en-US', {
+              weekday: 'short',
+              month: 'short',
+              day: 'numeric',
+            });
           case '1M':
+            return date.toLocaleDateString('en-US', {
+              month: 'short',
+              day: 'numeric',
+            });
           case '3M':
           case '6M':
             return date.toLocaleDateString('en-US', {
@@ -186,6 +226,7 @@ export const StockDetailScreen: React.FC = () => {
           case '1Y':
             return date.toLocaleDateString('en-US', {
               month: 'short',
+              year: '2-digit',
             });
           default:
             return date.toLocaleDateString('en-US', {
@@ -195,31 +236,58 @@ export const StockDetailScreen: React.FC = () => {
         }
       });
 
-      // Limit labels to prevent overlap (show every nth label)
-      const maxLabels = 6;
-      const step = Math.max(1, Math.floor(labels.length / maxLabels));
-      const filteredLabels = labels.filter((_, index) => index % step === 0);
+      // Optimize labels to prevent overlap
+      let optimizedLabels = labels;
+      const maxLabels = timeframe === '1D' ? 8 : 6;
+
+      if (labels.length > maxLabels) {
+        const step = Math.max(1, Math.floor(labels.length / maxLabels));
+        optimizedLabels = labels.filter(
+          (_, index) => index % step === 0 || index === labels.length - 1
+        );
+
+        // Ensure we show the latest data point
+        if (
+          optimizedLabels[optimizedLabels.length - 1] !==
+          labels[labels.length - 1]
+        ) {
+          optimizedLabels[optimizedLabels.length - 1] =
+            labels[labels.length - 1];
+        }
+      }
+
+      const validData = data.filter((price) => price > 0);
+      if (validData.length === 0) {
+        console.log('❌ No valid price data found');
+        return {
+          labels: ['No Data'],
+          datasets: [{ data: [0] }],
+        };
+      }
 
       console.log('✅ Using real historical data:', {
         dataPoints: data.length,
-        priceRange: `${Math.min(...data).toFixed(2)} - ${Math.max(
-          ...data
+        priceRange: `${Math.min(...validData).toFixed(2)} - ${Math.max(
+          ...validData
         ).toFixed(2)}`,
         firstPrice: data[0],
         lastPrice: data[data.length - 1],
+        timeframe,
+        sampleDates: prices.slice(0, 3).map((p) => p.date),
       });
 
       return {
-        labels: filteredLabels,
+        labels: optimizedLabels,
         datasets: [{ data }],
       };
     }
 
-    // No historical data available and no stock data - return empty chart
+    // No historical data available - return placeholder chart with current price
     console.log('❌ No historical data available for chart');
+    const currentPrice = displayStockData?.current_price || 150;
     return {
-      labels: ['No Data'],
-      datasets: [{ data: [0] }],
+      labels: ['Current'],
+      datasets: [{ data: [currentPrice] }],
     };
   };
 
@@ -231,6 +299,15 @@ export const StockDetailScreen: React.FC = () => {
   const portfolioItems = useAppSelector(
     (state) => state.portfolio.portfolio?.items || []
   );
+
+  // Check if stock is in watchlist using API data (preferred) or local state (fallback)
+  const isInWatchlistAPI = watchlistData?.some(
+    (item) => item.stock_symbol === symbol
+  );
+  const isInWatchlistLocal = watchlistItems.some(
+    (item) => item.stock_symbol === symbol
+  );
+  const isInWatchlist = isInWatchlistAPI ?? isInWatchlistLocal;
 
   // Use real data when available, with better fallback using watchlist data
   const watchlistItem = watchlistItems.find(
@@ -328,14 +405,16 @@ export const StockDetailScreen: React.FC = () => {
     return null;
   }, [stockData, priceData, watchlistItem, symbol]);
 
-  const isInWatchlist = watchlistItems.some(
-    (item) => item.stock_symbol === symbol
-  );
   const portfolioPosition = portfolioItems.find(
     (item) => item.symbol === symbol
   );
 
   const timeframes = ['1D', '1W', '1M', '3M', '6M', '1Y'];
+
+  // Refetch data when timeframe changes
+  useEffect(() => {
+    refetchHistorical();
+  }, [selectedTimeframe, refetchHistorical]);
 
   useEffect(() => {
     navigation.setOptions({
@@ -344,16 +423,29 @@ export const StockDetailScreen: React.FC = () => {
         <TouchableOpacity
           onPress={handleWatchlistToggle}
           style={styles.headerButton}
+          disabled={addingToWatchlist || removingFromWatchlist}
         >
           <Ionicons
-            name={isInWatchlist ? 'heart' : 'heart-outline'}
+            name={
+              addingToWatchlist || removingFromWatchlist
+                ? 'sync'
+                : isInWatchlist
+                ? 'heart'
+                : 'heart-outline'
+            }
             size={24}
             color={isInWatchlist ? theme.colors.error : theme.colors.text}
           />
         </TouchableOpacity>
       ),
     });
-  }, [isInWatchlist, symbol, theme.colors]);
+  }, [
+    isInWatchlist,
+    symbol,
+    theme.colors,
+    addingToWatchlist,
+    removingFromWatchlist,
+  ]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -366,6 +458,7 @@ export const StockDetailScreen: React.FC = () => {
         refetchAnalysis(),
         refetchPrediction(),
         refetchNews(),
+        refetchWatchlist(),
       ]);
     } catch (error) {
       console.error('Error refreshing data:', error);
@@ -375,27 +468,45 @@ export const StockDetailScreen: React.FC = () => {
   };
 
   const handleWatchlistToggle = async () => {
+    if (addingToWatchlist || removingFromWatchlist) {
+      return; // Prevent multiple simultaneous requests
+    }
+
     try {
       if (isInWatchlist) {
+        // Remove from watchlist using API
+        await removeFromWatchlistMutation(symbol).unwrap();
+
+        // Also update local state for immediate UI feedback
         const watchlistItem = watchlistItems.find(
           (item) => item.stock_symbol === symbol
         );
         if (watchlistItem) {
-          dispatch(removeFromWatchlist(watchlistItem.id));
+          dispatch(removeFromWatchlistLocal(watchlistItem.id));
         }
       } else {
+        // Add to watchlist using API
+        await addToWatchlistMutation({
+          stock_symbol: symbol,
+          notes: `Added ${symbol} to watchlist`,
+        }).unwrap();
+
+        // Also update local state for immediate UI feedback
         dispatch(
-          addToWatchlist({
+          addToWatchlistLocal({
             id: Date.now(),
             stock_symbol: symbol,
-            stock: safeStock.name || '',
-            current_price: safeStock.current_price || 0,
-            price_change: safeStock.change_amount || 0,
-            price_change_percent: safeStock.change_percent || 0,
+            stock: displayStockData?.name || '',
+            current_price: displayStockData?.current_price || 0,
+            price_change: displayStockData?.change_amount || 0,
+            price_change_percent: displayStockData?.change_percent || 0,
             added_at: new Date().toISOString(),
           })
         );
       }
+
+      // Refetch watchlist to ensure consistency
+      await refetchWatchlist();
     } catch (error) {
       console.error('Error toggling watchlist:', error);
       Alert.alert('Error', 'Failed to update watchlist. Please try again.');
@@ -411,6 +522,8 @@ export const StockDetailScreen: React.FC = () => {
   };
 
   const handleSaveToPortfolio = async () => {
+    if (addingToPortfolio) return; // Prevent duplicate requests
+
     const shares = parseInt(portfolioModalData.shares, 10);
     const price = parseFloat(portfolioModalData.price);
 
@@ -425,6 +538,16 @@ export const StockDetailScreen: React.FC = () => {
     }
 
     try {
+      // Use API to add to portfolio
+      await addToPortfolioMutation({
+        stock_symbol: symbol,
+        quantity: shares,
+        average_cost: price,
+        purchase_date: new Date().toISOString(),
+        notes: `Added ${shares} shares of ${symbol}`,
+      }).unwrap();
+
+      // Also update local state for immediate UI feedback
       dispatch(
         addPortfolioItem({
           id: Date.now(),
@@ -442,10 +565,6 @@ export const StockDetailScreen: React.FC = () => {
       );
 
       setAddToPortfolioModalVisible(false);
-      Alert.alert(
-        'Success',
-        `Added ${shares} shares of ${symbol} to your portfolio.`
-      );
     } catch (error) {
       console.error('Error adding to portfolio:', error);
       Alert.alert('Error', 'Failed to add to portfolio. Please try again.');
@@ -1139,15 +1258,21 @@ export const StockDetailScreen: React.FC = () => {
             )}
             <Button
               title={
-                isInWatchlist ? 'Remove from Watchlist' : 'Add to Watchlist'
+                addingToWatchlist || removingFromWatchlist
+                  ? 'Updating...'
+                  : isInWatchlist
+                  ? 'Remove from Watchlist'
+                  : 'Add to Watchlist'
               }
               onPress={handleWatchlistToggle}
+              disabled={addingToWatchlist || removingFromWatchlist}
               style={[
                 styles.actionButton,
                 {
                   backgroundColor: isInWatchlist
                     ? theme.colors.error
                     : theme.colors.primary,
+                  opacity: addingToWatchlist || removingFromWatchlist ? 0.6 : 1,
                 },
               ]}
             />
@@ -1240,11 +1365,15 @@ export const StockDetailScreen: React.FC = () => {
                 textStyle={{ color: theme.colors.text }}
               />
               <Button
-                title='Add to Portfolio'
+                title={addingToPortfolio ? 'Adding...' : 'Add to Portfolio'}
                 onPress={handleSaveToPortfolio}
+                disabled={addingToPortfolio}
                 style={[
                   styles.modalButton,
-                  { backgroundColor: theme.colors.primary },
+                  {
+                    backgroundColor: theme.colors.primary,
+                    opacity: addingToPortfolio ? 0.6 : 1,
+                  },
                 ]}
               />
             </View>

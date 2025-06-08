@@ -176,8 +176,17 @@ async def get_price_history(
     db: Session = Depends(get_db)
 ):
     """Get historical price data."""
+    logger.info(f"📊 Price history request: symbol={symbol}, days={days}")
+    
     stock_service = StockService(db)
     history = await stock_service.get_price_history(symbol.upper(), days)
+    
+    logger.info(f"📊 Price history response: symbol={symbol}, records={len(history)}")
+    
+    if history:
+        # Log sample data for debugging
+        sample_data = history[:3] if len(history) >= 3 else history
+        logger.info(f"📊 Sample data: {sample_data}")
     
     return {
         "symbol": symbol.upper(),

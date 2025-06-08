@@ -13,6 +13,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import type { CompositeNavigationProp } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAppSelector, useAppDispatch } from '../../store';
 import { useStockPrices } from '../../hooks/useWebSocket';
 import {
@@ -24,12 +26,13 @@ import { useTheme } from '../../hooks/useTheme';
 import { performLogout } from '../../utils/authUtils';
 import { LoadingSpinner, SectionLoadingCard } from '../../components/ui';
 import type { MainTabParamList } from '../../navigation/MainTabNavigator';
+import type { RootStackParamList } from '../../navigation/AppNavigator';
 
 const { width } = Dimensions.get('window');
 
-type DashboardNavigationProp = BottomTabNavigationProp<
-  MainTabParamList,
-  'Dashboard'
+type DashboardNavigationProp = CompositeNavigationProp<
+  BottomTabNavigationProp<MainTabParamList, 'Dashboard'>,
+  NativeStackNavigationProp<RootStackParamList>
 >;
 
 const DashboardScreen: React.FC = () => {
@@ -418,9 +421,15 @@ const DashboardScreen: React.FC = () => {
                     );
 
                     return (
-                      <View
+                      <TouchableOpacity
                         key={item.stock_symbol}
                         style={styles.watchlistItem}
+                        onPress={() =>
+                          navigation.navigate('StockDetail', {
+                            symbol: item.stock_symbol,
+                          })
+                        }
+                        activeOpacity={0.7}
                       >
                         <View style={styles.stockInfo}>
                           <Text
@@ -460,7 +469,7 @@ const DashboardScreen: React.FC = () => {
                             {formatPercentage(changeData.changePercent)}
                           </Text>
                         </View>
-                      </View>
+                      </TouchableOpacity>
                     );
                   })}
                 </View>

@@ -85,7 +85,7 @@ export const SettingsScreen: React.FC = () => {
     }
 
     // TODO: Implement password change API call
-    Alert.alert('Success', 'Password changed successfully.');
+
     setChangePasswordModalVisible(false);
     setPasswordData({
       currentPassword: '',

@@ -11,3 +11,4 @@ export {
 } from './SkeletonLoader';
 export { default as SectionLoadingCard } from './SectionLoadingCard';
 export { default as Toast, ToastContainer } from './Toast';
+export { StockCard } from './StockCard';

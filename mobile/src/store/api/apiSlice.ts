@@ -444,9 +444,9 @@ export const apiSlice = createApi({
       }),
       invalidatesTags: ['Watchlist'],
     }),
-    removeFromWatchlist: builder.mutation<void, number>({
-      query: (id) => ({
-        url: `/watchlist/${id}`,
+    removeFromWatchlist: builder.mutation<void, string>({
+      query: (symbol) => ({
+        url: `/watchlist/${symbol}`,
         method: 'DELETE',
       }),
       invalidatesTags: ['Watchlist'],
@@ -473,19 +473,28 @@ export const apiSlice = createApi({
       { symbol: string; timeframe: string }
     >({
       query: ({ symbol, timeframe }) => {
-        // Convert timeframe to days
-        const timeframeToDays = {
+        // Convert timeframe to days - more robust conversion
+        const timeframeToDays: Record<string, number> = {
           '1d': 1,
+          '1D': 1,
           '1w': 7,
+          '1W': 7,
           '1m': 30,
+          '1M': 30,
           '3m': 90,
+          '3M': 90,
           '6m': 180,
+          '6M': 180,
           '1y': 365,
+          '1Y': 365,
         };
-        const days =
-          timeframeToDays[
-            timeframe.toLowerCase() as keyof typeof timeframeToDays
-          ] || 30;
+
+        const days = timeframeToDays[timeframe] || 30;
+
+        console.log(
+          `📊 Price History Query: ${symbol}, timeframe: ${timeframe}, days: ${days}`
+        );
+
         return `/stocks/${symbol}/history?days=${days}`;
       },
       providesTags: (result, error, { symbol }) => [

@@ -69,7 +69,6 @@ const WatchlistScreen: React.FC = () => {
               );
               if (watchlistItem) {
                 await removeFromWatchlist(watchlistItem.id).unwrap();
-                Alert.alert('Success', 'Stock removed from watchlist');
               }
             } catch (error: any) {
               Alert.alert(
@@ -129,7 +128,6 @@ const WatchlistScreen: React.FC = () => {
                         average_cost: price,
                         purchase_date: new Date().toISOString(),
                       }).unwrap();
-                      Alert.alert('Success', 'Stock added to portfolio');
                     } catch (error: any) {
                       Alert.alert(
                         'Error',
@@ -209,7 +207,6 @@ const WatchlistScreen: React.FC = () => {
         activeOpacity={0.7}
       >
         <View style={styles.stockHeader}>
-          
           <View style={styles.stockInfo}>
             <Text style={[styles.stockSymbol, { color: theme.colors.text }]}>
               {item.stock_symbol}
@@ -326,7 +323,6 @@ const WatchlistScreen: React.FC = () => {
     <View
       style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
-      
       {/* Header */}
       <LinearGradient
         colors={isDark ? ['#1a1a2e', '#16213e'] : ['#667eea', '#764ba2']}

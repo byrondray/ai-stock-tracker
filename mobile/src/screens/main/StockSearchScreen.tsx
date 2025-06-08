@@ -64,7 +64,6 @@ const StockSearchScreen: React.FC = () => {
   const handleAddToWatchlist = async (symbol: string) => {
     try {
       await addToWatchlist({ stock_symbol: symbol }).unwrap();
-      Alert.alert('Success', `${symbol} added to watchlist`);
     } catch (error: any) {
       Alert.alert(
         'Error',
