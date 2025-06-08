@@ -66,8 +66,13 @@ const LineChart: React.FC<LineChartProps> = ({
       strokeOpacity: 0.3,
     },
     formatYLabel: (value: string) => `$${parseFloat(value).toFixed(0)}`,
-    formatXLabel: (value: string) =>
-      value.length > 6 ? value.substring(0, 6) : value,
+    formatXLabel: (value: string) => {
+      // More aggressive label shortening to prevent overlap
+      if (value.length > 5) {
+        return value.substring(0, 5);
+      }
+      return value;
+    },
   };
 
   const mergedChartConfig = { ...defaultChartConfig, ...chartConfig };
@@ -138,6 +143,10 @@ const LineChart: React.FC<LineChartProps> = ({
         withOuterLines={false}
         withHorizontalLabels={true}
         withVerticalLabels={true}
+        withDots={false}
+        horizontalLabelRotation={0}
+        verticalLabelRotation={0}
+        segments={3}
         {...props}
       />
 

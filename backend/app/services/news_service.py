@@ -408,9 +408,10 @@ class NewsService:
             sentiment_result = await analyzer.analyze_single_text(text)
             
             # Convert numerical sentiment to categorical
-            if sentiment_result["sentiment_score"] >= 0.1:
+            sentiment_score = sentiment_result.get("sentiment_score", 0.0)
+            if sentiment_score >= 0.1:
                 return "positive"
-            elif sentiment_result["sentiment_score"] <= -0.1:
+            elif sentiment_score <= -0.1:
                 return "negative"
             else:
                 return "neutral"

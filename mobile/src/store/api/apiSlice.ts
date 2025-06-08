@@ -390,12 +390,12 @@ export const apiSlice = createApi({
 
     // Portfolio endpoints
     getPortfolio: builder.query<Portfolio, void>({
-      query: () => '/portfolio',
+      query: () => '/portfolio/',
       providesTags: ['Portfolio'],
     }),
     addToPortfolio: builder.mutation<PortfolioItem, PortfolioItemCreate>({
       query: (item) => ({
-        url: '/portfolio',
+        url: '/portfolio/',
         method: 'POST',
         body: item,
       }),
@@ -422,12 +422,12 @@ export const apiSlice = createApi({
 
     // Watchlist endpoints
     getWatchlist: builder.query<WatchlistItem[], void>({
-      query: () => '/watchlist',
+      query: () => '/watchlist/',
       providesTags: ['Watchlist'],
     }),
     addToWatchlist: builder.mutation<WatchlistItem, WatchlistItemCreate>({
       query: (item) => ({
-        url: '/watchlist',
+        url: '/watchlist/',
         method: 'POST',
         body: item,
       }),

@@ -12,7 +12,6 @@ router = APIRouter()
 
 
 @router.get("/", response_model=Portfolio)
-@router.get("", response_model=Portfolio) 
 async def get_portfolio(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)

@@ -7,8 +7,12 @@ import {
   TouchableOpacity,
   RefreshControl,
   Alert,
+  Modal,
+  TextInput,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme } from '../../hooks/useTheme';
 import { useStockPrices } from '../../hooks/useWebSocket';
 import {
@@ -30,9 +34,31 @@ interface WatchlistStock {
   low_52w?: number;
 }
 
+type RootStackParamList = {
+  StockDetail: { symbol: string };
+};
+
+type WatchlistScreenNavigationProp =
+  NativeStackNavigationProp<RootStackParamList>;
+
+interface AddToPortfolioModalData {
+  stock: WatchlistItem | null;
+  quantity: string;
+  price: string;
+}
+
 const WatchlistScreen: React.FC = () => {
+  const navigation = useNavigation<WatchlistScreenNavigationProp>();
   const { theme, isDark } = useTheme();
   const [refreshing, setRefreshing] = useState(false);
+  const [addToPortfolioModalVisible, setAddToPortfolioModalVisible] =
+    useState(false);
+  const [portfolioModalData, setPortfolioModalData] =
+    useState<AddToPortfolioModalData>({
+      stock: null,
+      quantity: '',
+      price: '',
+    });
 
   const { data: watchlist, isLoading, refetch } = useGetWatchlistQuery();
 
@@ -77,70 +103,51 @@ const WatchlistScreen: React.FC = () => {
     );
   };
   const handleAddToPortfolio = (stock: WatchlistItem) => {
-    Alert.alert(
-      'Add to Portfolio',
-      `Add ${stock.stock_symbol} to your portfolio?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Add',
-          onPress: () => {
-            Alert.prompt(
-              'Add to Portfolio',
-              'Enter the number of shares and purchase price:',
-              [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                  text: 'Add',
-                  onPress: async (input) => {
-                    if (!input) return;
+    setPortfolioModalData({
+      stock,
+      quantity: '',
+      price: (stock.current_price || 0).toString(),
+    });
+    setAddToPortfolioModalVisible(true);
+  };
 
-                    const parts = input.split(',');
-                    if (parts.length !== 2) {
-                      Alert.alert(
-                        'Error',
-                        'Please enter quantity and price separated by comma (e.g., 10, 150.50)'
-                      );
-                      return;
-                    }
+  const handleSaveToPortfolio = async () => {
+    if (!portfolioModalData.stock) return;
 
-                    const quantity = parseFloat(parts[0].trim());
-                    const price = parseFloat(parts[1].trim());
+    const quantity = parseInt(portfolioModalData.quantity, 10);
+    const price = parseFloat(portfolioModalData.price);
 
-                    if (
-                      isNaN(quantity) ||
-                      isNaN(price) ||
-                      quantity <= 0 ||
-                      price <= 0
-                    ) {
-                      Alert.alert('Error', 'Please enter valid numbers');
-                      return;
-                    }
-                    try {
-                      await addToPortfolio({
-                        stock_symbol: stock.stock_symbol,
-                        quantity,
-                        average_cost: price,
-                        purchase_date: new Date().toISOString(),
-                      }).unwrap();
-                    } catch (error: any) {
-                      Alert.alert(
-                        'Error',
-                        error?.data?.detail ||
-                          'Failed to add stock to portfolio'
-                      );
-                    }
-                  },
-                },
-              ],
-              'plain-text',
-              '',
-              'number-pad'
-            );
-          },
-        },
-      ]
-    );
+    if (isNaN(quantity) || quantity <= 0) {
+      Alert.alert('Invalid Input', 'Please enter a valid number of shares.');
+      return;
+    }
+
+    if (isNaN(price) || price <= 0) {
+      Alert.alert('Invalid Input', 'Please enter a valid price.');
+      return;
+    }
+
+    try {
+      await addToPortfolio({
+        stock_symbol: portfolioModalData.stock.stock_symbol,
+        quantity,
+        average_cost: price,
+        purchase_date: new Date().toISOString(),
+        notes: `Added ${quantity} shares of ${portfolioModalData.stock.stock_symbol}`,
+      }).unwrap();
+
+      setAddToPortfolioModalVisible(false);
+      setPortfolioModalData({
+        stock: null,
+        quantity: '',
+        price: '',
+      });
+    } catch (error: any) {
+      Alert.alert(
+        'Error',
+        error?.data?.detail || 'Failed to add stock to portfolio'
+      );
+    }
   };
 
   const formatCurrency = (amount: number) => {
@@ -198,6 +205,9 @@ const WatchlistScreen: React.FC = () => {
     return (
       <TouchableOpacity
         style={[styles.stockCard, { backgroundColor: theme.colors.surface }]}
+        onPress={() =>
+          navigation.navigate('StockDetail', { symbol: item.stock_symbol })
+        }
         onLongPress={() => handleRemoveStock(item.stock_symbol)}
         activeOpacity={0.7}
       >
@@ -237,21 +247,8 @@ const WatchlistScreen: React.FC = () => {
             </View>
           </View>
         </View>
-        <View style={styles.stockDetails}>
-          <View style={styles.detailRow}>
-            <Text
-              style={[
-                styles.detailLabel,
-                { color: theme.colors.textSecondary },
-              ]}
-            >
-              Volume
-            </Text>
-            <Text style={[styles.detailValue, { color: theme.colors.text }]}>
-              {formatVolume(item.stock.volume || 0)}
-            </Text>
-          </View>
-          {item.stock.market_cap && (
+        {item.stock.market_cap && (
+          <View style={styles.stockDetails}>
             <View style={styles.detailRow}>
               <Text
                 style={[
@@ -265,8 +262,8 @@ const WatchlistScreen: React.FC = () => {
                 {formatVolume(item.stock.market_cap)}
               </Text>
             </View>
-          )}
-        </View>
+          </View>
+        )}
         <View style={styles.actionButtons}>
           <TouchableOpacity
             style={[
@@ -382,6 +379,119 @@ const WatchlistScreen: React.FC = () => {
           </Text>
         </View>
       )}
+
+      {/* Add to Portfolio Modal */}
+      <Modal
+        visible={addToPortfolioModalVisible}
+        transparent
+        animationType='slide'
+        onRequestClose={() => setAddToPortfolioModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View
+            style={[
+              styles.modalContent,
+              { backgroundColor: theme.colors.card },
+            ]}
+          >
+            <Text style={[styles.modalTitle, { color: theme.colors.text }]}>
+              Add {portfolioModalData.stock?.stock_symbol} to Portfolio
+            </Text>
+
+            <View style={styles.inputContainer}>
+              <Text
+                style={[
+                  styles.inputLabel,
+                  { color: theme.colors.textSecondary },
+                ]}
+              >
+                Number of Shares
+              </Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: theme.colors.surface,
+                    color: theme.colors.text,
+                    borderColor: theme.colors.border,
+                  },
+                ]}
+                value={portfolioModalData.quantity}
+                onChangeText={(text) =>
+                  setPortfolioModalData((prev) => ({ ...prev, quantity: text }))
+                }
+                keyboardType='numeric'
+                placeholder='Enter number of shares'
+                placeholderTextColor={theme.colors.textSecondary}
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text
+                style={[
+                  styles.inputLabel,
+                  { color: theme.colors.textSecondary },
+                ]}
+              >
+                Purchase Price
+              </Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: theme.colors.surface,
+                    color: theme.colors.text,
+                    borderColor: theme.colors.border,
+                  },
+                ]}
+                value={portfolioModalData.price}
+                onChangeText={(text) =>
+                  setPortfolioModalData((prev) => ({ ...prev, price: text }))
+                }
+                keyboardType='decimal-pad'
+                placeholder='Enter purchase price'
+                placeholderTextColor={theme.colors.textSecondary}
+              />
+            </View>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[
+                  styles.modalButton,
+                  { backgroundColor: theme.colors.surface },
+                ]}
+                onPress={() => setAddToPortfolioModalVisible(false)}
+              >
+                <Text
+                  style={[styles.modalButtonText, { color: theme.colors.text }]}
+                >
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.modalButton,
+                  {
+                    backgroundColor: theme.colors.primary,
+                    opacity: adding ? 0.6 : 1,
+                  },
+                ]}
+                onPress={handleSaveToPortfolio}
+                disabled={adding}
+              >
+                <Text
+                  style={[
+                    styles.modalButtonText,
+                    { color: theme.colors.surface },
+                  ]}
+                >
+                  {adding ? 'Adding...' : 'Add to Portfolio'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -550,6 +660,54 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     fontStyle: 'italic',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    width: '100%',
+    borderRadius: 12,
+    padding: 20,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  inputContainer: {
+    marginBottom: 16,
+  },
+  inputLabel: {
+    fontSize: 14,
+    marginBottom: 8,
+  },
+  input: {
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 20,
+    gap: 12,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  modalButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 

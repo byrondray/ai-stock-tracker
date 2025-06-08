@@ -115,7 +115,7 @@ class AnalysisService:
             return {
                 "fundamental_score": fundamental.get("score", 0),
                 "technical_score": technical.get("score", 0),
-                "sentiment_score": sentiment.get("score", 0),
+                "sentiment_score": (sentiment.get("score", 50) - 50) / 50,  # Convert 0-100 to -1 to 1
                 "overall_score": overall_score,
                 "recommendation": recommendation,
                 "fundamental_data": fundamental,

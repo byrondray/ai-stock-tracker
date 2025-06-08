@@ -272,20 +272,15 @@ const DashboardScreen: React.FC = () => {
             <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
               Portfolio Overview
             </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Portfolio')}>
-              <Text
-                style={[styles.seeAllText, { color: theme.colors.primary }]}
-              >
-                See All
-              </Text>
-            </TouchableOpacity>
           </View>
 
           {portfolioLoading ? (
             <SectionLoadingCard type='portfolio' />
           ) : (
-            <View
+            <TouchableOpacity
+              onPress={() => navigation.navigate('Portfolio')}
               style={[styles.card, { backgroundColor: theme.colors.surface }]}
+              activeOpacity={0.7}
             >
               {portfolio ? (
                 <>
@@ -376,7 +371,7 @@ const DashboardScreen: React.FC = () => {
                   </Text>
                 </View>
               )}
-            </View>
+            </TouchableOpacity>
           )}
         </View>
 

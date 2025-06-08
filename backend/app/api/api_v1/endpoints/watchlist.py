@@ -12,7 +12,6 @@ router = APIRouter()
 
 
 @router.get("/", response_model=List[WatchlistItem])
-@router.get("", response_model=List[WatchlistItem])
 async def get_watchlist(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)

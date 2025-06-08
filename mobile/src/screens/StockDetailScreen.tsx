@@ -188,72 +188,69 @@ export const StockDetailScreen: React.FC = () => {
       const labels = prices.map((price, index) => {
         const date = new Date(price.date);
 
-        // Adjust label format based on timeframe
+        // Adjust label format based on timeframe - use shorter formats
         switch (timeframe) {
           case '1D':
-            // For intraday data, show time
+            // For intraday data, show time in compact format
             if (prices.length > 50) {
-              // Intraday data - show hours
+              // Intraday data - show hours only
               return date.toLocaleTimeString('en-US', {
                 hour: 'numeric',
-                minute: '2-digit',
-                hour12: true,
+                hour12: false, // Use 24h format for compactness
               });
             } else {
-              // Daily close data
-              return date.toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-              });
+              // Daily close data - very compact
+              return `${date.getMonth() + 1}/${date.getDate()}`;
             }
           case '1W':
+            // Compact weekday format
             return date.toLocaleDateString('en-US', {
               weekday: 'short',
-              month: 'short',
-              day: 'numeric',
             });
           case '1M':
-            return date.toLocaleDateString('en-US', {
-              month: 'short',
-              day: 'numeric',
-            });
+            // Month/day format
+            return `${date.getMonth() + 1}/${date.getDate()}`;
           case '3M':
           case '6M':
-            return date.toLocaleDateString('en-US', {
-              month: 'short',
-              day: 'numeric',
-            });
+            // Month/day format
+            return `${date.getMonth() + 1}/${date.getDate()}`;
           case '1Y':
+            // Month abbreviation
             return date.toLocaleDateString('en-US', {
               month: 'short',
-              year: '2-digit',
             });
           default:
-            return date.toLocaleDateString('en-US', {
-              month: 'short',
-              day: 'numeric',
-            });
+            // Default compact format
+            return `${date.getMonth() + 1}/${date.getDate()}`;
         }
       });
 
-      // Optimize labels to prevent overlap
+      // Optimize labels to prevent overlap - more aggressive filtering
       let optimizedLabels = labels;
-      const maxLabels = timeframe === '1D' ? 8 : 6;
+      const maxLabels = timeframe === '1D' ? 4 : 5; // Reduce max labels further
 
       if (labels.length > maxLabels) {
         const step = Math.max(1, Math.floor(labels.length / maxLabels));
-        optimizedLabels = labels.filter(
-          (_, index) => index % step === 0 || index === labels.length - 1
-        );
 
-        // Ensure we show the latest data point
-        if (
-          optimizedLabels[optimizedLabels.length - 1] !==
-          labels[labels.length - 1]
-        ) {
-          optimizedLabels[optimizedLabels.length - 1] =
-            labels[labels.length - 1];
+        // Always include first and last, then evenly space the rest
+        const selectedIndices = [0]; // Always include first
+
+        // Add evenly spaced indices
+        for (let i = step; i < labels.length - 1; i += step) {
+          selectedIndices.push(i);
         }
+
+        // Always include last if not already included
+        if (selectedIndices[selectedIndices.length - 1] !== labels.length - 1) {
+          selectedIndices.push(labels.length - 1);
+        }
+
+        // Filter both labels and data to match
+        optimizedLabels = selectedIndices.map((i) => labels[i]);
+
+        // Also optimize the data array to match the labels
+        const optimizedData = selectedIndices.map((i) => data[i]);
+        data.splice(0, data.length, ...optimizedData);
       }
 
       const validData = data.filter((price) => price > 0);
@@ -313,6 +310,22 @@ export const StockDetailScreen: React.FC = () => {
   const watchlistItem = watchlistItems.find(
     (item) => item.stock_symbol === symbol
   );
+
+  // Extract daily stats from historical data (same source as chart)
+  const getDailyStats = () => {
+    if (historicalData?.data && historicalData.data.length > 0) {
+      const latestData = historicalData.data[historicalData.data.length - 1];
+      return {
+        open: latestData.open || latestData.Open,
+        high: latestData.high || latestData.High,
+        low: latestData.low || latestData.Low,
+        volume: latestData.volume || latestData.Volume,
+      };
+    }
+    return { open: null, high: null, low: null, volume: null };
+  };
+
+  const dailyStats = getDailyStats();
 
   const displayStockData = React.useMemo(() => {
     console.log('🔍 StockDetailScreen Debug:', {
@@ -450,14 +463,30 @@ export const StockDetailScreen: React.FC = () => {
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
-      // Refetch all data including price and historical data
+      // Stagger the API calls to avoid rate limiting
+      console.log('🔄 Refreshing essential data first...');
+      await refetchStock();
+      await refetchPrice();
+
+      // Add small delay before fetching more data
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      console.log('🔄 Refreshing chart data...');
+      await refetchHistorical();
+
+      // Another delay before AI services
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      console.log('🔄 Refreshing AI services (may be rate limited)...');
+      // These are more likely to be rate limited, so do them last and in parallel
       await Promise.all([
-        refetchStock(),
-        refetchPrice(),
-        refetchHistorical(),
-        refetchAnalysis(),
-        refetchPrediction(),
-        refetchNews(),
+        refetchAnalysis().catch((e) =>
+          console.log('Analysis rate limited:', e)
+        ),
+        refetchPrediction().catch((e) =>
+          console.log('Prediction rate limited:', e)
+        ),
+        refetchNews().catch((e) => console.log('News rate limited:', e)),
         refetchWatchlist(),
       ]);
     } catch (error) {
@@ -817,6 +846,39 @@ export const StockDetailScreen: React.FC = () => {
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
       >
+        {/* Rate Limit Info - Show if AI services are failing */}
+        {(analysisError || predictionError || newsError) && (
+          <Card
+            style={[
+              styles.infoCard,
+              {
+                backgroundColor: theme.colors.warning + '20',
+                borderColor: theme.colors.warning,
+              },
+            ]}
+          >
+            <View style={styles.infoContent}>
+              <Text style={[styles.infoIcon, { color: theme.colors.warning }]}>
+                ℹ️
+              </Text>
+              <View style={styles.infoText}>
+                <Text style={[styles.infoTitle, { color: theme.colors.text }]}>
+                  API Rate Limit Reached
+                </Text>
+                <Text
+                  style={[
+                    styles.infoMessage,
+                    { color: theme.colors.textSecondary },
+                  ]}
+                >
+                  Free APIs have daily limits. Stock prices and charts still
+                  work. AI analysis will resume after the limit resets.
+                </Text>
+              </View>
+            </View>
+          </Card>
+        )}
+
         {/* Stock Header */}
         <Card style={styles.headerCard}>
           <View style={styles.stockHeader}>
@@ -915,14 +977,14 @@ export const StockDetailScreen: React.FC = () => {
               <Text
                 style={[
                   {
-                    color: theme.colors.error,
-                    fontSize: 14,
+                    color: theme.colors.warning,
+                    fontSize: 12,
                     fontWeight: 'normal',
                   },
                 ]}
               >
                 {' '}
-                (Service unavailable)
+                (Rate limited - showing default analysis)
               </Text>
             )}
           </Text>
@@ -987,7 +1049,10 @@ export const StockDetailScreen: React.FC = () => {
               <Text
                 style={[styles.analysisValue, { color: theme.colors.text }]}
               >
-                {displayAnalysisData.sentiment_score ?? '--'}/100
+                {displayAnalysisData.sentiment_score
+                  ? Math.round(displayAnalysisData.sentiment_score * 100)
+                  : '--'}
+                /100
               </Text>
             </View>
             <View style={styles.analysisItem}>
@@ -1022,6 +1087,34 @@ export const StockDetailScreen: React.FC = () => {
         <Card style={styles.predictionCard}>
           <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
             AI Price Predictions
+            {predictionLoading && (
+              <Text
+                style={[
+                  {
+                    color: theme.colors.textSecondary,
+                    fontSize: 12,
+                    fontWeight: 'normal',
+                  },
+                ]}
+              >
+                {' '}
+                (Loading...)
+              </Text>
+            )}
+            {predictionError && (
+              <Text
+                style={[
+                  {
+                    color: theme.colors.warning,
+                    fontSize: 12,
+                    fontWeight: 'normal',
+                  },
+                ]}
+              >
+                {' '}
+                (Rate limited - basic analysis shown)
+              </Text>
+            )}
           </Text>
           <Text
             style={[
@@ -1072,14 +1165,33 @@ export const StockDetailScreen: React.FC = () => {
                   </View>
                 ))
             ) : (
-              <Text
-                style={[
-                  styles.predictionDate,
-                  { color: theme.colors.textSecondary, textAlign: 'center' },
-                ]}
-              >
-                No predictions available. Loading AI models...
-              </Text>
+              <View style={styles.rateLimitNotice}>
+                <Text
+                  style={[
+                    styles.rateLimitTitle,
+                    { color: theme.colors.warning },
+                  ]}
+                >
+                  🔄 Rate Limited
+                </Text>
+                <Text
+                  style={[
+                    styles.rateLimitText,
+                    { color: theme.colors.textSecondary },
+                  ]}
+                >
+                  Free API tier reached its limit. Upgrade to premium for
+                  unlimited predictions, or try again later.
+                </Text>
+                <Text
+                  style={[
+                    styles.rateLimitHint,
+                    { color: theme.colors.textSecondary },
+                  ]}
+                >
+                  Basic analysis and real-time prices are still available.
+                </Text>
+              </View>
             )}
           </View>
         </Card>
@@ -1100,9 +1212,7 @@ export const StockDetailScreen: React.FC = () => {
                 Open
               </Text>
               <Text style={[styles.statValue, { color: theme.colors.text }]}>
-                {displayStockData.open_price
-                  ? `$${displayStockData.open_price.toFixed(2)}`
-                  : '--'}
+                {dailyStats.open ? `$${dailyStats.open.toFixed(2)}` : '--'}
               </Text>
             </View>
             <View style={styles.statItem}>
@@ -1115,9 +1225,7 @@ export const StockDetailScreen: React.FC = () => {
                 High
               </Text>
               <Text style={[styles.statValue, { color: theme.colors.text }]}>
-                {displayStockData.high_price
-                  ? `$${displayStockData.high_price.toFixed(2)}`
-                  : '--'}
+                {dailyStats.high ? `$${dailyStats.high.toFixed(2)}` : '--'}
               </Text>
             </View>
             <View style={styles.statItem}>
@@ -1130,9 +1238,7 @@ export const StockDetailScreen: React.FC = () => {
                 Low
               </Text>
               <Text style={[styles.statValue, { color: theme.colors.text }]}>
-                {displayStockData.low_price
-                  ? `$${displayStockData.low_price.toFixed(2)}`
-                  : '--'}
+                {dailyStats.low ? `$${dailyStats.low.toFixed(2)}` : '--'}
               </Text>
             </View>
             <View style={styles.statItem}>
@@ -1145,9 +1251,7 @@ export const StockDetailScreen: React.FC = () => {
                 Volume
               </Text>
               <Text style={[styles.statValue, { color: theme.colors.text }]}>
-                {displayStockData.volume
-                  ? displayStockData.volume.toLocaleString()
-                  : '--'}
+                {dailyStats.volume ? dailyStats.volume.toLocaleString() : '--'}
               </Text>
             </View>
             <View style={styles.statItem}>
@@ -1181,36 +1285,41 @@ export const StockDetailScreen: React.FC = () => {
           </View>
         </Card>
 
-        {/* News Section */}
-        <Card style={styles.newsCard}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
-            Latest News
-          </Text>
-          {displayNewsData?.news_items?.map((news: any, index: number) => (
-            <TouchableOpacity key={index} style={styles.newsItem}>
-              <Text style={[styles.newsTitle, { color: theme.colors.text }]}>
-                {news.title}
+        {/* News Section - Only show if news is available */}
+        {displayNewsData?.news_items &&
+          displayNewsData.news_items.length > 0 && (
+            <Card style={styles.newsCard}>
+              <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
+                Latest News
               </Text>
-              <Text
-                style={[
-                  styles.newsSource,
-                  { color: theme.colors.textSecondary },
-                ]}
-              >
-                {news.source}
-                {new Date(news.published_at).toLocaleDateString()}
-              </Text>
-              <Text
-                style={[
-                  styles.newsSummary,
-                  { color: theme.colors.textSecondary },
-                ]}
-              >
-                {news.summary}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </Card>
+              {displayNewsData.news_items.map((news: any, index: number) => (
+                <TouchableOpacity key={index} style={styles.newsItem}>
+                  <Text
+                    style={[styles.newsTitle, { color: theme.colors.text }]}
+                  >
+                    {news.title}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.newsSource,
+                      { color: theme.colors.textSecondary },
+                    ]}
+                  >
+                    {news.source} •{' '}
+                    {new Date(news.published_at).toLocaleDateString()}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.newsSummary,
+                      { color: theme.colors.textSecondary },
+                    ]}
+                  >
+                    {news.summary}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </Card>
+          )}
 
         {/* Action Buttons */}
         <Card style={styles.actionsCard}>
@@ -1626,5 +1735,51 @@ const styles = StyleSheet.create({
   retryButton: {
     marginTop: 16,
     minWidth: 120,
+  },
+  rateLimitNotice: {
+    alignItems: 'center',
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+  },
+  rateLimitTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  rateLimitText: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 8,
+    lineHeight: 20,
+  },
+  rateLimitHint: {
+    fontSize: 12,
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  infoCard: {
+    marginBottom: 16,
+    borderWidth: 1,
+  },
+  infoContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  infoIcon: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  infoText: {
+    flex: 1,
+  },
+  infoTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  infoMessage: {
+    fontSize: 14,
+    lineHeight: 18,
   },
 });
