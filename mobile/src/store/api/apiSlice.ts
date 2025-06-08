@@ -2,9 +2,111 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import type { RootState } from '../index';
 import { ReactNode } from 'react';
 import { configService } from '../../services/config';
+import { logout, updateToken } from '../slices/authSlice';
+import { addNotification } from '../slices/uiSlice';
 
 // Base URL from config service
 const baseUrl = configService.buildApiUrl('');
+
+// Enhanced base query with 401 error handling
+const baseQueryWithAuth = fetchBaseQuery({
+  baseUrl,
+  prepareHeaders: (headers, { getState }) => {
+    const token = (getState() as RootState).auth.token;
+    if (token) {
+      headers.set('authorization', `Bearer ${token}`);
+    }
+    headers.set('content-type', 'application/json');
+    return headers;
+  },
+});
+
+// Wrapper that handles 401 errors with token refresh attempt
+const baseQueryWithReauth = async (args: any, api: any, extraOptions: any) => {
+  let result = await baseQueryWithAuth(args, api, extraOptions);
+
+  // If we get a 401 Unauthorized response, try to refresh the token
+  if (result.error && result.error.status === 401) {
+    console.log('🔐 401 Unauthorized detected - attempting token refresh');
+
+    const state = api.getState() as RootState;
+    const refreshToken = state.auth.refreshToken;
+
+    if (refreshToken) {
+      try {
+        // Attempt to refresh the token
+        const refreshResult = await fetchBaseQuery({
+          baseUrl,
+          prepareHeaders: (headers) => {
+            headers.set('content-type', 'application/json');
+            return headers;
+          },
+        })(
+          {
+            url: '/auth/refresh',
+            method: 'POST',
+            body: { refresh_token: refreshToken },
+          },
+          api,
+          extraOptions
+        );
+
+        if (refreshResult.data) {
+          // Refresh successful - update tokens
+          const newTokenData = refreshResult.data as any;
+          api.dispatch(
+            updateToken({
+              token: newTokenData.access_token,
+              refreshToken: newTokenData.refresh_token,
+            })
+          );
+
+          console.log(
+            '✅ Token refresh successful - retrying original request'
+          );
+
+          // Retry the original request with the new token
+          result = await baseQueryWithAuth(args, api, extraOptions);
+        } else {
+          // Refresh failed - logout user
+          console.log('❌ Token refresh failed - logging out');
+          throw new Error('Token refresh failed');
+        }
+      } catch (error) {
+        console.log('❌ Token refresh error - logging out:', error);
+
+        // Dispatch logout action to clear auth state
+        api.dispatch(logout());
+
+        // Add notification to inform user
+        api.dispatch(
+          addNotification({
+            title: 'Session Expired',
+            message: 'Your session has expired. Please log in again.',
+            type: 'warning',
+          })
+        );
+      }
+    } else {
+      // No refresh token available - logout immediately
+      console.log('❌ No refresh token available - logging out');
+
+      // Dispatch logout action to clear auth state
+      api.dispatch(logout());
+
+      // Add notification to inform user
+      api.dispatch(
+        addNotification({
+          title: 'Session Expired',
+          message: 'Your session has expired. Please log in again.',
+          type: 'warning',
+        })
+      );
+    }
+  }
+
+  return result;
+};
 
 // Types matching backend schemas exactly
 export interface User {
@@ -228,19 +330,13 @@ export interface Notification {
   data?: any;
 }
 
+export interface RefreshTokenRequest {
+  refresh_token: string;
+}
+
 export const apiSlice = createApi({
   reducerPath: 'api',
-  baseQuery: fetchBaseQuery({
-    baseUrl,
-    prepareHeaders: (headers, { getState }) => {
-      const token = (getState() as RootState).auth.token;
-      if (token) {
-        headers.set('authorization', `Bearer ${token}`);
-      }
-      headers.set('content-type', 'application/json');
-      return headers;
-    },
-  }),
+  baseQuery: baseQueryWithReauth,
   tagTypes: [
     'User',
     'Stock',
@@ -265,6 +361,13 @@ export const apiSlice = createApi({
         url: '/auth/register',
         method: 'POST',
         body: userData,
+      }),
+    }),
+    refreshToken: builder.mutation<AuthResponse, RefreshTokenRequest>({
+      query: (refreshData) => ({
+        url: '/auth/refresh',
+        method: 'POST',
+        body: refreshData,
       }),
     }),
     getCurrentUser: builder.query<User, void>({
@@ -435,6 +538,7 @@ export const apiSlice = createApi({
 export const {
   useLoginMutation,
   useRegisterMutation,
+  useRefreshTokenMutation,
   useGetCurrentUserQuery,
   useSearchStocksQuery,
   useGetStockQuery,

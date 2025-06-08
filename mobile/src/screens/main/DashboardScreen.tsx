@@ -187,6 +187,34 @@ const DashboardScreen: React.FC = () => {
     return 'Investor';
   };
 
+  // Debug API errors
+  useEffect(() => {
+    console.log('🔍 DashboardScreen Debug Info:');
+    console.log('User:', user);
+    console.log('isAuthenticated:', isAuthenticated);
+    console.log('Auth token:', token ? 'Present' : 'Missing');
+    console.log('Portfolio Error:', portfolioError);
+    console.log('Watchlist Error:', watchlistError);
+    console.log('Portfolio Data:', portfolio ? 'Available' : 'undefined');
+    console.log('Watchlist Data:', watchlist ? 'Available' : 'undefined');
+
+    // Log API errors for debugging
+    if (portfolioError) {
+      console.error('Portfolio API Error:', portfolioError);
+    }
+    if (watchlistError) {
+      console.error('Watchlist API Error:', watchlistError);
+    }
+  }, [
+    user,
+    isAuthenticated,
+    token,
+    portfolioError,
+    watchlistError,
+    portfolio,
+    watchlist,
+  ]);
+
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: theme.colors.background }]}
@@ -237,9 +265,9 @@ const DashboardScreen: React.FC = () => {
               </Text>
             </TouchableOpacity>
           </View>
-          
+
           {portfolioLoading ? (
-            <SectionLoadingCard type="portfolio" />
+            <SectionLoadingCard type='portfolio' />
           ) : (
             <View
               style={[styles.card, { backgroundColor: theme.colors.surface }]}
@@ -306,7 +334,9 @@ const DashboardScreen: React.FC = () => {
                       <Text
                         style={[
                           styles.statValue,
-                          { color: getChangeColor(portfolio.total_return || 0) },
+                          {
+                            color: getChangeColor(portfolio.total_return || 0),
+                          },
                         ]}
                       >
                         {formatCurrency(portfolio.total_return || 0)}
@@ -316,7 +346,9 @@ const DashboardScreen: React.FC = () => {
                 </>
               ) : (
                 <View style={styles.emptyState}>
-                  <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
+                  <Text
+                    style={[styles.emptyTitle, { color: theme.colors.text }]}
+                  >
                     No Portfolio Yet
                   </Text>
                   <Text
@@ -347,9 +379,9 @@ const DashboardScreen: React.FC = () => {
               </Text>
             </TouchableOpacity>
           </View>
-          
+
           {watchlistLoading ? (
-            <SectionLoadingCard type="watchlist" />
+            <SectionLoadingCard type='watchlist' />
           ) : (
             <View
               style={[styles.card, { backgroundColor: theme.colors.surface }]}
@@ -386,7 +418,10 @@ const DashboardScreen: React.FC = () => {
                     );
 
                     return (
-                      <View key={item.stock_symbol} style={styles.watchlistItem}>
+                      <View
+                        key={item.stock_symbol}
+                        style={styles.watchlistItem}
+                      >
                         <View style={styles.stockInfo}>
                           <Text
                             style={[
@@ -431,7 +466,9 @@ const DashboardScreen: React.FC = () => {
                 </View>
               ) : (
                 <View style={styles.emptyState}>
-                  <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
+                  <Text
+                    style={[styles.emptyTitle, { color: theme.colors.text }]}
+                  >
                     Empty Watchlist
                   </Text>
                   <Text
@@ -462,9 +499,9 @@ const DashboardScreen: React.FC = () => {
               </Text>
             </TouchableOpacity>
           </View>
-          
+
           {newsLoading ? (
-            <SectionLoadingCard type="news" />
+            <SectionLoadingCard type='news' />
           ) : (
             <View
               style={[styles.card, { backgroundColor: theme.colors.surface }]}
@@ -476,7 +513,10 @@ const DashboardScreen: React.FC = () => {
                     .map((article: any, index: number) => (
                       <TouchableOpacity key={index} style={styles.newsItem}>
                         <Text
-                          style={[styles.newsTitle, { color: theme.colors.text }]}
+                          style={[
+                            styles.newsTitle,
+                            { color: theme.colors.text },
+                          ]}
                         >
                           {article.title}
                         </Text>
@@ -494,7 +534,9 @@ const DashboardScreen: React.FC = () => {
                 </View>
               ) : (
                 <View style={styles.emptyState}>
-                  <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
+                  <Text
+                    style={[styles.emptyTitle, { color: theme.colors.text }]}
+                  >
                     No News Available
                   </Text>
                   <Text

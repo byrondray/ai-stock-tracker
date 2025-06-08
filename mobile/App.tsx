@@ -19,6 +19,7 @@ import { ThemeProvider } from './src/providers/ThemeProvider';
 import { NotificationProvider } from './src/providers/NotificationProvider';
 import { useAppDispatch } from './src/store';
 import { setOnlineStatus } from './src/store/slices/uiSlice';
+import { ToastContainer } from './src/components/ui';
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -58,6 +59,7 @@ function AppContent() {
       <ThemeProvider>
         <NotificationProvider>
           <AppNavigator />
+          <ToastContainer />
           <StatusBar style='auto' />
         </NotificationProvider>
       </ThemeProvider>
