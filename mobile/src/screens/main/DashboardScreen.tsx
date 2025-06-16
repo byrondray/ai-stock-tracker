@@ -21,7 +21,6 @@ import {
   useGetPortfolioQuery,
   useGetWatchlistQuery,
   useGetGeneralNewsQuery,
-  useGetNotificationsQuery,
 } from '../../store/api/apiSlice';
 import { useTheme } from '../../hooks/useTheme';
 
@@ -103,13 +102,6 @@ const DashboardScreen: React.FC = () => {
   } = useGetGeneralNewsQuery({
     limit: 5,
   });
-
-  // Get notifications count for bell icon badge
-  const { data: notifications = [] } = useGetNotificationsQuery(undefined, {
-    skip: !user,
-  });
-
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   // Get all unique symbols from portfolio and watchlist for real-time updates
   const portfolioSymbols =
@@ -234,34 +226,6 @@ const DashboardScreen: React.FC = () => {
               {getUserDisplayName()}
             </Text>
           </View>
-
-          {/* Notifications Bell Icon */}
-          <TouchableOpacity
-            style={styles.notificationButton}
-            onPress={() => navigation.navigate('Notifications')}
-          >
-            <View style={styles.bellIconContainer}>
-              <Ionicons
-                name='notifications-outline'
-                size={24}
-                color={theme.colors.surface}
-              />
-              {unreadCount > 0 && (
-                <View
-                  style={[
-                    styles.notificationBadge,
-                    { backgroundColor: theme.colors.error },
-                  ]}
-                >
-                  <Text
-                    style={[styles.badgeText, { color: theme.colors.surface }]}
-                  >
-                    {unreadCount > 99 ? '99+' : unreadCount.toString()}
-                  </Text>
-                </View>
-              )}
-            </View>
-          </TouchableOpacity>
         </View>
       </LinearGradient>
 
@@ -587,30 +551,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  notificationButton: {
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  bellIconContainer: {
-    position: 'relative',
-  },
-  notificationBadge: {
-    position: 'absolute',
-    top: -6,
-    right: -6,
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 4,
-  },
-  badgeText: {
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
-
   greeting: {
     fontSize: 16,
     opacity: 0.8,

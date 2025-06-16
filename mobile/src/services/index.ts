@@ -13,6 +13,3 @@ export type {
   ConnectionCallback,
   ErrorCallback,
 } from './websocket';
-
-export { default as notificationService } from './notifications';
-export type { NotificationData, PriceAlert } from './notifications';

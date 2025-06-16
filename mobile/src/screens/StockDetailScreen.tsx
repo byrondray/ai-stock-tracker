@@ -414,10 +414,18 @@ export const StockDetailScreen: React.FC = () => {
   useEffect(() => {
     refetchHistorical();
   }, [selectedTimeframe, refetchHistorical]);
-
   useEffect(() => {
     navigation.setOptions({
       title: symbol,
+      headerStyle: {
+        backgroundColor: theme.colors.surface,
+      },
+      headerTintColor: theme.colors.text,
+      headerTitleStyle: {
+        color: theme.colors.text,
+        fontWeight: '600',
+      },
+      headerBackTitle: 'Home',
       headerRight: () => (
         <TouchableOpacity
           onPress={handleWatchlistToggle}

@@ -17,7 +17,6 @@ import { StockDetailScreen } from '../screens/StockDetailScreen';
 import { PortfolioDetailScreen } from '../screens/PortfolioDetailScreen';
 import { WatchlistDetailScreen } from '../screens/WatchlistDetailScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
-import { NotificationsScreen } from '../screens/NotificationsScreen';
 import { useTheme } from '../hooks/useTheme';
 
 export type RootStackParamList = {
@@ -27,7 +26,6 @@ export type RootStackParamList = {
   PortfolioDetail: { portfolioId: number };
   WatchlistDetail: { watchlistId: number };
   Settings: undefined;
-  Notifications: undefined;
   Home: undefined;
   Profile: undefined;
 };
@@ -91,6 +89,7 @@ export function AppNavigator() {
   const { isAuthenticated, user, token } = useAppSelector(
     (state) => state.auth
   );
+  const { theme } = useTheme();
   const navigationRef = React.useRef<any>(null);
 
   // More robust authentication check
@@ -133,7 +132,17 @@ export function AppNavigator() {
   return (
     <NavigationContainer ref={navigationRef}>
       <Stack.Navigator
-        screenOptions={{ headerShown: false }}
+        screenOptions={{
+          headerShown: false,
+          headerStyle: {
+            backgroundColor: theme.colors.surface,
+          },
+          headerTintColor: theme.colors.text,
+          headerTitleStyle: {
+            color: theme.colors.text,
+            fontWeight: '600',
+          },
+        }}
         initialRouteName={isActuallyAuthenticated ? 'Main' : 'Auth'}
       >
         <Stack.Screen name='Auth' component={AuthNavigator} />
@@ -141,27 +150,70 @@ export function AppNavigator() {
         <Stack.Screen
           name='StockDetail'
           component={StockDetailScreen}
-          options={{ headerShown: true, title: 'Stock Details' }}
+          options={{
+            headerShown: true,
+            title: 'Stock Details',
+            headerBackTitle: 'Home',
+            headerStyle: {
+              backgroundColor: theme.colors.surface,
+            },
+            headerTintColor: theme.colors.text,
+            headerTitleStyle: {
+              color: theme.colors.text,
+              fontWeight: '600',
+            },
+          }}
         />
         <Stack.Screen
           name='PortfolioDetail'
           component={PortfolioDetailScreen}
-          options={{ headerShown: true, title: 'Portfolio Details' }}
+          options={{
+            headerShown: true,
+            title: 'Portfolio Details',
+            headerBackTitle: 'Home',
+            headerStyle: {
+              backgroundColor: theme.colors.surface,
+            },
+            headerTintColor: theme.colors.text,
+            headerTitleStyle: {
+              color: theme.colors.text,
+              fontWeight: '600',
+            },
+          }}
         />
         <Stack.Screen
           name='WatchlistDetail'
           component={WatchlistDetailScreen}
-          options={{ headerShown: true, title: 'Watchlist Details' }}
+          options={{
+            headerShown: true,
+            title: 'Watchlist Details',
+            headerBackTitle: 'Home',
+            headerStyle: {
+              backgroundColor: theme.colors.surface,
+            },
+            headerTintColor: theme.colors.text,
+            headerTitleStyle: {
+              color: theme.colors.text,
+              fontWeight: '600',
+            },
+          }}
         />
         <Stack.Screen
           name='Settings'
           component={SettingsScreen}
-          options={{ headerShown: true, title: 'Settings' }}
-        />
-        <Stack.Screen
-          name='Notifications'
-          component={NotificationsScreen}
-          options={{ headerShown: true, title: 'Notifications' }}
+          options={{
+            headerShown: true,
+            title: 'Settings',
+            headerBackTitle: 'Home',
+            headerStyle: {
+              backgroundColor: theme.colors.surface,
+            },
+            headerTintColor: theme.colors.text,
+            headerTitleStyle: {
+              color: theme.colors.text,
+              fontWeight: '600',
+            },
+          }}
         />
         <Stack.Screen name='Home' component={HomeScreen} />
         <Stack.Screen name='Profile' component={ProfileScreen} />

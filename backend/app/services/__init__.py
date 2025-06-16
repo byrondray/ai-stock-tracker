@@ -11,6 +11,7 @@ from .portfolio_service import PortfolioService
 from .analysis_service import AnalysisService
 from .prediction_service import PredictionService
 from .news_service import NewsService
+from .fmp_service import FMPService
 
 __all__ = [
     "UserService",
@@ -19,5 +20,6 @@ __all__ = [
     "PortfolioService",
     "AnalysisService",
     "PredictionService",
-    "NewsService"
+    "NewsService",
+    "FMPService"
 ]

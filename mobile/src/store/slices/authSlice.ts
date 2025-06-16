@@ -106,7 +106,7 @@ export const authSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
-    builder.addCase(REHYDRATE, (state, action) => {
+    builder.addCase(REHYDRATE, (state, action: any) => {
       // When redux-persist rehydrates the state, restore auth status
       if (action.payload && action.payload.auth) {
         const authState = action.payload.auth;

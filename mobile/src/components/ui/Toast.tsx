@@ -9,8 +9,6 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../hooks/useTheme';
-import { useAppSelector, useAppDispatch } from '../../store';
-import { removeNotification } from '../../store/slices/uiSlice';
 
 const { width } = Dimensions.get('window');
 
@@ -21,6 +19,7 @@ interface ToastProps {
   message: string;
   autoHide?: boolean;
   duration?: number;
+  onDismiss?: () => void;
 }
 
 const Toast: React.FC<ToastProps> = ({
@@ -30,9 +29,9 @@ const Toast: React.FC<ToastProps> = ({
   message,
   autoHide = true,
   duration = 4000,
+  onDismiss,
 }) => {
   const { theme } = useTheme();
-  const dispatch = useAppDispatch();
   const insets = useSafeAreaInsets();
   const [slideAnim] = useState(new Animated.Value(-100));
 
@@ -53,14 +52,13 @@ const Toast: React.FC<ToastProps> = ({
       return () => clearTimeout(timer);
     }
   }, []);
-
   const handleDismiss = () => {
     Animated.timing(slideAnim, {
       toValue: -100,
       duration: 300,
       useNativeDriver: true,
     }).start(() => {
-      dispatch(removeNotification(id));
+      onDismiss?.();
     });
   };
 
@@ -130,23 +128,9 @@ const Toast: React.FC<ToastProps> = ({
 };
 
 export const ToastContainer: React.FC = () => {
-  const notifications = useAppSelector((state) => state.ui.notifications);
-
-  // Only show the most recent notification as a toast
-  const latestNotification = notifications.length > 0 ? notifications[0] : null;
-
-  if (!latestNotification) {
-    return null;
-  }
-
-  return (
-    <Toast
-      id={latestNotification.id}
-      type={latestNotification.type}
-      title={latestNotification.title}
-      message={latestNotification.message}
-    />
-  );
+  // Toast notifications have been removed from the app
+  // This component is kept for backward compatibility but does nothing
+  return null;
 };
 
 const styles = StyleSheet.create({

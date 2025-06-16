@@ -14,7 +14,7 @@ from app.schemas import StockPrediction, PredictionRequest, PredictionPoint
 from app.services.prediction_service import PredictionService
 from app.services.stock_service import StockService
 from app.services.fmp_service import FMPService
-from app.ml import LSTMPredictor, TechnicalIndicators
+from app.ml import LSTMPredictor, FeatureStore
 
 logger = logging.getLogger(__name__)
 
@@ -72,19 +72,7 @@ async def get_stock_prediction(
         
         logger.info(f"Retrieved {len(historical_data)} historical data points for {symbol}")
         
-        # Add only essential technical indicators to avoid NaN issues
-        enhanced_data = _add_essential_indicators(historical_data)
-        logger.info(f"Added essential technical indicators. Data now has {len(enhanced_data.columns)} columns")
-        
-        # Remove only the initial rows with NaN values (from moving averages)
-        # Keep as much data as possible by only dropping the first 50 rows where indicators are NaN
-        enhanced_data = enhanced_data.iloc[50:]  # Skip first 50 rows where long-term indicators are NaN
-        
-        if len(enhanced_data) < 60:  # Need at least 60 days for LSTM sequences
-            logger.warning(f"Insufficient clean data after adding indicators: {len(enhanced_data)} rows")
-            return await _fallback_prediction(symbol, days)
-        
-        # Initialize LSTM predictor
+        # Initialize improved LSTM predictor with feature store
         lstm_predictor = LSTMPredictor(
             sequence_length=60,
             prediction_horizon=days,
@@ -92,33 +80,26 @@ async def get_stock_prediction(
         )
         
         try:
-            # Try to make predictions with existing model or train a new one
+            # Train or load existing model and make predictions
             logger.info(f"Attempting LSTM prediction for {symbol}")
             
-            # Check if we need to retrain the model
-            needs_retrain = await lstm_predictor.retrain_if_needed(
-                enhanced_data,
-                max_age_days=7,  # Retrain if model is older than 7 days
-                min_data_points=200
+            # Train the model with robust feature engineering
+            training_results = await lstm_predictor.train(
+                data=historical_data,
+                symbol=symbol,
+                epochs=50,
+                batch_size=32,
+                early_stopping_patience=10
             )
             
-            if needs_retrain:
-                logger.info(f"Training LSTM model for {symbol}")
-                
-                # Train the model (this might take a while)
-                training_results = await lstm_predictor.train(
-                    data=enhanced_data,
-                    target_column='Close',
-                    epochs=50,  # Reduced for faster training
-                    batch_size=32,
-                    early_stopping_patience=10,
-                    save_model=True
-                )
-                
-                logger.info(f"LSTM training completed for {symbol}. MAE: {training_results['final_metrics'].get('mae', 'N/A')}")
+            logger.info(f"LSTM training completed for {symbol}. Validation metrics: {training_results.get('validation_metrics', {})}")
             
-            # Make predictions
-            prediction_results = await lstm_predictor.predict(enhanced_data, symbol)
+            # Make predictions with confidence intervals
+            prediction_results = await lstm_predictor.predict(
+                data=historical_data,
+                symbol=symbol,
+                return_confidence=True
+            )
             
             # Convert to the expected format
             predictions = []
@@ -149,90 +130,11 @@ async def get_stock_prediction(
         except Exception as lstm_error:
             logger.error(f"LSTM prediction failed for {symbol}: {str(lstm_error)}")
             # Fall back to technical analysis based predictions
-            return await _technical_analysis_prediction(symbol, days, enhanced_data)
+            return await _technical_analysis_prediction(symbol, days, historical_data)
         
     except Exception as e:
         logger.error(f"Error in ML prediction pipeline for {symbol}: {str(e)}")
         return await _fallback_prediction(symbol, days)
-
-
-def _add_essential_indicators(df: pd.DataFrame) -> pd.DataFrame:
-    """Add only essential technical indicators that won't cause excessive NaN values"""
-    try:
-        result = df.copy()
-        
-        # Moving Averages (essential for trend analysis)
-        result['SMA_20'] = result['Close'].rolling(window=20).mean()
-        result['SMA_50'] = result['Close'].rolling(window=50).mean()
-        result['EMA_12'] = result['Close'].ewm(span=12).mean()
-        result['EMA_26'] = result['Close'].ewm(span=26).mean()
-        
-        # MACD (momentum indicator)
-        result['MACD'] = result['EMA_12'] - result['EMA_26']
-        result['MACD_Signal'] = result['MACD'].ewm(span=9).mean()
-        result['MACD_Histogram'] = result['MACD'] - result['MACD_Signal']
-        
-        # RSI (momentum oscillator)
-        delta = result['Close'].diff()
-        gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-        rs = gain / loss
-        result['RSI'] = 100 - (100 / (1 + rs))
-        
-        # Bollinger Bands (volatility)
-        bb_sma = result['Close'].rolling(window=20).mean()
-        bb_std = result['Close'].rolling(window=20).std()
-        result['BB_Upper'] = bb_sma + (bb_std * 2)
-        result['BB_Lower'] = bb_sma - (bb_std * 2)
-        result['BB_Width'] = (result['BB_Upper'] - result['BB_Lower']) / bb_sma
-        
-        # Add the features LSTM model expects (to match the 20 features)
-        result['SMA_5'] = result['Close'].rolling(window=5).mean()
-        result['SMA_10'] = result['Close'].rolling(window=10).mean()
-        result['EMA_8'] = result['Close'].ewm(span=8).mean()
-        result['EMA_21'] = result['Close'].ewm(span=21).mean()
-        
-        # ATR (Average True Range)
-        high_low = result['High'] - result['Low']
-        high_close = np.abs(result['High'] - result['Close'].shift())
-        low_close = np.abs(result['Low'] - result['Close'].shift())
-        ranges = pd.concat([high_low, high_close, low_close], axis=1)
-        result['ATR'] = ranges.max(axis=1).rolling(window=14).mean()
-        
-        # Stochastic Oscillator
-        lowest_low = result['Low'].rolling(window=14).min()
-        highest_high = result['High'].rolling(window=14).max()
-        result['Stoch_K'] = 100 * ((result['Close'] - lowest_low) / (highest_high - lowest_low))
-        result['Stoch_D'] = result['Stoch_K'].rolling(window=3).mean()
-        
-        # Williams %R
-        result['Williams_R'] = -100 * ((highest_high - result['Close']) / (highest_high - lowest_low))
-        
-        # CCI (Commodity Channel Index)
-        tp = (result['High'] + result['Low'] + result['Close']) / 3
-        result['CCI'] = (tp - tp.rolling(window=20).mean()) / (0.015 * tp.rolling(window=20).std())
-        
-        # MFI (Money Flow Index)
-        typical_price = (result['High'] + result['Low'] + result['Close']) / 3
-        money_flow = typical_price * result['Volume']
-        positive_flow = money_flow.where(typical_price > typical_price.shift(1), 0).rolling(window=14).sum()
-        negative_flow = money_flow.where(typical_price < typical_price.shift(1), 0).rolling(window=14).sum()
-        mfi_ratio = positive_flow / negative_flow
-        result['MFI'] = 100 - (100 / (1 + mfi_ratio))
-        
-        # ADX (simplified)
-        result['ADX'] = result['ATR']  # Simplified - use ATR as proxy
-        
-        # OBV (On Balance Volume)
-        result['OBV'] = (result['Volume'] * ((result['Close'] > result['Close'].shift(1)).astype(int) - 
-                                           (result['Close'] < result['Close'].shift(1)).astype(int))).cumsum()
-        
-        logger.info(f"Added {len(result.columns) - len(df.columns)} essential technical indicators")
-        return result
-        
-    except Exception as e:
-        logger.error(f"Error adding essential indicators: {str(e)}")
-        return df
 
 
 async def _technical_analysis_prediction(
@@ -244,16 +146,22 @@ async def _technical_analysis_prediction(
     try:
         logger.info(f"Generating technical analysis predictions for {symbol}")
         
-        current_price = float(data['Close'].iloc[-1])
+        # Use feature store to calculate basic indicators for technical analysis
+        feature_store = FeatureStore()
+        basic_features = ['SMA_20', 'EMA_12', 'EMA_26', 'RSI', 'MACD']
         
-        # Use technical indicators for trend analysis
-        predictions = []
+        try:
+            enhanced_data = feature_store.calculate_features(data, basic_features)
+        except Exception as e:
+            logger.warning(f"Could not calculate technical indicators: {e}")
+            enhanced_data = data.copy()
         
-        # Get recent technical indicators
-        recent_rsi = data['RSI'].iloc[-1] if 'RSI' in data.columns else 50
-        recent_macd = data['MACD'].iloc[-1] if 'MACD' in data.columns else 0
-        recent_sma_20 = data['SMA_20'].iloc[-1] if 'SMA_20' in data.columns else current_price
-        recent_sma_50 = data['SMA_50'].iloc[-1] if 'SMA_50' in data.columns else current_price
+        current_price = float(enhanced_data['Close'].iloc[-1])
+        
+        # Get recent technical indicators (with fallbacks)
+        recent_rsi = enhanced_data['RSI'].iloc[-1] if 'RSI' in enhanced_data.columns and not pd.isna(enhanced_data['RSI'].iloc[-1]) else 50
+        recent_macd = enhanced_data['MACD'].iloc[-1] if 'MACD' in enhanced_data.columns and not pd.isna(enhanced_data['MACD'].iloc[-1]) else 0
+        recent_sma_20 = enhanced_data['SMA_20'].iloc[-1] if 'SMA_20' in enhanced_data.columns and not pd.isna(enhanced_data['SMA_20'].iloc[-1]) else current_price
         
         # Determine trend based on technical indicators
         trend_factors = []
@@ -273,18 +181,17 @@ async def _technical_analysis_prediction(
             trend_factors.append(-0.005)  # Bearish
         
         # Moving average analysis
-        if current_price > recent_sma_20 > recent_sma_50:
-            trend_factors.append(0.015)  # Strong uptrend
-        elif current_price < recent_sma_20 < recent_sma_50:
-            trend_factors.append(-0.01)  # Strong downtrend
+        if current_price > recent_sma_20:
+            trend_factors.append(0.015)  # Uptrend
         else:
-            trend_factors.append(0.002)  # Sideways
+            trend_factors.append(-0.01)  # Downtrend
         
         # Calculate average trend
         avg_trend = np.mean(trend_factors)
         
         # Generate predictions with trend and some volatility
         running_price = current_price
+        predictions = []
         
         for i in range(1, days + 1):
             date = datetime.utcnow() + timedelta(days=i)
@@ -296,8 +203,12 @@ async def _technical_analysis_prediction(
             # Confidence decreases over time
             confidence = max(0.3, 0.75 - (i * 0.05))
             
-            # Technical analysis bounds
-            volatility = data['Close'].pct_change().std() * np.sqrt(i)
+            # Technical analysis bounds based on historical volatility
+            if len(enhanced_data) > 20:
+                volatility = enhanced_data['Close'].pct_change().std() * np.sqrt(i)
+            else:
+                volatility = 0.02 * np.sqrt(i)  # Default 2% daily volatility
+                
             lower_bound = running_price * (1 - volatility)
             upper_bound = running_price * (1 + volatility)
             

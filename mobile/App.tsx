@@ -16,7 +16,6 @@ import { View, ActivityIndicator, Text, StyleSheet } from 'react-native';
 import { store, persistor } from './src/store';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { ThemeProvider } from './src/providers/ThemeProvider';
-import { NotificationProvider } from './src/providers/NotificationProvider';
 import { useAppDispatch } from './src/store';
 import { setOnlineStatus } from './src/store/slices/uiSlice';
 import { ToastContainer } from './src/components/ui';
@@ -53,15 +52,12 @@ function AppContent() {
       clearTimeout(timer);
     };
   }, [dispatch]);
-
   return (
     <SafeAreaProvider>
       <ThemeProvider>
-        <NotificationProvider>
-          <AppNavigator />
-          <ToastContainer />
-          <StatusBar style='auto' />
-        </NotificationProvider>
+        <AppNavigator />
+        <ToastContainer />
+        <StatusBar style='auto' />
       </ThemeProvider>
     </SafeAreaProvider>
   );

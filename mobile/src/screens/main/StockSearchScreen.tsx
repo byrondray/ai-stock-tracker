@@ -21,6 +21,8 @@ import {
 } from '../../store/api/apiSlice';
 import { LoadingSpinner, SkeletonCard } from '../../components/ui';
 
+const SKELETON_COUNT = 6;
+
 type RootStackParamList = {
   StockDetail: { symbol: string };
 };

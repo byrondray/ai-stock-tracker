@@ -120,7 +120,7 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
           errorMessage = error.data.detail;
         } else if (Array.isArray(error.data.detail)) {
           errorMessage = error.data.detail
-            .map((item) => item.msg || item)
+            .map((item: any) => item.msg || item)
             .join(', ');
         }
       }

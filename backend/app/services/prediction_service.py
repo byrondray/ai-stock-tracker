@@ -14,7 +14,7 @@ from pathlib import Path
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..schemas import PredictionResponse
-from ..ml import LSTMPredictor, TechnicalIndicators
+from ..ml import LSTMPredictor, FeatureStore
 
 logger = logging.getLogger(__name__)
 
@@ -70,10 +70,21 @@ class PredictionService:
             if len(hist) < 100:  # Need sufficient data
                 logger.warning(f"Insufficient data for {symbol}")
                 return None
+              # Use feature store for robust feature engineering
+            feature_store = FeatureStore()
+            essential_features = [
+                'Close', 'Volume', 'Returns', 'Log_Returns',
+                'SMA_10', 'SMA_20', 'EMA_12', 'EMA_26',
+                'RSI', 'MACD', 'MACD_Signal',
+                'BB_Upper', 'BB_Lower', 'BB_Width',
+                'Volume_SMA_10', 'Price_Volume_Ratio', 'ATR', 'ADX'
+            ]
             
-            # Initialize technical indicators calculator
-            tech_indicators = TechnicalIndicators()
-            hist_with_indicators = tech_indicators.add_all_indicators(hist)
+            try:
+                hist_with_indicators = feature_store.calculate_features(hist, essential_features)
+            except Exception as e:
+                logger.warning(f"Feature calculation failed for {symbol}: {e}")
+                hist_with_indicators = hist.copy()
             
             # Initialize LSTM model with working implementation
             lstm_predictor = LSTMPredictor(
@@ -173,12 +184,17 @@ class PredictionService:
         try:
             df = hist.copy()
             
-            # Use our enhanced technical indicators
-            tech_indicators = TechnicalIndicators()
+            # Use feature store for consistent feature engineering
+            feature_store = FeatureStore()
+            basic_features = ['RSI', 'MACD', 'MACD_Signal', 'SMA_20', 'EMA_12', 'EMA_26']
             
             # Get basic technical indicators (already calculated if passed from _generate_prediction)
             if 'RSI' not in df.columns:
-                df = tech_indicators.add_all_indicators(df)
+                try:
+                    df = feature_store.calculate_features(df, basic_features)
+                except Exception as e:
+                    logger.warning(f"Could not calculate features: {e}")
+                    df = hist.copy()
             
             # Select the most important features for traditional ML models
             # (LSTM will use raw OHLCV data with full technical indicators)

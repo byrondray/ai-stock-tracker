@@ -3,7 +3,6 @@ import type { RootState } from '../index';
 import { ReactNode } from 'react';
 import { configService } from '../../services/config';
 import { logout, updateToken } from '../slices/authSlice';
-import { addNotification } from '../slices/uiSlice';
 
 // Base URL from config service
 const baseUrl = configService.buildApiUrl('');
@@ -77,15 +76,6 @@ const baseQueryWithReauth = async (args: any, api: any, extraOptions: any) => {
 
         // Dispatch logout action to clear auth state
         api.dispatch(logout());
-
-        // Add notification to inform user
-        api.dispatch(
-          addNotification({
-            title: 'Session Expired',
-            message: 'Your session has expired. Please log in again.',
-            type: 'warning',
-          })
-        );
       }
     } else {
       // No refresh token available - logout immediately
@@ -93,15 +83,6 @@ const baseQueryWithReauth = async (args: any, api: any, extraOptions: any) => {
 
       // Dispatch logout action to clear auth state
       api.dispatch(logout());
-
-      // Add notification to inform user
-      api.dispatch(
-        addNotification({
-          title: 'Session Expired',
-          message: 'Your session has expired. Please log in again.',
-          type: 'warning',
-        })
-      );
     }
   }
 
@@ -321,16 +302,6 @@ export interface PriceHistoryResponse {
   prices: StockPrice[];
 }
 
-export interface Notification {
-  id: number;
-  title: string;
-  message: string;
-  type: 'info' | 'warning' | 'error' | 'success';
-  isRead: boolean;
-  created_at: string;
-  data?: any;
-}
-
 export interface RefreshTokenRequest {
   refresh_token: string;
 }
@@ -346,7 +317,6 @@ export const apiSlice = createApi({
     'News',
     'Prediction',
     'Analysis',
-    'Notification',
   ],
   endpoints: (builder) => ({
     // Authentication endpoints
@@ -521,26 +491,6 @@ export const apiSlice = createApi({
         { type: 'Analysis', id: symbol },
       ],
     }),
-
-    // Notification endpoints
-    getNotifications: builder.query<Notification[], void>({
-      query: () => '/notifications',
-      providesTags: ['Notification'],
-    }),
-    markNotificationAsRead: builder.mutation<void, number>({
-      query: (id) => ({
-        url: `/notifications/${id}/read`,
-        method: 'POST',
-      }),
-      invalidatesTags: ['Notification'],
-    }),
-    deleteNotification: builder.mutation<void, number>({
-      query: (id) => ({
-        url: `/notifications/${id}`,
-        method: 'DELETE',
-      }),
-      invalidatesTags: ['Notification'],
-    }),
   }),
 });
 
@@ -566,9 +516,6 @@ export const {
   useGetGeneralNewsQuery,
   useGetStockPredictionQuery,
   useGetStockAnalysisQuery,
-  useGetNotificationsQuery,
-  useMarkNotificationAsReadMutation,
-  useDeleteNotificationMutation,
 } = apiSlice;
 
 // Add aliases for backward compatibility
