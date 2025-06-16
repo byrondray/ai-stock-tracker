@@ -633,7 +633,6 @@ export const StockDetailScreen: React.FC = () => {
             </View>
           </View>
         </Card>
-
         {/* Chart Section Skeleton */}
         <Card style={styles.chartCard}>
           <View style={styles.chartHeader}>
@@ -658,29 +657,32 @@ export const StockDetailScreen: React.FC = () => {
               />
             </View>
           </View>
-        </Card>
-
+        </Card>{' '}
         {/* AI Analysis Skeleton */}
         <Card style={styles.analysisCard}>
-          <SkeletonLoader
-            width={120}
-            height={20}
-            style={{ marginBottom: 16 }}
-          />
-          <View style={styles.analysisGrid}>
-            {Array.from({ length: 5 }).map((_, index) => (
-              <View key={index} style={styles.analysisItem}>
-                <SkeletonLoader
-                  width={80}
-                  height={12}
-                  style={{ marginBottom: 4 }}
-                />
-                <SkeletonLoader width={60} height={16} />
-              </View>
-            ))}
+          <View style={styles.analysisHeader}>
+            <View style={styles.analysisHeaderLeft}>
+              <SkeletonLoader
+                width={32}
+                height={32}
+                style={{ marginRight: 12, borderRadius: 16 }}
+              />
+              <SkeletonLoader width={100} height={20} />
+            </View>
+          </View>
+          <View style={styles.analysisLoadingState}>
+            <View
+              style={[styles.loadingIndicator, { backgroundColor: '#f0f0f0' }]}
+            >
+              <SkeletonLoader
+                width={120}
+                height={16}
+                style={{ marginBottom: 8 }}
+              />
+              <SkeletonLoader width={200} height={14} />
+            </View>
           </View>
         </Card>
-
         {/* Predictions Skeleton */}
         <Card style={styles.predictionCard}>
           <SkeletonLoader width={150} height={20} style={{ marginBottom: 4 }} />
@@ -699,7 +701,6 @@ export const StockDetailScreen: React.FC = () => {
             ))}
           </View>
         </Card>
-
         {/* Statistics Skeleton */}
         <Card style={styles.statsCard}>
           <SkeletonLoader
@@ -720,7 +721,6 @@ export const StockDetailScreen: React.FC = () => {
             ))}
           </View>
         </Card>
-
         {/* News Skeleton */}
         <Card style={styles.newsCard}>
           <SkeletonLoader
@@ -740,7 +740,6 @@ export const StockDetailScreen: React.FC = () => {
             </View>
           ))}
         </Card>
-
         {/* Actions Skeleton */}
         <Card style={styles.actionsCard}>
           <SkeletonLoader width={80} height={20} style={{ marginBottom: 16 }} />
@@ -872,7 +871,6 @@ export const StockDetailScreen: React.FC = () => {
             </View>
           </Card>
         )}
-
         {/* Stock Header */}
         <Card style={styles.headerCard}>
           <View style={styles.stockHeader}>
@@ -908,7 +906,6 @@ export const StockDetailScreen: React.FC = () => {
             </View>
           </View>
         </Card>
-
         {/* Chart Section */}
         <Card style={styles.chartCard}>
           <View style={styles.chartHeader}>
@@ -947,176 +944,302 @@ export const StockDetailScreen: React.FC = () => {
           <View style={styles.chartContainer}>
             <LineChart data={getChartData(selectedTimeframe)} />
           </View>
-        </Card>
-
+        </Card>{' '}
         {/* AI Analysis */}
         <Card style={styles.analysisCard}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
-            AI Analysis
-            {analysisLoading && (
-              <Text
-                style={[
-                  {
-                    color: theme.colors.textSecondary,
-                    fontSize: 14,
-                    fontWeight: 'normal',
-                  },
-                ]}
-              >
-                {' '}
-                (Loading...)
-              </Text>
-            )}
-            {analysisError && (
-              <Text
-                style={[
-                  {
-                    color: theme.colors.warning,
-                    fontSize: 12,
-                    fontWeight: 'normal',
-                  },
-                ]}
-              >
-                {' '}
-                (API service unavailable)
-              </Text>
-            )}
-          </Text>
-          {analysisLoading ? (
-            <View style={styles.rateLimitNotice}>
-              <LoadingSpinner variant='gradient' size='small' />
-              <Text
-                style={[styles.rateLimitTitle, { color: theme.colors.primary }]}
-              >
-                🤖 Analyzing Stock...
-              </Text>
-              <Text
-                style={[
-                  styles.rateLimitText,
-                  { color: theme.colors.textSecondary },
-                ]}
-              >
-                AI is performing fundamental, technical, and sentiment analysis.
+          <View style={styles.analysisHeader}>
+            <View style={styles.analysisHeaderLeft}>
+              <View style={styles.aiIconContainer}>
+                <Ionicons
+                  name='analytics'
+                  size={20}
+                  color={theme.colors.primary}
+                />
+              </View>
+              <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
+                AI Analysis
               </Text>
             </View>
-          ) : analysisData ? (
-            <View style={styles.analysisGrid}>
-              <View style={styles.analysisItem}>
+            {analysisLoading && (
+              <View style={styles.loadingBadge}>
+                <LoadingSpinner variant='gradient' size='small' />{' '}
                 <Text
                   style={[
-                    styles.analysisLabel,
+                    styles.loadingBadgeText,
+                    { color: theme.colors.primary },
+                  ]}
+                >
+                  Analyzing...
+                </Text>
+              </View>
+            )}
+            {analysisError && (
+              <View
+                style={[
+                  styles.errorBadge,
+                  { backgroundColor: theme.colors.warning + '20' },
+                ]}
+              >
+                <Ionicons
+                  name='warning-outline'
+                  size={16}
+                  color={theme.colors.warning}
+                />
+                <Text
+                  style={[styles.errorText, { color: theme.colors.warning }]}
+                >
+                  Unavailable
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {analysisLoading ? (
+            <View style={styles.analysisLoadingState}>
+              <View
+                style={[
+                  styles.loadingIndicator,
+                  { backgroundColor: theme.colors.primary + '10' },
+                ]}
+              >
+                <LoadingSpinner variant='gradient' size='large' />
+                <Text
+                  style={[styles.loadingTitle, { color: theme.colors.primary }]}
+                >
+                  🤖 AI Analysis in Progress
+                </Text>{' '}
+                <Text
+                  style={[
+                    styles.loadingDescription,
+                    { color: theme.colors.textSecondary },
+                  ]}
+                >
+                  Performing comprehensive fundamental and technical analysis...
+                </Text>
+              </View>
+            </View>
+          ) : analysisData ? (
+            <View style={styles.analysisContent}>
+              {/* Overall Rating Card */}
+              <View
+                style={[
+                  styles.ratingCard,
+                  { backgroundColor: theme.colors.background },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.ratingLabel,
                     { color: theme.colors.textSecondary },
                   ]}
                 >
                   Overall Rating
                 </Text>
-                <Text
-                  style={[
-                    styles.analysisValue,
-                    {
-                      color: getRatingColor(
+                <View style={styles.ratingContent}>
+                  <Text
+                    style={[
+                      styles.ratingValue,
+                      {
+                        color: getRatingColor(
+                          displayAnalysisData?.overall_rating || 'hold'
+                        ),
+                      },
+                    ]}
+                  >
+                    {formatRating(
+                      displayAnalysisData?.overall_rating || 'hold'
+                    )}
+                  </Text>
+                  <View
+                    style={[
+                      styles.ratingBadge,
+                      {
+                        backgroundColor:
+                          getRatingColor(
+                            displayAnalysisData?.overall_rating || 'hold'
+                          ) + '20',
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.ratingBadgeText,
+                        {
+                          color: getRatingColor(
+                            displayAnalysisData?.overall_rating || 'hold'
+                          ),
+                        },
+                      ]}
+                    >
+                      {(
                         displayAnalysisData?.overall_rating || 'hold'
-                      ),
-                    },
-                  ]}
-                >
-                  {formatRating(displayAnalysisData?.overall_rating || 'hold')}
-                </Text>
+                      ).toUpperCase()}
+                    </Text>
+                  </View>
+                </View>
               </View>
-              <View style={styles.analysisItem}>
-                <Text
+
+              {/* Analysis Metrics */}
+              <View style={styles.metricsGrid}>
+                <View
                   style={[
-                    styles.analysisLabel,
-                    { color: theme.colors.textSecondary },
+                    styles.metricCard,
+                    { backgroundColor: theme.colors.background },
                   ]}
                 >
-                  Fundamental
-                </Text>
-                <Text
-                  style={[styles.analysisValue, { color: theme.colors.text }]}
-                >
-                  {displayAnalysisData?.fundamental_score ?? '--'}/100
-                </Text>
-              </View>
-              <View style={styles.analysisItem}>
-                <Text
+                  <View style={styles.metricHeader}>
+                    <Ionicons
+                      name='analytics'
+                      size={18}
+                      color={theme.colors.primary}
+                    />
+                    <Text
+                      style={[
+                        styles.metricLabel,
+                        { color: theme.colors.textSecondary },
+                      ]}
+                    >
+                      Fundamental
+                    </Text>
+                  </View>
+                  <Text
+                    style={[styles.metricValue, { color: theme.colors.text }]}
+                  >
+                    {displayAnalysisData?.fundamental_score ?? '--'}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.metricUnit,
+                      { color: theme.colors.textSecondary },
+                    ]}
+                  >
+                    /100
+                  </Text>
+                </View>
+
+                <View
                   style={[
-                    styles.analysisLabel,
-                    { color: theme.colors.textSecondary },
+                    styles.metricCard,
+                    { backgroundColor: theme.colors.background },
                   ]}
                 >
-                  Technical
-                </Text>
-                <Text
-                  style={[styles.analysisValue, { color: theme.colors.text }]}
-                >
-                  {displayAnalysisData?.technical_score ?? '--'}/100
-                </Text>
-              </View>
-              <View style={styles.analysisItem}>
-                <Text
+                  <View style={styles.metricHeader}>
+                    <Ionicons
+                      name='trending-up'
+                      size={18}
+                      color={theme.colors.primary}
+                    />
+                    <Text
+                      style={[
+                        styles.metricLabel,
+                        { color: theme.colors.textSecondary },
+                      ]}
+                    >
+                      Technical
+                    </Text>
+                  </View>
+                  <Text
+                    style={[styles.metricValue, { color: theme.colors.text }]}
+                  >
+                    {displayAnalysisData?.technical_score ?? '--'}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.metricUnit,
+                      { color: theme.colors.textSecondary },
+                    ]}
+                  >
+                    /100
+                  </Text>
+                </View>
+
+                <View
                   style={[
-                    styles.analysisLabel,
-                    { color: theme.colors.textSecondary },
+                    styles.metricCard,
+                    { backgroundColor: theme.colors.background },
                   ]}
                 >
-                  Sentiment
-                </Text>
-                <Text
-                  style={[styles.analysisValue, { color: theme.colors.text }]}
-                >
-                  {displayAnalysisData?.sentiment_score
-                    ? Math.round(displayAnalysisData.sentiment_score * 100)
-                    : '--'}
-                  /100
-                </Text>
-              </View>
-              <View style={styles.analysisItem}>
-                <Text
-                  style={[
-                    styles.analysisLabel,
-                    { color: theme.colors.textSecondary },
-                  ]}
-                >
-                  Risk Score
-                </Text>
-                <Text
-                  style={[
-                    styles.analysisValue,
-                    {
-                      color:
+                  <View style={styles.metricHeader}>
+                    <Ionicons
+                      name='shield-checkmark'
+                      size={18}
+                      color={
                         (displayAnalysisData?.risk_score ?? 0) > 70
                           ? theme.colors.error
                           : (displayAnalysisData?.risk_score ?? 0) > 40
                           ? theme.colors.warning
-                          : theme.colors.success,
-                    },
-                  ]}
-                >
-                  {displayAnalysisData?.risk_score ?? '--'}/100
-                </Text>
+                          : theme.colors.success
+                      }
+                    />
+                    <Text
+                      style={[
+                        styles.metricLabel,
+                        { color: theme.colors.textSecondary },
+                      ]}
+                    >
+                      Risk Score
+                    </Text>
+                  </View>
+                  <Text
+                    style={[
+                      styles.metricValue,
+                      {
+                        color:
+                          (displayAnalysisData?.risk_score ?? 0) > 70
+                            ? theme.colors.error
+                            : (displayAnalysisData?.risk_score ?? 0) > 40
+                            ? theme.colors.warning
+                            : theme.colors.success,
+                      },
+                    ]}
+                  >
+                    {displayAnalysisData?.risk_score ?? '--'}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.metricUnit,
+                      { color: theme.colors.textSecondary },
+                    ]}
+                  >
+                    /100
+                  </Text>
+                </View>
               </View>
             </View>
           ) : (
-            <View style={styles.rateLimitNotice}>
-              <Text
-                style={[styles.rateLimitTitle, { color: theme.colors.warning }]}
-              >
-                📊 Analysis Unavailable
-              </Text>
-              <Text
+            <View style={styles.analysisErrorState}>
+              <View
                 style={[
-                  styles.rateLimitText,
-                  { color: theme.colors.textSecondary },
+                  styles.errorIndicator,
+                  { backgroundColor: theme.colors.warning + '10' },
                 ]}
               >
-                AI analysis service is temporarily unavailable. Stock price data
-                and charts are still working.
-              </Text>
+                <Ionicons
+                  name='analytics-outline'
+                  size={32}
+                  color={theme.colors.warning}
+                />{' '}
+                <Text
+                  style={[
+                    styles.analysisErrorTitle,
+                    { color: theme.colors.warning },
+                  ]}
+                >
+                  Analysis Temporarily Unavailable
+                </Text>
+                <Text
+                  style={[
+                    styles.errorDescription,
+                    { color: theme.colors.textSecondary },
+                  ]}
+                >
+                  AI analysis service is currently offline. Stock price data and
+                  charts are still available.
+                </Text>
+              </View>
             </View>
           )}
         </Card>
-
         {/* AI Predictions */}
         <Card style={styles.predictionCard}>
           <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
@@ -1131,7 +1254,6 @@ export const StockDetailScreen: React.FC = () => {
                   },
                 ]}
               >
-                {' '}
                 (Loading...)
               </Text>
             )}
@@ -1145,7 +1267,6 @@ export const StockDetailScreen: React.FC = () => {
                   },
                 ]}
               >
-                {' '}
                 (API service unavailable)
               </Text>
             )}
@@ -1259,7 +1380,6 @@ export const StockDetailScreen: React.FC = () => {
             </View>
           )}
         </Card>
-
         {/* Stock Stats */}
         <Card style={styles.statsCard}>
           <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
@@ -1348,7 +1468,6 @@ export const StockDetailScreen: React.FC = () => {
             </View>
           </View>
         </Card>
-
         {/* News Section - Only show if news is available */}
         {displayNewsData?.news_items &&
           displayNewsData.news_items.length > 0 && (
@@ -1369,7 +1488,7 @@ export const StockDetailScreen: React.FC = () => {
                       { color: theme.colors.textSecondary },
                     ]}
                   >
-                    {news.source} •{' '}
+                    {news.source} •
                     {new Date(news.published_at).toLocaleDateString()}
                   </Text>
                   <Text
@@ -1384,7 +1503,6 @@ export const StockDetailScreen: React.FC = () => {
               ))}
             </Card>
           )}
-
         {/* Action Buttons */}
         <Card style={styles.actionsCard}>
           <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
@@ -1627,23 +1745,148 @@ const styles = StyleSheet.create({
   analysisCard: {
     marginBottom: 16,
   },
-  analysisGrid: {
+  analysisHeader: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     justifyContent: 'space-between',
-    marginTop: 16,
-  },
-  analysisItem: {
-    width: '48%',
+    alignItems: 'center',
     marginBottom: 16,
   },
-  analysisLabel: {
-    fontSize: 12,
-    marginBottom: 4,
+  analysisHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  analysisValue: {
+  aiIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#667eea20',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  loadingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: '#667eea10',
+  },
+  loadingBadgeText: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginLeft: 4,
+  },
+  errorBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  errorText: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginLeft: 4,
+  },
+  analysisLoadingState: {
+    marginTop: 8,
+  },
+  loadingIndicator: {
+    padding: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  loadingTitle: {
     fontSize: 16,
+    fontWeight: '600',
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  loadingDescription: {
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  analysisContent: {
+    marginTop: 8,
+  },
+  ratingCard: {
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  ratingLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 8,
+  },
+  ratingContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  ratingValue: {
+    fontSize: 24,
     fontWeight: 'bold',
+  },
+  ratingBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  ratingBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  metricsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  metricCard: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  metricHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  metricLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginLeft: 4,
+  },
+  metricValue: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 2,
+  },
+  metricUnit: {
+    fontSize: 12,
+  },
+  analysisErrorState: {
+    marginTop: 8,
+  },
+  errorIndicator: {
+    padding: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  analysisErrorTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginTop: 12,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  errorDescription: {
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
   },
   predictionCard: {
     marginBottom: 16,

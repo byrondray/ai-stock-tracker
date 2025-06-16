@@ -1,31 +1,28 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   FlatList,
   TouchableOpacity,
+  StyleSheet,
   RefreshControl,
-  Image,
-  Linking,
   Alert,
-  ScrollView,
+  Linking,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../hooks/useTheme';
-import { useGetMarketNewsQuery, type NewsItem } from '../../store/api/apiSlice';
+import { useGetMarketNewsQuery } from '../../store/api/apiSlice';
 import {
   LoadingSpinner,
+  SkeletonLoader,
   SkeletonCard,
   SkeletonText,
 } from '../../components/ui';
 
-type SentimentFilter = 'all' | 'positive' | 'negative' | 'neutral';
-
 const NewsScreen: React.FC = () => {
   const { theme, isDark } = useTheme();
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedFilter, setSelectedFilter] = useState<SentimentFilter>('all');
   const {
     data: news,
     isLoading,
@@ -34,37 +31,8 @@ const NewsScreen: React.FC = () => {
     limit: 50,
   });
 
-  // Filter news based on sentiment
-  const filteredNews = useMemo(() => {
-    if (!news?.news_items) return [];
-
-    if (selectedFilter === 'all') {
-      return news.news_items;
-    }
-
-    return news.news_items.filter((item) => {
-      const score = item.sentiment_score || 0;
-
-      switch (selectedFilter) {
-        case 'positive':
-          return score > 0.1;
-        case 'negative':
-          return score < -0.1;
-        case 'neutral':
-          return score >= -0.1 && score <= 0.1;
-        default:
-          return true;
-      }
-    });
-  }, [news?.news_items, selectedFilter]);
-
-  // Get sentiment category from score
-  const getSentimentCategory = (score?: number): SentimentFilter => {
-    if (!score) return 'neutral';
-    if (score > 0.1) return 'positive';
-    if (score < -0.1) return 'negative';
-    return 'neutral';
-  };
+  // Get all news items
+  const newsItems = news?.news_items || [];
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -107,237 +75,46 @@ const NewsScreen: React.FC = () => {
     }
   };
 
-  const getSentimentColor = (score?: number) => {
-    if (!score) return theme.colors.textSecondary;
-    if (score > 0.1) return theme.colors.success;
-    if (score < -0.1) return theme.colors.error;
-    return theme.colors.warning;
-  };
-  const getSentimentLabel = (score?: number) => {
-    if (!score) return 'Neutral';
-    if (score > 0.3) return 'Very Positive';
-    if (score > 0.1) return 'Positive';
-    if (score < -0.3) return 'Very Negative';
-    if (score < -0.1) return 'Negative';
-    return 'Neutral';
-  };
-  const renderFilterTabs = () => {
-    const filters: Array<{
-      key: SentimentFilter;
-      label: string;
-      count: number;
-      color?: string;
-    }> = [
-      {
-        key: 'all',
-        label: 'All',
-        count: news?.news_items?.length || 0,
-      },
-      {
-        key: 'positive',
-        label: 'Positive',
-        count:
-          news?.news_items?.filter(
-            (item) => getSentimentCategory(item.sentiment_score) === 'positive'
-          ).length || 0,
-        color: theme.colors.success,
-      },
-      {
-        key: 'neutral',
-        label: 'Neutral',
-        count:
-          news?.news_items?.filter(
-            (item) => getSentimentCategory(item.sentiment_score) === 'neutral'
-          ).length || 0,
-        color: theme.colors.warning,
-      },
-      {
-        key: 'negative',
-        label: 'Negative',
-        count:
-          news?.news_items?.filter(
-            (item) => getSentimentCategory(item.sentiment_score) === 'negative'
-          ).length || 0,
-        color: theme.colors.error,
-      },
-    ];
-
-    return (
-      <View style={styles.filtersContainer}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filtersContent}
-        >
-          {filters.map((filter) => (
-            <TouchableOpacity
-              key={filter.key}
-              style={[
-                styles.filterTab,
-                {
-                  backgroundColor:
-                    selectedFilter === filter.key
-                      ? filter.color || theme.colors.primary
-                      : theme.colors.surface,
-                  borderColor: filter.color || theme.colors.border,
-                },
-              ]}
-              onPress={() => setSelectedFilter(filter.key)}
-            >
-              {filter.color && (
-                <View
-                  style={[
-                    styles.filterColorDot,
-                    {
-                      backgroundColor:
-                        selectedFilter === filter.key
-                          ? theme.colors.surface
-                          : filter.color,
-                    },
-                  ]}
-                />
-              )}
-              <Text
-                style={[
-                  styles.filterTabText,
-                  {
-                    color:
-                      selectedFilter === filter.key
-                        ? theme.colors.surface
-                        : theme.colors.text,
-                  },
-                ]}
-              >
-                {filter.label}
-              </Text>
-              <Text
-                style={[
-                  styles.filterTabCount,
-                  {
-                    color:
-                      selectedFilter === filter.key
-                        ? theme.colors.surface
-                        : theme.colors.textSecondary,
-                  },
-                ]}
-              >
-                ({filter.count})
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
-    );
-  };
-
-  const renderNewsItem = ({
-    item,
-    index,
-  }: {
-    item: NewsItem;
-    index: number;
-  }) => (
+  const renderNewsItem = ({ item }: { item: any }) => (
     <TouchableOpacity
-      style={[
-        styles.newsCard,
-        { backgroundColor: theme.colors.surface },
-        index === 0 && styles.featuredCard,
-      ]}
+      style={[styles.newsCard, { backgroundColor: theme.colors.surface }]}
       onPress={() => handleArticlePress(item.url)}
       activeOpacity={0.7}
     >
-      {(item as any).image_url && (
-        <Image
-          source={{ uri: (item as any).image_url }}
-          style={[styles.newsImage, index === 0 && styles.featuredImage]}
-          resizeMode='cover'
-        />
-      )}
-
-      <View style={[styles.newsContent, index === 0 && styles.featuredContent]}>
-        <View style={styles.newsHeader}>
-          <Text style={[styles.newsSource, { color: theme.colors.primary }]}>
-            {item.source}
-          </Text>
-          <Text
-            style={[styles.newsTime, { color: theme.colors.textSecondary }]}
-          >
-            {formatTimeAgo(item.published_at)}
-          </Text>
-        </View>
-        <Text
-          style={[
-            styles.newsTitle,
-            { color: theme.colors.text },
-            index === 0 && styles.featuredTitle,
-          ]}
-          numberOfLines={index === 0 ? 3 : 2}
-        >
+      <View style={styles.newsContent}>
+        <Text style={[styles.newsTitle, { color: theme.colors.text }]}>
           {item.title}
         </Text>
+
         {item.summary && (
           <Text
-            style={[
-              styles.newsSummary,
-              { color: theme.colors.textSecondary },
-              index === 0 && styles.featuredSummary,
-            ]}
-            numberOfLines={index === 0 ? 4 : 2}
+            style={[styles.newsSummary, { color: theme.colors.textSecondary }]}
+            numberOfLines={3}
           >
             {item.summary}
           </Text>
         )}
-        <View style={styles.newsFooter}>
-          {(item as any).symbols && (item as any).symbols.length > 0 && (
-            <View style={styles.symbolsContainer}>
-              {(item as any).symbols
-                .slice(0, 3)
-                .map((symbol: string, idx: number) => (
-                  <View
-                    key={idx}
-                    style={[
-                      styles.symbolTag,
-                      { backgroundColor: theme.colors.primary },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.symbolText,
-                        { color: theme.colors.surface },
-                      ]}
-                    >
-                      {symbol}
-                    </Text>
-                  </View>
-                ))}
-              {(item as any).symbols.length > 3 && (
-                <Text
-                  style={[
-                    styles.moreSymbols,
-                    { color: theme.colors.textSecondary },
-                  ]}
-                >
-                  +{(item as any).symbols.length - 3}
-                </Text>
-              )}
-            </View>
-          )}
 
-          {item.sentiment_score !== undefined && (
-            <View style={styles.sentimentContainer}>
-              <View
-                style={[
-                  styles.sentimentDot,
-                  { backgroundColor: getSentimentColor(item.sentiment_score) },
-                ]}
-              />
+        <View style={styles.newsFooter}>
+          <View style={styles.newsMetadata}>
+            <Text style={[styles.newsSource, { color: theme.colors.primary }]}>
+              {item.source}
+            </Text>
+            {item.published_at && (
               <Text
-                style={[
-                  styles.sentimentText,
-                  { color: getSentimentColor(item.sentiment_score) },
-                ]}
+                style={[styles.newsTime, { color: theme.colors.textSecondary }]}
               >
-                {getSentimentLabel(item.sentiment_score)}
+                • {formatTimeAgo(item.published_at)}
+              </Text>
+            )}
+          </View>
+
+          {item.symbol && (
+            <View style={styles.symbolContainer}>
+              <Text
+                style={[styles.symbolText, { color: theme.colors.primary }]}
+              >
+                ${item.symbol}
               </Text>
             </View>
           )}
@@ -345,19 +122,33 @@ const NewsScreen: React.FC = () => {
       </View>
     </TouchableOpacity>
   );
-
-  const renderLoadingNews = () => (
+  const renderLoadingState = () => (
     <View style={styles.loadingContainer}>
-      <LoadingSpinner
-        variant='pulse'
-        size='large'
-        text='Loading market news...'
+      {Array.from({ length: 10 }).map((_, index) => (
+        <View key={index} style={styles.skeletonItem}>
+          <SkeletonLoader width='80%' height={16} style={{ marginBottom: 8 }} />
+          <SkeletonLoader width='60%' height={14} style={{ marginBottom: 8 }} />
+          <SkeletonLoader width='40%' height={12} />
+        </View>
+      ))}
+    </View>
+  );
+
+  const renderEmptyState = () => (
+    <View style={styles.emptyContainer}>
+      <Ionicons
+        name='newspaper-outline'
+        size={64}
+        color={theme.colors.textSecondary}
       />
-      <View style={styles.loadingSkeletons}>
-        {Array.from({ length: 5 }).map((_, index) => (
-          <SkeletonCard key={index} style={styles.skeletonNewsCard} />
-        ))}
-      </View>
+      <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
+        No News Available
+      </Text>
+      <Text
+        style={[styles.emptySubtitle, { color: theme.colors.textSecondary }]}
+      >
+        Pull down to refresh or check back later
+      </Text>
     </View>
   );
 
@@ -366,7 +157,6 @@ const NewsScreen: React.FC = () => {
       <View
         style={[styles.container, { backgroundColor: theme.colors.background }]}
       >
-        {/* Header */}
         <LinearGradient
           colors={isDark ? ['#1a1a2e', '#16213e'] : ['#667eea', '#764ba2']}
           style={styles.header}
@@ -380,8 +170,7 @@ const NewsScreen: React.FC = () => {
             Stay updated with the latest market insights
           </Text>
         </LinearGradient>
-
-        {renderLoadingNews()}
+        {renderLoadingState()}
       </View>
     );
   }
@@ -403,54 +192,25 @@ const NewsScreen: React.FC = () => {
         </Text>
       </LinearGradient>
 
-      {/* Filter Tabs */}
-      {news &&
-        news.news_items &&
-        news.news_items.length > 0 &&
-        renderFilterTabs()}
-
       {/* News List */}
-      {filteredNews && filteredNews.length > 0 ? (
+      {newsItems.length > 0 ? (
         <FlatList
-          data={filteredNews}
+          data={newsItems}
           keyExtractor={(item, index) => `${item.url}-${index}`}
           renderItem={renderNewsItem}
           contentContainerStyle={styles.listContent}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[theme.colors.primary]}
+              tintColor={theme.colors.primary}
+            />
           }
           showsVerticalScrollIndicator={false}
-          ItemSeparatorComponent={() => <View style={styles.separator} />}
         />
-      ) : news && news.news_items && news.news_items.length > 0 ? (
-        <View style={styles.emptyState}>
-          <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
-            {selectedFilter === 'all'
-              ? 'No News Found'
-              : `No ${
-                  selectedFilter.charAt(0).toUpperCase() +
-                  selectedFilter.slice(1)
-                } News Found`}
-          </Text>
-          <Text
-            style={[styles.emptyText, { color: theme.colors.textSecondary }]}
-          >
-            {selectedFilter === 'all'
-              ? 'Check back later for the latest market updates'
-              : `Try selecting a different filter or check back later for more ${selectedFilter} news`}
-          </Text>
-        </View>
       ) : (
-        <View style={styles.emptyState}>
-          <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
-            No News Available
-          </Text>
-          <Text
-            style={[styles.emptyText, { color: theme.colors.textSecondary }]}
-          >
-            Check back later for the latest market updates
-          </Text>
-        </View>
+        renderEmptyState()
       )}
     </View>
   );
@@ -459,13 +219,6 @@ const NewsScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  centered: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    fontSize: 16,
   },
   header: {
     paddingTop: 60,
@@ -481,23 +234,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     opacity: 0.8,
   },
-  loadingContainer: {
-    flex: 1,
-    padding: 16,
-  },
-  loadingSkeletons: {
-    marginTop: 20,
-  },
-  skeletonNewsCard: {
-    marginBottom: 12,
-    height: 120,
-  },
   listContent: {
     padding: 16,
   },
   newsCard: {
-    borderRadius: 16,
-    overflow: 'hidden',
+    marginBottom: 16,
+    borderRadius: 12,
+    padding: 16,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -507,143 +250,76 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
-  featuredCard: {
-    marginBottom: 8,
-  },
-  newsImage: {
-    width: '100%',
-    height: 120,
-  },
-  featuredImage: {
-    height: 200,
-  },
   newsContent: {
-    padding: 16,
-  },
-  featuredContent: {
-    padding: 20,
-  },
-  newsHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  newsSource: {
-    fontSize: 12,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-  },
-  newsTime: {
-    fontSize: 12,
+    flex: 1,
   },
   newsTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
     lineHeight: 22,
     marginBottom: 8,
-  },
-  featuredTitle: {
-    fontSize: 20,
-    lineHeight: 26,
   },
   newsSummary: {
     fontSize: 14,
     lineHeight: 20,
     marginBottom: 12,
   },
-  featuredSummary: {
-    fontSize: 16,
-    lineHeight: 22,
-  },
   newsFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  symbolsContainer: {
+  newsMetadata: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
   },
-  symbolTag: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginRight: 6,
-  },
-  symbolText: {
-    fontSize: 10,
+  newsSource: {
+    fontSize: 12,
     fontWeight: '600',
   },
-  moreSymbols: {
+  newsTime: {
     fontSize: 12,
-    fontWeight: '500',
+    marginLeft: 4,
   },
-  sentimentContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  symbolContainer: {
+    backgroundColor: '#667eea20',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
-  sentimentDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 6,
-  },
-  sentimentText: {
+  symbolText: {
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: '600',
   },
-  separator: {
-    height: 16,
+  loadingContainer: {
+    padding: 16,
   },
-  emptyState: {
+  skeletonItem: {
+    marginBottom: 16,
+    padding: 16,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 12,
+  },
+  skeletonContent: {
+    flex: 1,
+  },
+  emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 32,
+    padding: 32,
   },
   emptyTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: 'bold',
-    marginBottom: 12,
-    textAlign: 'center',
+    marginTop: 16,
+    marginBottom: 8,
   },
-  emptyText: {
+  emptySubtitle: {
     fontSize: 16,
     textAlign: 'center',
-  },
-  filtersContainer: {
-    paddingVertical: 12,
-    backgroundColor: 'transparent',
-  },
-  filtersContent: {
-    paddingHorizontal: 16,
-    gap: 8,
-  },
-  filterTab: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    marginRight: 8,
-  },
-  filterTabText: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginRight: 4,
-  },
-  filterTabCount: {
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  filterColorDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 6,
+    lineHeight: 22,
   },
 });
 
