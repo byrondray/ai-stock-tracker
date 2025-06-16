@@ -23,6 +23,7 @@ import {
 const NewsScreen: React.FC = () => {
   const { theme, isDark } = useTheme();
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedSentiment, setSelectedSentiment] = useState<string>('all');
   const {
     data: news,
     isLoading,
@@ -31,8 +32,12 @@ const NewsScreen: React.FC = () => {
     limit: 50,
   });
 
-  // Get all news items
-  const newsItems = news?.news_items || [];
+  // Filter news items by sentiment
+  const allNewsItems = news?.news_items || [];
+  const newsItems =
+    selectedSentiment === 'all'
+      ? allNewsItems
+      : allNewsItems.filter((item) => item.sentiment === selectedSentiment);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -55,7 +60,6 @@ const NewsScreen: React.FC = () => {
       Alert.alert('Error', 'Failed to open article');
     }
   };
-
   const formatTimeAgo = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -74,7 +78,116 @@ const NewsScreen: React.FC = () => {
       return `${days}d ago`;
     }
   };
+  const getSentimentColor = (sentiment: string) => {
+    switch (sentiment) {
+      case 'positive':
+        return '#10B981'; // Green
+      case 'negative':
+        return '#EF4444'; // Red
+      case 'neutral':
+        return '#6B7280'; // Gray
+      default:
+        return theme.colors.primary;
+    }
+  };
 
+  const getSentimentIcon = (sentiment: string) => {
+    switch (sentiment) {
+      case 'positive':
+        return 'trending-up';
+      case 'negative':
+        return 'trending-down';
+      case 'neutral':
+        return 'remove-outline';
+      default:
+        return 'ellipse-outline';
+    }
+  };
+
+  const renderSentimentFilters = () => {
+    const filters = [
+      {
+        key: 'all',
+        label: 'All',
+        count: allNewsItems.length,
+        icon: 'list-outline',
+      },
+      {
+        key: 'positive',
+        label: 'Positive',
+        count: allNewsItems.filter((item) => item.sentiment === 'positive')
+          .length,
+        icon: 'trending-up',
+      },
+      {
+        key: 'neutral',
+        label: 'Neutral',
+        count: allNewsItems.filter((item) => item.sentiment === 'neutral')
+          .length,
+        icon: 'remove-outline',
+      },
+      {
+        key: 'negative',
+        label: 'Negative',
+        count: allNewsItems.filter((item) => item.sentiment === 'negative')
+          .length,
+        icon: 'trending-down',
+      },
+    ];
+
+    return (
+      <View style={styles.filtersContainer}>
+        {filters.map((filter) => {
+          const isSelected = selectedSentiment === filter.key;
+          const sentimentColor =
+            filter.key === 'all'
+              ? theme.colors.primary
+              : getSentimentColor(filter.key);
+
+          return (
+            <TouchableOpacity
+              key={filter.key}
+              style={[
+                styles.filterButton,
+                {
+                  backgroundColor: isSelected
+                    ? sentimentColor + '20'
+                    : 'transparent',
+                  borderColor: isSelected
+                    ? sentimentColor
+                    : theme.colors.border,
+                },
+              ]}
+              onPress={() => setSelectedSentiment(filter.key)}
+            >
+              <View style={styles.filterContent}>
+                <Ionicons
+                  name={filter.icon as any}
+                  size={14}
+                  color={
+                    isSelected ? sentimentColor : theme.colors.textSecondary
+                  }
+                  style={styles.filterIcon}
+                />
+                <Text
+                  style={[
+                    styles.filterText,
+                    {
+                      color: isSelected
+                        ? sentimentColor
+                        : theme.colors.textSecondary,
+                    },
+                  ]}
+                >
+                  {filter.label} ({filter.count})
+                </Text>
+              </View>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    );
+  };
   const renderNewsItem = ({ item }: { item: any }) => (
     <TouchableOpacity
       style={[styles.newsCard, { backgroundColor: theme.colors.surface }]}
@@ -82,9 +195,25 @@ const NewsScreen: React.FC = () => {
       activeOpacity={0.7}
     >
       <View style={styles.newsContent}>
-        <Text style={[styles.newsTitle, { color: theme.colors.text }]}>
-          {item.title}
-        </Text>
+        <View style={styles.newsTitleRow}>
+          <Text style={[styles.newsTitle, { color: theme.colors.text }]}>
+            {item.title}
+          </Text>
+          {item.sentiment && (
+            <View
+              style={[
+                styles.sentimentIndicator,
+                { backgroundColor: getSentimentColor(item.sentiment) + '20' },
+              ]}
+            >
+              <Ionicons
+                name={getSentimentIcon(item.sentiment) as any}
+                size={12}
+                color={getSentimentColor(item.sentiment)}
+              />
+            </View>
+          )}
+        </View>
 
         {item.summary && (
           <Text
@@ -125,7 +254,13 @@ const NewsScreen: React.FC = () => {
   const renderLoadingState = () => (
     <View style={styles.loadingContainer}>
       {Array.from({ length: 10 }).map((_, index) => (
-        <View key={index} style={styles.skeletonItem}>
+        <View
+          key={index}
+          style={[
+            styles.skeletonItem,
+            { backgroundColor: theme.colors.surface },
+          ]}
+        >
           <SkeletonLoader width='80%' height={16} style={{ marginBottom: 8 }} />
           <SkeletonLoader width='60%' height={14} style={{ marginBottom: 8 }} />
           <SkeletonLoader width='40%' height={12} />
@@ -179,6 +314,7 @@ const NewsScreen: React.FC = () => {
     <View
       style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
+      {' '}
       {/* Header */}
       <LinearGradient
         colors={isDark ? ['#1a1a2e', '#16213e'] : ['#667eea', '#764ba2']}
@@ -191,7 +327,8 @@ const NewsScreen: React.FC = () => {
           Stay updated with the latest market insights
         </Text>
       </LinearGradient>
-
+      {/* Sentiment Filters */}
+      {allNewsItems.length > 0 && renderSentimentFilters()}
       {/* News List */}
       {newsItems.length > 0 ? (
         <FlatList
@@ -253,11 +390,25 @@ const styles = StyleSheet.create({
   newsContent: {
     flex: 1,
   },
+  newsTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
   newsTitle: {
     fontSize: 16,
     fontWeight: '600',
     lineHeight: 22,
-    marginBottom: 8,
+    flex: 1,
+    marginRight: 8,
+  },
+  sentimentIndicator: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 2,
   },
   newsSummary: {
     fontSize: 14,
@@ -298,8 +449,15 @@ const styles = StyleSheet.create({
   skeletonItem: {
     marginBottom: 16,
     padding: 16,
-    backgroundColor: '#f0f0f0',
     borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   skeletonContent: {
     flex: 1,
@@ -320,6 +478,29 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
     lineHeight: 22,
+  },
+  filtersContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 8,
+  },
+  filterButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  filterContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  filterIcon: {
+    marginRight: 4,
+  },
+  filterText: {
+    fontSize: 12,
+    fontWeight: '500',
   },
 });
 

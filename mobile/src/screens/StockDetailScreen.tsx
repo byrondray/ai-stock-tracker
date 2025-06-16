@@ -150,16 +150,8 @@ export const StockDetailScreen: React.FC = () => {
   // Use real data when available, show nothing when unavailable
   const displayAnalysisData = analysisData;
   const displayPredictionData = predictionData;
-
   // Get real chart data from historical prices
   const getChartData = (timeframe: string) => {
-    console.log('📊 Chart Data Debug:', {
-      timeframe,
-      historicalData: historicalData ? 'Available' : 'Not available',
-      historicalError: historicalError ? 'Error' : 'No error',
-      pricesCount: historicalData?.data?.length || 0,
-    });
-
     // Use real historical data if available
     if (historicalData?.data && historicalData.data.length > 0) {
       const prices = historicalData.data;
@@ -247,18 +239,6 @@ export const StockDetailScreen: React.FC = () => {
           datasets: [{ data: [0] }],
         };
       }
-
-      console.log('✅ Using real historical data:', {
-        dataPoints: data.length,
-        priceRange: `${Math.min(...validData).toFixed(2)} - ${Math.max(
-          ...validData
-        ).toFixed(2)}`,
-        firstPrice: data[0],
-        lastPrice: data[data.length - 1],
-        timeframe,
-        sampleDates: prices.slice(0, 3).map((p) => p.date),
-      });
-
       return {
         labels: optimizedLabels,
         datasets: [{ data }],
@@ -266,7 +246,6 @@ export const StockDetailScreen: React.FC = () => {
     }
 
     // No historical data available - return placeholder chart with current price
-    console.log('❌ No historical data available for chart');
     const currentPrice = displayStockData?.current_price || 150;
     return {
       labels: ['Current'],
@@ -312,27 +291,9 @@ export const StockDetailScreen: React.FC = () => {
   };
 
   const dailyStats = getDailyStats();
-
   const displayStockData = React.useMemo(() => {
-    console.log('🔍 StockDetailScreen Debug:', {
-      symbol,
-      stockData: stockData ? 'Available' : 'Not available',
-      priceData: priceData ? 'Available' : 'Not available',
-      stockDataPrice: stockData?.current_price,
-      priceDataPrice: priceData?.price,
-      watchlistItem: watchlistItem
-        ? {
-            symbol: watchlistItem.stock_symbol,
-            current_price: watchlistItem.current_price,
-            stock_name: (watchlistItem.stock as any)?.name,
-            raw_item: watchlistItem,
-          }
-        : 'Not found',
-    });
-
     // Priority 1: Combine stock data with separate price data (REAL DATA!)
     if (stockData && priceData && priceData.price > 0) {
-      console.log('✅ Using combined stock + price data:', priceData.price);
       return {
         ...stockData,
         current_price: priceData.price,
@@ -341,20 +302,11 @@ export const StockDetailScreen: React.FC = () => {
         volume: priceData.volume,
         last_updated: priceData.last_updated,
       };
-    }
-
-    // Priority 2: Use API stock data if it has valid price
+    } // Priority 2: Use API stock data if it has valid price
     if (stockData && stockData.current_price && stockData.current_price > 0) {
-      console.log('✅ Using API stock data:', stockData.current_price);
       return stockData;
-    }
-
-    // Priority 3: Use just price data with basic stock info
+    } // Priority 3: Use just price data with basic stock info
     if (priceData && priceData.price > 0) {
-      console.log(
-        '✅ Using price data with basic stock info:',
-        priceData.price
-      );
       return {
         symbol: symbol,
         name: stockData?.name || `${symbol} Inc.`,
@@ -395,12 +347,10 @@ export const StockDetailScreen: React.FC = () => {
         currency: 'USD',
         last_updated: new Date().toISOString(),
       };
-      console.log('✅ Using watchlist data:', result);
       return result;
     }
 
     // No fallback data - return null if no real data available
-    console.log('❌ No real data available for:', symbol);
     return null;
   }, [stockData, priceData, watchlistItem, symbol]);
 
@@ -469,10 +419,7 @@ export const StockDetailScreen: React.FC = () => {
       await refetchHistorical();
 
       // Another delay before AI services
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      console.log('🔄 Refreshing AI services (may be rate limited)...');
-      // These are more likely to be rate limited, so do them last and in parallel
+      await new Promise((resolve) => setTimeout(resolve, 500)); // These are more likely to be rate limited, so do them last and in parallel
       await Promise.all([
         refetchAnalysis().catch((e) =>
           console.log('Analysis rate limited:', e)
@@ -657,7 +604,7 @@ export const StockDetailScreen: React.FC = () => {
               />
             </View>
           </View>
-        </Card>{' '}
+        </Card>
         {/* AI Analysis Skeleton */}
         <Card style={styles.analysisCard}>
           <View style={styles.analysisHeader}>
@@ -944,7 +891,7 @@ export const StockDetailScreen: React.FC = () => {
           <View style={styles.chartContainer}>
             <LineChart data={getChartData(selectedTimeframe)} />
           </View>
-        </Card>{' '}
+        </Card>
         {/* AI Analysis */}
         <Card style={styles.analysisCard}>
           <View style={styles.analysisHeader}>
@@ -962,7 +909,7 @@ export const StockDetailScreen: React.FC = () => {
             </View>
             {analysisLoading && (
               <View style={styles.loadingBadge}>
-                <LoadingSpinner variant='gradient' size='small' />{' '}
+                <LoadingSpinner variant='gradient' size='small' />
                 <Text
                   style={[
                     styles.loadingBadgeText,
@@ -1007,7 +954,7 @@ export const StockDetailScreen: React.FC = () => {
                   style={[styles.loadingTitle, { color: theme.colors.primary }]}
                 >
                   🤖 AI Analysis in Progress
-                </Text>{' '}
+                </Text>
                 <Text
                   style={[
                     styles.loadingDescription,
@@ -1218,7 +1165,7 @@ export const StockDetailScreen: React.FC = () => {
                   name='analytics-outline'
                   size={32}
                   color={theme.colors.warning}
-                />{' '}
+                />
                 <Text
                   style={[
                     styles.analysisErrorTitle,
@@ -1239,144 +1186,243 @@ export const StockDetailScreen: React.FC = () => {
               </View>
             </View>
           )}
-        </Card>
+        </Card>{' '}
         {/* AI Predictions */}
         <Card style={styles.predictionCard}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
-            AI Price Predictions
-            {predictionLoading && (
-              <Text
-                style={[
-                  {
-                    color: theme.colors.textSecondary,
-                    fontSize: 12,
-                    fontWeight: 'normal',
-                  },
-                ]}
-              >
-                (Loading...)
-              </Text>
-            )}
-            {predictionError && (
-              <Text
-                style={[
-                  {
-                    color: theme.colors.warning,
-                    fontSize: 12,
-                    fontWeight: 'normal',
-                  },
-                ]}
-              >
-                (API service unavailable)
-              </Text>
-            )}
-          </Text>
-          {predictionLoading ? (
-            <View style={styles.rateLimitNotice}>
-              <LoadingSpinner variant='gradient' size='small' />
-              <Text
-                style={[styles.rateLimitTitle, { color: theme.colors.primary }]}
-              >
-                🧠 Training ML Model...
-              </Text>
-              <Text
-                style={[
-                  styles.rateLimitText,
-                  { color: theme.colors.textSecondary },
-                ]}
-              >
-                LSTM neural network is analyzing price patterns and training on
-                historical data.
+          <View style={styles.analysisHeader}>
+            <View style={styles.analysisHeaderLeft}>
+              <View style={styles.aiIconContainer}>
+                <Ionicons
+                  name='trending-up'
+                  size={20}
+                  color={theme.colors.primary}
+                />
+              </View>
+              <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
+                AI Price Predictions
               </Text>
             </View>
-          ) : displayPredictionData ? (
-            <>
-              <Text
+            {predictionLoading && (
+              <View style={styles.loadingBadge}>
+                <LoadingSpinner variant='gradient' size='small' />
+                <Text
+                  style={[
+                    styles.loadingBadgeText,
+                    { color: theme.colors.primary },
+                  ]}
+                >
+                  Training...
+                </Text>
+              </View>
+            )}
+            {predictionError && (
+              <View
                 style={[
-                  styles.predictionSubtitle,
-                  { color: theme.colors.textSecondary },
+                  styles.errorBadge,
+                  { backgroundColor: theme.colors.warning + '20' },
                 ]}
               >
-                Model: {displayPredictionData.model_type} v
-                {displayPredictionData.model_version}
-              </Text>
+                <Ionicons
+                  name='warning-outline'
+                  size={16}
+                  color={theme.colors.warning}
+                />
+                <Text
+                  style={[styles.errorText, { color: theme.colors.warning }]}
+                >
+                  Unavailable
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {predictionLoading ? (
+            <View style={styles.analysisLoadingState}>
+              <View
+                style={[
+                  styles.loadingIndicator,
+                  { backgroundColor: theme.colors.primary + '10' },
+                ]}
+              >
+                <LoadingSpinner variant='gradient' size='small' />
+                <Text
+                  style={[styles.loadingTitle, { color: theme.colors.primary }]}
+                >
+                  Training LSTM Model
+                </Text>
+                <Text
+                  style={[
+                    styles.loadingDescription,
+                    { color: theme.colors.textSecondary },
+                  ]}
+                >
+                  Neural network analyzing price patterns...
+                </Text>
+              </View>
+            </View>
+          ) : displayPredictionData ? (
+            <View style={styles.analysisContent}>
+              <View style={styles.analysisMetrics}>
+                <View style={styles.metricItem}>
+                  <Text
+                    style={[
+                      styles.metricLabel,
+                      { color: theme.colors.textSecondary },
+                    ]}
+                  >
+                    Model
+                  </Text>
+                  <Text
+                    style={[styles.metricValue, { color: theme.colors.text }]}
+                  >
+                    {displayPredictionData.model_type} v
+                    {displayPredictionData.model_version}
+                  </Text>
+                </View>
+                <View style={styles.metricItem}>
+                  <Text
+                    style={[
+                      styles.metricLabel,
+                      { color: theme.colors.textSecondary },
+                    ]}
+                  >
+                    Confidence
+                  </Text>
+                  <Text
+                    style={[
+                      styles.metricValue,
+                      { color: theme.colors.success },
+                    ]}
+                  >
+                    {displayPredictionData.predictions.length > 0
+                      ? `${(
+                          displayPredictionData.predictions[0].confidence * 100
+                        ).toFixed(1)}%`
+                      : 'N/A'}
+                  </Text>
+                </View>
+              </View>
+
               <View style={styles.predictionList}>
                 {displayPredictionData.predictions.length > 0 ? (
                   displayPredictionData.predictions
                     .slice(0, 7)
                     .map((prediction, index) => (
                       <View key={index} style={styles.predictionItem}>
-                        <Text
+                        <View style={styles.predictionInfo}>
+                          <Text
+                            style={[
+                              styles.predictionDate,
+                              { color: theme.colors.textSecondary },
+                            ]}
+                          >
+                            {new Date(prediction.date).toLocaleDateString()}
+                          </Text>
+                          <Text
+                            style={[
+                              styles.predictionPrice,
+                              { color: theme.colors.text },
+                            ]}
+                          >
+                            ${prediction.predicted_price.toFixed(2)}
+                          </Text>
+                        </View>
+                        <View
                           style={[
-                            styles.predictionDate,
-                            { color: theme.colors.textSecondary },
-                          ]}
-                        >
-                          {new Date(prediction.date).toLocaleDateString()}
-                        </Text>
-                        <Text
-                          style={[
-                            styles.predictionPrice,
-                            { color: theme.colors.text },
-                          ]}
-                        >
-                          ${prediction.predicted_price.toFixed(2)}
-                        </Text>
-                        <Text
-                          style={[
-                            styles.predictionConfidence,
+                            styles.confidenceBadge,
                             {
-                              color:
+                              backgroundColor:
                                 prediction.confidence > 0.8
-                                  ? theme.colors.success
+                                  ? theme.colors.success + '20'
                                   : prediction.confidence > 0.6
-                                  ? theme.colors.warning
-                                  : theme.colors.error,
+                                  ? theme.colors.warning + '20'
+                                  : theme.colors.error + '20',
                             },
                           ]}
                         >
-                          {(prediction.confidence * 100).toFixed(1)}%
-                        </Text>
+                          <Text
+                            style={[
+                              styles.confidenceText,
+                              {
+                                color:
+                                  prediction.confidence > 0.8
+                                    ? theme.colors.success
+                                    : prediction.confidence > 0.6
+                                    ? theme.colors.warning
+                                    : theme.colors.error,
+                              },
+                            ]}
+                          >
+                            {(prediction.confidence * 100).toFixed(1)}%
+                          </Text>
+                        </View>
                       </View>
                     ))
                 ) : (
-                  <View style={styles.rateLimitNotice}>
-                    <Text
+                  <View style={styles.analysisErrorState}>
+                    <View
                       style={[
-                        styles.rateLimitTitle,
-                        { color: theme.colors.warning },
+                        styles.errorIndicator,
+                        { backgroundColor: theme.colors.warning + '10' },
                       ]}
                     >
-                      📊 No Predictions Available
-                    </Text>
-                    <Text
-                      style={[
-                        styles.rateLimitText,
-                        { color: theme.colors.textSecondary },
-                      ]}
-                    >
-                      ML prediction service returned no data for this stock.
-                    </Text>
+                      <Ionicons
+                        name='bar-chart-outline'
+                        size={32}
+                        color={theme.colors.warning}
+                      />{' '}
+                      <Text
+                        style={[
+                          styles.analysisErrorTitle,
+                          { color: theme.colors.warning },
+                        ]}
+                      >
+                        No Predictions Available
+                      </Text>
+                      <Text
+                        style={[
+                          styles.errorDescription,
+                          { color: theme.colors.textSecondary },
+                        ]}
+                      >
+                        ML prediction service returned no data for this stock.
+                      </Text>
+                    </View>
                   </View>
                 )}
               </View>
-            </>
+            </View>
           ) : (
-            <View style={styles.rateLimitNotice}>
-              <Text
-                style={[styles.rateLimitTitle, { color: theme.colors.warning }]}
-              >
-                🤖 Predictions Unavailable
-              </Text>
-              <Text
+            <View style={styles.analysisErrorState}>
+              <View
                 style={[
-                  styles.rateLimitText,
-                  { color: theme.colors.textSecondary },
+                  styles.errorIndicator,
+                  { backgroundColor: theme.colors.warning + '10' },
                 ]}
               >
-                AI prediction service is temporarily unavailable. Stock price
-                data and charts are still working.
-              </Text>
+                <Ionicons
+                  name='cloud-offline-outline'
+                  size={32}
+                  color={theme.colors.warning}
+                />{' '}
+                <Text
+                  style={[
+                    styles.analysisErrorTitle,
+                    { color: theme.colors.warning },
+                  ]}
+                >
+                  Predictions Unavailable
+                </Text>
+                <Text
+                  style={[
+                    styles.errorDescription,
+                    { color: theme.colors.textSecondary },
+                  ]}
+                >
+                  AI prediction service is temporarily unavailable. Stock price
+                  data and charts are still working.
+                </Text>
+              </View>
             </View>
           )}
         </Card>
@@ -1903,23 +1949,41 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 12,
+    marginBottom: 8,
+  },
+  predictionInfo: {
+    flex: 1,
   },
   predictionDate: {
     fontSize: 12,
-    flex: 1,
+    marginBottom: 4,
   },
   predictionPrice: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '600',
-    flex: 1,
-    textAlign: 'center',
   },
-  predictionConfidence: {
+  confidenceBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    marginLeft: 12,
+  },
+  confidenceText: {
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: '600',
+  },
+  analysisMetrics: {
+    flexDirection: 'row',
+    marginBottom: 16,
+    gap: 16,
+  },
+  metricItem: {
     flex: 1,
-    textAlign: 'right',
+    alignItems: 'center',
   },
   statsCard: {
     marginBottom: 16,

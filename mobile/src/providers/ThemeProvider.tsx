@@ -2,9 +2,17 @@
  * Theme Provider
  *
  * Provides theme context and dark/light mode support
+ * Automatically follows the device's system theme
  */
 
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, {
+  createContext,
+  useContext,
+  ReactNode,
+  useState,
+  useEffect,
+} from 'react';
+import { Appearance, ColorSchemeName } from 'react-native';
 
 interface ThemeColors {
   primary: string;
@@ -51,7 +59,7 @@ const darkTheme: Theme = {
     surface: '#2D2D44',
     card: '#353559',
     text: '#FFFFFF',
-    textSecondary: '#B8B8CC',
+    textSecondary: '#FFFFFF', // Changed from gray to white for better contrast
     border: '#4A4A6A',
     error: '#FF6B6B',
     success: '#51CF66',
@@ -62,6 +70,8 @@ const darkTheme: Theme = {
 interface ThemeContextType {
   theme: Theme;
   toggleTheme: () => void;
+  setSystemTheme: (enabled: boolean) => void;
+  isSystemTheme: boolean;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -71,16 +81,51 @@ interface ThemeProviderProps {
 }
 
 export function ThemeProvider({ children }: ThemeProviderProps) {
-  const [mode, setMode] = React.useState<'light' | 'dark'>('light');
+  const [mode, setMode] = useState<'light' | 'dark'>('light');
+  const [isSystemTheme, setIsSystemTheme] = useState(true);
+
+  // Get initial system theme
+  useEffect(() => {
+    const getInitialTheme = () => {
+      const systemColorScheme = Appearance.getColorScheme();
+      if (isSystemTheme) {
+        setMode(systemColorScheme === 'dark' ? 'dark' : 'light');
+      }
+    };
+
+    getInitialTheme();
+
+    // Listen for system theme changes
+    const subscription = Appearance.addChangeListener(({ colorScheme }) => {
+      if (isSystemTheme) {
+        setMode(colorScheme === 'dark' ? 'dark' : 'light');
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [isSystemTheme]);
 
   const toggleTheme = () => {
+    setIsSystemTheme(false);
     setMode((prev) => (prev === 'light' ? 'dark' : 'light'));
+  };
+
+  const setSystemTheme = (enabled: boolean) => {
+    setIsSystemTheme(enabled);
+    if (enabled) {
+      const systemColorScheme = Appearance.getColorScheme();
+      setMode(systemColorScheme === 'dark' ? 'dark' : 'light');
+    }
   };
 
   const theme = mode === 'light' ? lightTheme : darkTheme;
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeContext.Provider
+      value={{ theme, toggleTheme, setSystemTheme, isSystemTheme }}
+    >
       {children}
     </ThemeContext.Provider>
   );

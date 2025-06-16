@@ -61,18 +61,8 @@ const DashboardScreen: React.FC = () => {
   } = useGetWatchlistQuery(undefined, {
     skip: !user,
   });
-
   // Debug authentication and API issues
   useEffect(() => {
-    console.log('🔍 DashboardScreen Debug Info:');
-    console.log('User:', user);
-    console.log('isAuthenticated:', isAuthenticated);
-    console.log('Auth token:', token ? 'Present' : 'Missing');
-    console.log('Portfolio Error:', portfolioError);
-    console.log('Watchlist Error:', watchlistError);
-    console.log('Portfolio Data:', portfolio);
-    console.log('Watchlist Data:', watchlist);
-
     if (!user) {
       console.warn(
         '⚠️ User is not authenticated - portfolio and watchlist queries will be skipped'
@@ -175,18 +165,8 @@ const DashboardScreen: React.FC = () => {
     }
     return 'Investor';
   };
-
   // Debug API errors
   useEffect(() => {
-    console.log('🔍 DashboardScreen Debug Info:');
-    console.log('User:', user);
-    console.log('isAuthenticated:', isAuthenticated);
-    console.log('Auth token:', token ? 'Present' : 'Missing');
-    console.log('Portfolio Error:', portfolioError);
-    console.log('Watchlist Error:', watchlistError);
-    console.log('Portfolio Data:', portfolio ? 'Available' : 'undefined');
-    console.log('Watchlist Data:', watchlist ? 'Available' : 'undefined');
-
     // Log API errors for debugging
     if (portfolioError) {
       console.error('Portfolio API Error:', portfolioError);

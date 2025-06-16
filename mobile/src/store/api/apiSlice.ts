@@ -193,6 +193,7 @@ export interface NewsItem {
   url: string;
   source: string;
   published_at: string;
+  sentiment?: string; // "positive", "negative", "neutral"
   sentiment_score?: number;
   relevance_score?: number;
 }
