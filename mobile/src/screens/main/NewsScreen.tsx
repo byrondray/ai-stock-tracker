@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,16 +9,23 @@ import {
   Image,
   Linking,
   Alert,
+  ScrollView,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../hooks/useTheme';
 import { useGetMarketNewsQuery, type NewsItem } from '../../store/api/apiSlice';
-import { LoadingSpinner, SkeletonCard, SkeletonText } from '../../components/ui';
+import {
+  LoadingSpinner,
+  SkeletonCard,
+  SkeletonText,
+} from '../../components/ui';
+
+type SentimentFilter = 'all' | 'positive' | 'negative' | 'neutral';
 
 const NewsScreen: React.FC = () => {
   const { theme, isDark } = useTheme();
   const [refreshing, setRefreshing] = useState(false);
-
+  const [selectedFilter, setSelectedFilter] = useState<SentimentFilter>('all');
   const {
     data: news,
     isLoading,
@@ -26,6 +33,38 @@ const NewsScreen: React.FC = () => {
   } = useGetMarketNewsQuery({
     limit: 50,
   });
+
+  // Filter news based on sentiment
+  const filteredNews = useMemo(() => {
+    if (!news?.news_items) return [];
+
+    if (selectedFilter === 'all') {
+      return news.news_items;
+    }
+
+    return news.news_items.filter((item) => {
+      const score = item.sentiment_score || 0;
+
+      switch (selectedFilter) {
+        case 'positive':
+          return score > 0.1;
+        case 'negative':
+          return score < -0.1;
+        case 'neutral':
+          return score >= -0.1 && score <= 0.1;
+        default:
+          return true;
+      }
+    });
+  }, [news?.news_items, selectedFilter]);
+
+  // Get sentiment category from score
+  const getSentimentCategory = (score?: number): SentimentFilter => {
+    if (!score) return 'neutral';
+    if (score > 0.1) return 'positive';
+    if (score < -0.1) return 'negative';
+    return 'neutral';
+  };
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -74,7 +113,6 @@ const NewsScreen: React.FC = () => {
     if (score < -0.1) return theme.colors.error;
     return theme.colors.warning;
   };
-
   const getSentimentLabel = (score?: number) => {
     if (!score) return 'Neutral';
     if (score > 0.3) return 'Very Positive';
@@ -83,7 +121,115 @@ const NewsScreen: React.FC = () => {
     if (score < -0.1) return 'Negative';
     return 'Neutral';
   };
-  
+  const renderFilterTabs = () => {
+    const filters: Array<{
+      key: SentimentFilter;
+      label: string;
+      count: number;
+      color?: string;
+    }> = [
+      {
+        key: 'all',
+        label: 'All',
+        count: news?.news_items?.length || 0,
+      },
+      {
+        key: 'positive',
+        label: 'Positive',
+        count:
+          news?.news_items?.filter(
+            (item) => getSentimentCategory(item.sentiment_score) === 'positive'
+          ).length || 0,
+        color: theme.colors.success,
+      },
+      {
+        key: 'neutral',
+        label: 'Neutral',
+        count:
+          news?.news_items?.filter(
+            (item) => getSentimentCategory(item.sentiment_score) === 'neutral'
+          ).length || 0,
+        color: theme.colors.warning,
+      },
+      {
+        key: 'negative',
+        label: 'Negative',
+        count:
+          news?.news_items?.filter(
+            (item) => getSentimentCategory(item.sentiment_score) === 'negative'
+          ).length || 0,
+        color: theme.colors.error,
+      },
+    ];
+
+    return (
+      <View style={styles.filtersContainer}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filtersContent}
+        >
+          {filters.map((filter) => (
+            <TouchableOpacity
+              key={filter.key}
+              style={[
+                styles.filterTab,
+                {
+                  backgroundColor:
+                    selectedFilter === filter.key
+                      ? filter.color || theme.colors.primary
+                      : theme.colors.surface,
+                  borderColor: filter.color || theme.colors.border,
+                },
+              ]}
+              onPress={() => setSelectedFilter(filter.key)}
+            >
+              {filter.color && (
+                <View
+                  style={[
+                    styles.filterColorDot,
+                    {
+                      backgroundColor:
+                        selectedFilter === filter.key
+                          ? theme.colors.surface
+                          : filter.color,
+                    },
+                  ]}
+                />
+              )}
+              <Text
+                style={[
+                  styles.filterTabText,
+                  {
+                    color:
+                      selectedFilter === filter.key
+                        ? theme.colors.surface
+                        : theme.colors.text,
+                  },
+                ]}
+              >
+                {filter.label}
+              </Text>
+              <Text
+                style={[
+                  styles.filterTabCount,
+                  {
+                    color:
+                      selectedFilter === filter.key
+                        ? theme.colors.surface
+                        : theme.colors.textSecondary,
+                  },
+                ]}
+              >
+                ({filter.count})
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+    );
+  };
+
   const renderNewsItem = ({
     item,
     index,
@@ -202,7 +348,11 @@ const NewsScreen: React.FC = () => {
 
   const renderLoadingNews = () => (
     <View style={styles.loadingContainer}>
-      <LoadingSpinner variant="pulse" size="large" text="Loading market news..." />
+      <LoadingSpinner
+        variant='pulse'
+        size='large'
+        text='Loading market news...'
+      />
       <View style={styles.loadingSkeletons}>
         {Array.from({ length: 5 }).map((_, index) => (
           <SkeletonCard key={index} style={styles.skeletonNewsCard} />
@@ -214,10 +364,7 @@ const NewsScreen: React.FC = () => {
   if (isLoading) {
     return (
       <View
-        style={[
-          styles.container,
-          { backgroundColor: theme.colors.background },
-        ]}
+        style={[styles.container, { backgroundColor: theme.colors.background }]}
       >
         {/* Header */}
         <LinearGradient
@@ -227,11 +374,13 @@ const NewsScreen: React.FC = () => {
           <Text style={[styles.headerTitle, { color: theme.colors.surface }]}>
             Market News
           </Text>
-          <Text style={[styles.headerSubtitle, { color: theme.colors.surface }]}>
+          <Text
+            style={[styles.headerSubtitle, { color: theme.colors.surface }]}
+          >
             Stay updated with the latest market insights
           </Text>
         </LinearGradient>
-        
+
         {renderLoadingNews()}
       </View>
     );
@@ -253,11 +402,17 @@ const NewsScreen: React.FC = () => {
           Stay updated with the latest market insights
         </Text>
       </LinearGradient>
-      
+
+      {/* Filter Tabs */}
+      {news &&
+        news.news_items &&
+        news.news_items.length > 0 &&
+        renderFilterTabs()}
+
       {/* News List */}
-      {news && news.news_items && news.news_items.length > 0 ? (
+      {filteredNews && filteredNews.length > 0 ? (
         <FlatList
-          data={news.news_items}
+          data={filteredNews}
           keyExtractor={(item, index) => `${item.url}-${index}`}
           renderItem={renderNewsItem}
           contentContainerStyle={styles.listContent}
@@ -267,6 +422,24 @@ const NewsScreen: React.FC = () => {
           showsVerticalScrollIndicator={false}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
         />
+      ) : news && news.news_items && news.news_items.length > 0 ? (
+        <View style={styles.emptyState}>
+          <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
+            {selectedFilter === 'all'
+              ? 'No News Found'
+              : `No ${
+                  selectedFilter.charAt(0).toUpperCase() +
+                  selectedFilter.slice(1)
+                } News Found`}
+          </Text>
+          <Text
+            style={[styles.emptyText, { color: theme.colors.textSecondary }]}
+          >
+            {selectedFilter === 'all'
+              ? 'Check back later for the latest market updates'
+              : `Try selecting a different filter or check back later for more ${selectedFilter} news`}
+          </Text>
+        </View>
       ) : (
         <View style={styles.emptyState}>
           <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
@@ -439,6 +612,38 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     textAlign: 'center',
+  },
+  filtersContainer: {
+    paddingVertical: 12,
+    backgroundColor: 'transparent',
+  },
+  filtersContent: {
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  filterTab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    marginRight: 8,
+  },
+  filterTabText: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginRight: 4,
+  },
+  filterTabCount: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  filterColorDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
   },
 });
 

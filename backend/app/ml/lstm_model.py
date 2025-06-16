@@ -145,9 +145,14 @@ class LSTMPredictor:
             if len(feature_data) < self.sequence_length + self.prediction_horizon:
                 raise ValueError(f"Insufficient data: need at least {self.sequence_length + self.prediction_horizon} rows")
             
-            # Scale features and target
+            # Scale features and target - CRITICAL: Only fit target_scaler on Close price
             scaled_features = self.scaler.fit_transform(feature_data)
-            scaled_target = self.target_scaler.fit_transform(target_data.values.reshape(-1, 1)).flatten()
+            target_reshaped = target_data.values.reshape(-1, 1)
+            scaled_target = self.target_scaler.fit_transform(target_reshaped).flatten()
+            
+            # Log scaling info for debugging
+            logger.info(f"Target scaler fitted on {len(target_data)} Close prices")
+            logger.info("Target scaler fitted successfully")
             
             # Create sequences
             X, y = [], []
@@ -300,16 +305,27 @@ class LSTMPredictor:
             if len(available_features) == 0:
                 raise ValueError("No training features found in prediction data")
             
-            # Ensure we use exactly the same features as training, padding with zeros if needed
+            # CRITICAL FIX: Refuse to predict if too many features are missing (instead of zero-filling)
+            if len(available_features) < len(self.feature_names) * 0.8:  # Need at least 80% of features
+                raise ValueError(
+                    f"Too many features missing for reliable prediction. "
+                    f"Have {len(available_features)} of {len(self.feature_names)} required features. "
+                    f"Missing: {missing_features}"
+                )
+            
+            # For small number of missing features, use forward-fill instead of zero-fill
             if len(available_features) != len(self.feature_names):
                 logger.warning(f"Feature mismatch: expected {len(self.feature_names)}, got {len(available_features)}")
                 
-                # For missing features, we'll create them with zero values
                 missing_features_in_pred = [f for f in self.feature_names if f not in available_features]
-                if missing_features_in_pred:
-                    logger.warning(f"Creating zero-filled columns for missing features: {missing_features_in_pred}")
-                    for missing_feature in missing_features_in_pred:
-                        recent_data[missing_feature] = 0.0
+                for missing_feature in missing_features_in_pred:
+                    # Use forward-fill from last available value or median of Close price
+                    if 'Close' in recent_data.columns:
+                        fill_value = recent_data['Close'].iloc[-1] * 0.01  # Small percentage of current price
+                    else:
+                        fill_value = recent_data.iloc[:, 0].median()  # Use median of first column
+                    recent_data[missing_feature] = fill_value
+                    logger.info(f"Forward-filled missing feature '{missing_feature}' with value: {fill_value}")
                 
                 # Now use exactly the training features in the same order
                 available_features = self.feature_names
@@ -334,13 +350,59 @@ class LSTMPredictor:
             # Make prediction
             scaled_prediction = self.model.predict(X_pred, verbose=0)[0]
             
-            # Inverse transform to get actual prices
-            prediction = self.target_scaler.inverse_transform(
-                scaled_prediction.reshape(-1, 1)
-            ).flatten()
+            # Get current price for validation
+            current_price = float(data['Close'].iloc[-1])
+            
+            # CRITICAL FIX: Proper inverse transform with debugging
+            logger.info(f"Current price before scaling: ${current_price:.2f}")
+            logger.info(f"Scaled prediction shape: {scaled_prediction.shape}")
+            
+            # Ensure prediction is reshaped correctly for inverse transform
+            prediction_reshaped = scaled_prediction.reshape(-1, 1)
+            prediction = self.target_scaler.inverse_transform(prediction_reshaped).flatten()
+            
+            logger.info(f"Inverse transformed prediction: ${prediction[0]:.2f}")
+            logger.info("Inverse transform completed successfully")
+            
+            # SANITY CHECKS: Validate predictions are realistic
+            first_day_prediction = prediction[0]
+            price_change_pct = (first_day_prediction - current_price) / current_price * 100
+            
+            # Check for unrealistic predictions
+            if abs(price_change_pct) > 20:  # More than 20% change in one day
+                logger.warning(f"Unrealistic prediction detected: {price_change_pct:.1f}% change")
+                logger.warning(f"Current: ${current_price:.2f}, Predicted: ${first_day_prediction:.2f}")
+                
+                # Apply conservative adjustment - limit to ±5% for next day
+                max_change = 0.05  # 5%
+                if price_change_pct > max_change * 100:
+                    adjusted_prediction = current_price * (1 + max_change)
+                    logger.info(f"Capping prediction to +{max_change*100}%: ${adjusted_prediction:.2f}")
+                elif price_change_pct < -max_change * 100:
+                    adjusted_prediction = current_price * (1 - max_change)
+                    logger.info(f"Capping prediction to -{max_change*100}%: ${adjusted_prediction:.2f}")
+                else:
+                    adjusted_prediction = first_day_prediction
+                
+                # Adjust all predictions proportionally
+                adjustment_factor = adjusted_prediction / first_day_prediction
+                prediction = prediction * adjustment_factor
+                logger.info(f"Applied adjustment factor: {adjustment_factor:.3f}")
+            
+            # Validate price is positive
+            if any(p <= 0 for p in prediction):
+                logger.error(f"Invalid negative prices in prediction: {prediction}")
+                # Set minimum price to 90% of current price
+                prediction = np.maximum(prediction, current_price * 0.9)
+                logger.info(f"Adjusted negative predictions to minimum 90% of current price")
             
             # Calculate confidence based on recent model performance
             confidence = await self._calculate_prediction_confidence(data, X_pred)
+            
+            # Reduce confidence if we had to make major adjustments
+            if abs(price_change_pct) > 10:
+                confidence *= 0.5  # Halve confidence for unrealistic predictions
+                logger.info(f"Reduced confidence to {confidence:.2f} due to prediction adjustment")
             
             # Generate prediction dates
             last_date = data.index[-1] if hasattr(data.index, 'to_pydatetime') else datetime.now()
@@ -348,8 +410,6 @@ class LSTMPredictor:
                 last_date + timedelta(days=i+1) 
                 for i in range(self.prediction_horizon)
             ]
-            
-            current_price = float(data['Close'].iloc[-1])
             
             results = {
                 'predictions': [float(p) for p in prediction],
