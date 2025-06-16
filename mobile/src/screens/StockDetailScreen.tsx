@@ -1186,7 +1186,7 @@ export const StockDetailScreen: React.FC = () => {
               </View>
             </View>
           )}
-        </Card>{' '}
+        </Card>
         {/* AI Predictions */}
         <Card style={styles.predictionCard}>
           <View style={styles.analysisHeader}>
@@ -1370,7 +1370,7 @@ export const StockDetailScreen: React.FC = () => {
                         name='bar-chart-outline'
                         size={32}
                         color={theme.colors.warning}
-                      />{' '}
+                      />
                       <Text
                         style={[
                           styles.analysisErrorTitle,
@@ -1404,7 +1404,7 @@ export const StockDetailScreen: React.FC = () => {
                   name='cloud-offline-outline'
                   size={32}
                   color={theme.colors.warning}
-                />{' '}
+                />
                 <Text
                   style={[
                     styles.analysisErrorTitle,

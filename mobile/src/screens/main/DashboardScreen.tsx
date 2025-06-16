@@ -199,16 +199,15 @@ const DashboardScreen: React.FC = () => {
       >
         <View style={styles.headerContent}>
           <View>
-            <Text style={[styles.greeting, { color: theme.colors.surface }]}>
+            <Text style={[styles.greeting, { color: '#FFFFFF' }]}>
               Welcome back,
             </Text>
-            <Text style={[styles.userName, { color: theme.colors.surface }]}>
+            <Text style={[styles.userName, { color: '#FFFFFF' }]}>
               {getUserDisplayName()}
             </Text>
           </View>
         </View>
       </LinearGradient>
-
       <View style={styles.content}>
         {/* Portfolio Overview */}
         <View style={styles.section}>
@@ -486,7 +485,7 @@ const DashboardScreen: React.FC = () => {
                             { color: theme.colors.textSecondary },
                           ]}
                         >
-                          {article.source} •{' '}
+                          {article.source} •
                           {new Date(article.published_at).toLocaleDateString()}
                         </Text>
                       </TouchableOpacity>

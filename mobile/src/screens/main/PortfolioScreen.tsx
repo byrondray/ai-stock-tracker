@@ -388,7 +388,7 @@ const PortfolioScreen: React.FC = () => {
         colors={isDark ? ['#1a1a2e', '#16213e'] : ['#667eea', '#764ba2']}
         style={styles.header}
       >
-        <Text style={[styles.headerTitle, { color: theme.colors.surface }]}>
+        <Text style={[styles.headerTitle, { color: '#FFFFFF' }]}>
           Portfolio
         </Text>
         <TouchableOpacity
@@ -613,8 +613,7 @@ const PortfolioScreen: React.FC = () => {
                           { color: theme.colors.success },
                         ]}
                       >
-                        ✓ Selected: {selectedStock.symbol} -{' '}
-                        {selectedStock.name}
+                        ✓ Selected: {selectedStock.symbol} -{selectedStock.name}
                       </Text>
                     </View>
                   )}

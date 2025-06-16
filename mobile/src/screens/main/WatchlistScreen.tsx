@@ -321,11 +321,11 @@ const WatchlistScreen: React.FC = () => {
         style={styles.header}
       >
         <View style={styles.headerTop}>
-          <Text style={[styles.headerTitle, { color: theme.colors.surface }]}>
+          <Text style={[styles.headerTitle, { color: '#FFFFFF' }]}>
             Watchlist
           </Text>
           {watchlist && (
-            <Text style={[styles.stockCount, { color: theme.colors.surface }]}>
+            <Text style={[styles.stockCount, { color: '#FFFFFF' }]}>
               {watchlist.length} stocks
             </Text>
           )}
@@ -342,9 +342,7 @@ const WatchlistScreen: React.FC = () => {
               },
             ]}
           />
-          <Text
-            style={[styles.connectionText, { color: theme.colors.surface }]}
-          >
+          <Text style={[styles.connectionText, { color: '#FFFFFF' }]}>
             {isConnected ? 'Live prices' : 'Offline'}
           </Text>
         </View>

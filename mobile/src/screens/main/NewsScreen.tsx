@@ -188,69 +188,102 @@ const NewsScreen: React.FC = () => {
       </View>
     );
   };
-  const renderNewsItem = ({ item }: { item: any }) => (
-    <TouchableOpacity
-      style={[styles.newsCard, { backgroundColor: theme.colors.surface }]}
-      onPress={() => handleArticlePress(item.url)}
-      activeOpacity={0.7}
-    >
-      <View style={styles.newsContent}>
-        <View style={styles.newsTitleRow}>
-          <Text style={[styles.newsTitle, { color: theme.colors.text }]}>
-            {item.title}
-          </Text>
-          {item.sentiment && (
-            <View
-              style={[
-                styles.sentimentIndicator,
-                { backgroundColor: getSentimentColor(item.sentiment) + '20' },
-              ]}
-            >
-              <Ionicons
-                name={getSentimentIcon(item.sentiment) as any}
-                size={12}
-                color={getSentimentColor(item.sentiment)}
-              />
-            </View>
-          )}
-        </View>
+  const renderNewsItem = ({ item }: { item: any }) => {
+    // Debug log to check if sentiment_score is available
+    if (item.sentiment) {
+      console.log('News item sentiment data:', {
+        title: item.title.substring(0, 50) + '...',
+        sentiment: item.sentiment,
+        sentiment_score: item.sentiment_score,
+      });
+    }
 
-        {item.summary && (
-          <Text
-            style={[styles.newsSummary, { color: theme.colors.textSecondary }]}
-            numberOfLines={3}
-          >
-            {item.summary}
-          </Text>
-        )}
-
-        <View style={styles.newsFooter}>
-          <View style={styles.newsMetadata}>
-            <Text style={[styles.newsSource, { color: theme.colors.primary }]}>
-              {item.source}
+    return (
+      <TouchableOpacity
+        style={[styles.newsCard, { backgroundColor: theme.colors.surface }]}
+        onPress={() => handleArticlePress(item.url)}
+        activeOpacity={0.7}
+      >
+        <View style={styles.newsContent}>
+          <View style={styles.newsTitleRow}>
+            <Text style={[styles.newsTitle, { color: theme.colors.text }]}>
+              {item.title}
             </Text>
-            {item.published_at && (
-              <Text
-                style={[styles.newsTime, { color: theme.colors.textSecondary }]}
-              >
-                • {formatTimeAgo(item.published_at)}
-              </Text>
+            {item.sentiment && (
+              <View style={styles.sentimentContainer}>
+                <View
+                  style={[
+                    styles.sentimentIndicator,
+                    {
+                      backgroundColor: getSentimentColor(item.sentiment) + '20',
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name={getSentimentIcon(item.sentiment) as any}
+                    size={12}
+                    color={getSentimentColor(item.sentiment)}
+                  />
+                </View>
+                {item.sentiment_score !== undefined &&
+                  item.sentiment_score !== null && (
+                    <Text
+                      style={[
+                        styles.sentimentScore,
+                        { color: getSentimentColor(item.sentiment) },
+                      ]}
+                    >
+                      {Math.abs(item.sentiment_score * 100).toFixed(0)}%
+                    </Text>
+                  )}
+              </View>
             )}
           </View>
 
-          {item.symbol && (
-            <View style={styles.symbolContainer}>
-              <Text
-                style={[styles.symbolText, { color: theme.colors.primary }]}
-              >
-                ${item.symbol}
-              </Text>
-            </View>
+          {item.summary && (
+            <Text
+              style={[
+                styles.newsSummary,
+                { color: theme.colors.textSecondary },
+              ]}
+              numberOfLines={3}
+            >
+              {item.summary}
+            </Text>
           )}
+
+          <View style={styles.newsFooter}>
+            <View style={styles.newsMetadata}>
+              <Text
+                style={[styles.newsSource, { color: theme.colors.primary }]}
+              >
+                {item.source}
+              </Text>
+              {item.published_at && (
+                <Text
+                  style={[
+                    styles.newsTime,
+                    { color: theme.colors.textSecondary },
+                  ]}
+                >
+                  • {formatTimeAgo(item.published_at)}
+                </Text>
+              )}
+            </View>
+            {item.symbol && (
+              <View style={styles.symbolContainer}>
+                <Text
+                  style={[styles.symbolText, { color: theme.colors.primary }]}
+                >
+                  ${item.symbol}
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
   const renderLoadingState = () => (
     <View style={styles.loadingContainer}>
       {Array.from({ length: 10 }).map((_, index) => (
@@ -296,12 +329,10 @@ const NewsScreen: React.FC = () => {
           colors={isDark ? ['#1a1a2e', '#16213e'] : ['#667eea', '#764ba2']}
           style={styles.header}
         >
-          <Text style={[styles.headerTitle, { color: theme.colors.surface }]}>
+          <Text style={[styles.headerTitle, { color: '#FFFFFF' }]}>
             Market News
           </Text>
-          <Text
-            style={[styles.headerSubtitle, { color: theme.colors.surface }]}
-          >
+          <Text style={[styles.headerSubtitle, { color: '#FFFFFF' }]}>
             Stay updated with the latest market insights
           </Text>
         </LinearGradient>
@@ -314,16 +345,15 @@ const NewsScreen: React.FC = () => {
     <View
       style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
-      {' '}
       {/* Header */}
       <LinearGradient
         colors={isDark ? ['#1a1a2e', '#16213e'] : ['#667eea', '#764ba2']}
         style={styles.header}
       >
-        <Text style={[styles.headerTitle, { color: theme.colors.surface }]}>
+        <Text style={[styles.headerTitle, { color: '#FFFFFF' }]}>
           Market News
         </Text>
-        <Text style={[styles.headerSubtitle, { color: theme.colors.surface }]}>
+        <Text style={[styles.headerSubtitle, { color: '#FFFFFF' }]}>
           Stay updated with the latest market insights
         </Text>
       </LinearGradient>
@@ -402,12 +432,22 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 8,
   },
+  sentimentContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
   sentimentIndicator: {
     width: 24,
     height: 24,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
+    marginTop: 2,
+  },
+  sentimentScore: {
+    fontSize: 11,
+    fontWeight: '600',
     marginTop: 2,
   },
   newsSummary: {

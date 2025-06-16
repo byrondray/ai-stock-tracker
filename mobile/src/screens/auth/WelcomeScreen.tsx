@@ -43,50 +43,40 @@ const WelcomeScreen: React.FC<Props> = ({ navigation }) => {
       <View style={styles.content}>
         {/* Header Section */}
         <View style={styles.header}>
-          <Text style={[styles.title, { color: theme.colors.surface }]}>
+          <Text style={[styles.title, { color: '#FFFFFF' }]}>
             AI Stock Analyzer
           </Text>
-          <Text style={[styles.subtitle, { color: theme.colors.surface }]}>
+          <Text style={[styles.subtitle, { color: '#FFFFFF' }]}>
             Smart Investment Decisions
           </Text>
         </View>
-
         {/* Features Section */}
         <View style={styles.features}>
           <View style={styles.featureItem}>
-            <Text style={[styles.featureIcon, { color: theme.colors.surface }]}>
-              📊
-            </Text>
-            <Text style={[styles.featureText, { color: theme.colors.surface }]}>
+            <Text style={[styles.featureIcon, { color: '#FFFFFF' }]}>📊</Text>
+            <Text style={[styles.featureText, { color: '#FFFFFF' }]}>
               AI-Powered Analysis
             </Text>
           </View>
           <View style={styles.featureItem}>
-            <Text style={[styles.featureIcon, { color: theme.colors.surface }]}>
-              🔮
-            </Text>
-            <Text style={[styles.featureText, { color: theme.colors.surface }]}>
+            <Text style={[styles.featureIcon, { color: '#FFFFFF' }]}>🔮</Text>
+            <Text style={[styles.featureText, { color: '#FFFFFF' }]}>
               Price Predictions
             </Text>
           </View>
           <View style={styles.featureItem}>
-            <Text style={[styles.featureIcon, { color: theme.colors.surface }]}>
-              💼
-            </Text>
-            <Text style={[styles.featureText, { color: theme.colors.surface }]}>
+            <Text style={[styles.featureIcon, { color: '#FFFFFF' }]}>💼</Text>
+            <Text style={[styles.featureText, { color: '#FFFFFF' }]}>
               Portfolio Management
             </Text>
           </View>
           <View style={styles.featureItem}>
-            <Text style={[styles.featureIcon, { color: theme.colors.surface }]}>
-              📰
-            </Text>
-            <Text style={[styles.featureText, { color: theme.colors.surface }]}>
+            <Text style={[styles.featureIcon, { color: '#FFFFFF' }]}>📰</Text>
+            <Text style={[styles.featureText, { color: '#FFFFFF' }]}>
               Real-time News
             </Text>
           </View>
         </View>
-
         {/* Action Buttons */}
         <View style={styles.actions}>
           <TouchableOpacity
@@ -97,36 +87,22 @@ const WelcomeScreen: React.FC<Props> = ({ navigation }) => {
             onPress={handleLogin}
             activeOpacity={0.8}
           >
-            <Text
-              style={[
-                styles.primaryButtonText,
-                { color: theme.colors.surface },
-              ]}
-            >
+            <Text style={[styles.primaryButtonText, { color: '#FFFFFF' }]}>
               Sign In
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[
-              styles.secondaryButton,
-              { borderColor: theme.colors.surface },
-            ]}
+            style={[styles.secondaryButton, { borderColor: '#FFFFFF' }]}
             onPress={handleRegister}
             activeOpacity={0.8}
           >
-            <Text
-              style={[
-                styles.secondaryButtonText,
-                { color: theme.colors.surface },
-              ]}
-            >
+            <Text style={[styles.secondaryButtonText, { color: '#FFFFFF' }]}>
               Create Account
             </Text>
           </TouchableOpacity>
         </View>
-
-        <Text style={[styles.disclaimer, { color: theme.colors.surface }]}>
+        <Text style={[styles.disclaimer, { color: '#FFFFFF' }]}>
           Investment involves risk. Past performance does not guarantee future
           results.
         </Text>

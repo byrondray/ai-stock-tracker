@@ -152,14 +152,13 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
           <View style={styles.content}>
             {/* Header */}
             <View style={styles.header}>
-              <Text style={[styles.title, { color: theme.colors.surface }]}>
+              <Text style={[styles.title, { color: '#FFFFFF' }]}>
                 Create Account
               </Text>
-              <Text style={[styles.subtitle, { color: theme.colors.surface }]}>
+              <Text style={[styles.subtitle, { color: '#FFFFFF' }]}>
                 Join us to start your investment journey
               </Text>
             </View>
-
             {/* Form */}
             <View style={styles.form}>
               <View style={styles.nameRow}>
@@ -202,7 +201,6 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
                   />
                 </View>
               </View>
-
               <View style={styles.inputContainer}>
                 <TextInput
                   style={[
@@ -221,7 +219,6 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
                   autoCorrect={false}
                 />
               </View>
-
               <View style={styles.inputContainer}>
                 <TextInput
                   style={[
@@ -241,7 +238,6 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
                   autoCorrect={false}
                 />
               </View>
-
               <View style={styles.inputContainer}>
                 <TextInput
                   style={[
@@ -260,7 +256,6 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
                   autoCapitalize='none'
                 />
               </View>
-
               <View style={styles.inputContainer}>
                 <TextInput
                   style={[
@@ -281,7 +276,6 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
                   autoCapitalize='none'
                 />
               </View>
-
               <TouchableOpacity
                 style={[
                   styles.registerButton,
@@ -294,35 +288,26 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
                 disabled={isLoading}
                 activeOpacity={0.8}
               >
-                <Text
-                  style={[
-                    styles.registerButtonText,
-                    { color: theme.colors.surface },
-                  ]}
-                >
+                <Text style={[styles.registerButtonText, { color: '#FFFFFF' }]}>
                   {isLoading ? 'Creating Account...' : 'Create Account'}
                 </Text>
               </TouchableOpacity>
             </View>
-
             {/* Terms */}
-            <Text style={[styles.termsText, { color: theme.colors.surface }]}>
+            <Text style={[styles.termsText, { color: '#FFFFFF' }]}>
               By creating an account, you agree to our Terms of Service and
               Privacy Policy
             </Text>
-
             {/* Footer */}
             <View style={styles.footer}>
-              <Text
-                style={[styles.footerText, { color: theme.colors.surface }]}
-              >
+              <Text style={[styles.footerText, { color: '#FFFFFF' }]}>
                 Already have an account?
               </Text>
               <TouchableOpacity onPress={handleLogin}>
                 <Text
                   style={[
                     styles.footerLink,
-                    { color: theme.colors.surface, fontWeight: 'bold' },
+                    { color: '#FFFFFF', fontWeight: 'bold' },
                   ]}
                 >
                   Sign In
