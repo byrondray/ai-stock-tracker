@@ -31,6 +31,12 @@
     "extra": {
       "apiBaseUrl": "http://192.168.1.97:8000",
       "wsBaseUrl": "ws://192.168.1.97:8000"
+    },
+    "packagerOpts": {
+      "config": "metro.config.js"
+    },
+    "expo": {
+      "logLevel": "error"
     }
   }
 }

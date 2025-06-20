@@ -11,7 +11,13 @@ import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
 import NetInfo from '@react-native-community/netinfo';
 import * as SplashScreen from 'expo-splash-screen';
-import { View, ActivityIndicator, Text, StyleSheet } from 'react-native';
+import {
+  View,
+  ActivityIndicator,
+  Text,
+  StyleSheet,
+  LogBox,
+} from 'react-native';
 
 import { store, persistor } from './src/store';
 import { AppNavigator } from './src/navigation/AppNavigator';
@@ -19,6 +25,18 @@ import { ThemeProvider } from './src/providers/ThemeProvider';
 import { useAppDispatch } from './src/store';
 import { setOnlineStatus } from './src/store/slices/uiSlice';
 import { ToastContainer } from './src/components/ui';
+
+// Suppress all logs and warnings for demo
+if (!__DEV__) {
+  console.log = () => {};
+  console.warn = () => {};
+  console.error = () => {};
+  console.info = () => {};
+  console.debug = () => {};
+}
+
+// Ignore all LogBox warnings for demo
+LogBox.ignoreAllLogs(true);
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
